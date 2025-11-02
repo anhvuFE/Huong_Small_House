@@ -9,6 +9,13 @@ import {
   FiPhone,
   FiMapPin,
   FiMail,
+  FiHome,
+  FiPackage,
+  FiGrid,
+  FiInfo,
+  FiMessageCircle,
+  FiLogIn,
+  FiLogOut,
 } from 'react-icons/fi';
 import { useCartStore } from '../../store/useCartStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -20,7 +27,7 @@ export const Header: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { getTotalItems, toggleCart } = useCartStore();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, logout } = useAuthStore();
   const cartItemsCount = getTotalItems();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -30,9 +37,24 @@ export const Header: React.FC = () => {
     }
   };
 
+  React.useEffect(() => {
+    const updateHeaderHeight = () => {
+      const topBar = document.getElementById('top-bar');
+      const mainHeader = document.getElementById('main-header');
+      if (topBar && mainHeader) {
+        const totalHeight = topBar.offsetHeight + mainHeader.offsetHeight;
+        document.documentElement.style.setProperty('--header-height', `${totalHeight}px`);
+      }
+    };
+
+    updateHeaderHeight();
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => window.removeEventListener('resize', updateHeaderHeight);
+  }, []);
+
   return (
     <>
-      <div className="bg-primary text-white py-2">
+      <div className="bg-primary text-white py-2" id="top-bar">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap justify-between items-center text-sm">
             <div className="flex items-center gap-4">
@@ -53,7 +75,7 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      <header className="sticky top-0 z-40 bg-white shadow-md">
+      <header className="sticky top-0 z-40 bg-white shadow-md" id="main-header">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
@@ -62,7 +84,7 @@ export const Header: React.FC = () => {
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 aria-label="Toggle menu"
               >
-                {isMenuOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
+                <FiMenu className="w-6 h-6" />
               </button>
 
               <Link to="/" className="flex items-center">
@@ -161,64 +183,119 @@ export const Header: React.FC = () => {
           )}
         </div>
 
-        <div
+        {isMenuOpen && (
+          <div
+            className="lg:hidden fixed bg-black/50 z-30"
+            style={{
+              top: 'var(--header-height, 104px)',
+              left: 0,
+              right: 0,
+              bottom: 0
+            }}
+            onClick={() => setIsMenuOpen(false)}
+          />
+        )}
+
+        <nav
           className={cn(
-            'lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity',
-            isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            'lg:hidden fixed left-0 w-64 bg-white shadow-lg transition-transform z-40',
+            isMenuOpen ? 'translate-x-0' : '-translate-x-full'
           )}
-          onClick={() => setIsMenuOpen(false)}
+          style={{
+            top: 'var(--header-height, 104px)',
+            height: 'calc(100vh - var(--header-height, 104px))'
+          }}
         >
-          <nav
-            className={cn(
-              'fixed left-0 top-0 h-full w-64 bg-white shadow-lg transition-transform',
-              isMenuOpen ? 'translate-x-0' : '-translate-x-full'
-            )}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 border-b border-gray-200">
-              <div className="text-xl font-bold text-primary">
-                Hương Small House
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-lg font-bold text-primary">
+                <FiHome className="w-5 h-5" />
+                <span>Menu</span>
               </div>
+              <button
+                onClick={() => setIsMenuOpen(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Close menu"
+              >
+                <FiX className="w-6 h-6 text-gray-600" />
+              </button>
             </div>
-            <div className="p-4">
+            <div className="p-4 space-y-1">
               <Link
                 to="/"
-                className="block py-2 text-gray-700 hover:text-primary font-medium"
+                className="flex items-center gap-3 py-3 px-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Trang chủ
+                <FiHome className="w-5 h-5" />
+                <span>Trang chủ</span>
               </Link>
               <Link
                 to="/products"
-                className="block py-2 text-gray-700 hover:text-primary font-medium"
+                className="flex items-center gap-3 py-3 px-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Sản phẩm
+                <FiPackage className="w-5 h-5" />
+                <span>Sản phẩm</span>
               </Link>
               <Link
                 to="/categories"
-                className="block py-2 text-gray-700 hover:text-primary font-medium"
+                className="flex items-center gap-3 py-3 px-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Danh mục
+                <FiGrid className="w-5 h-5" />
+                <span>Danh mục</span>
               </Link>
               <Link
                 to="/about"
-                className="block py-2 text-gray-700 hover:text-primary font-medium"
+                className="flex items-center gap-3 py-3 px-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Giới thiệu
+                <FiInfo className="w-5 h-5" />
+                <span>Giới thiệu</span>
               </Link>
               <Link
                 to="/contact"
-                className="block py-2 text-gray-700 hover:text-primary font-medium"
+                className="flex items-center gap-3 py-3 px-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Liên hệ
+                <FiMessageCircle className="w-5 h-5" />
+                <span>Liên hệ</span>
               </Link>
             </div>
+
+            <div className="p-4 border-t border-gray-200 mt-auto absolute bottom-0 left-0 right-0">
+              {isAuthenticated ? (
+                <div className="space-y-3">
+                  <Link
+                    to="/account"
+                    className="flex items-center gap-3 py-3 px-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <FiUser className="w-5 h-5" />
+                    <span>{user?.fullName || 'Tài khoản'}</span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 py-3 px-2 w-full text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg font-medium transition-colors"
+                  >
+                    <FiLogOut className="w-5 h-5" />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center gap-3 py-3 px-2 text-white bg-primary hover:bg-primary-dark rounded-lg font-medium transition-colors justify-center"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <FiLogIn className="w-5 h-5" />
+                  <span>Đăng nhập</span>
+                </Link>
+              )}
+            </div>
           </nav>
-        </div>
       </header>
     </>
   );
