@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#fde68a" />
+    </linearGradient>
+    <linearGradient id="bottle" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fb923c" />
+      <stop offset="100%" stop-color="#f97316" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="600" rx="48" fill="url(#bg)" />
+  <g transform="translate(150 120)">
+    <rect x="120" y="0" width="160" height="60" rx="20" fill="#ffffff" opacity="0.9" />
+    <rect x="80" y="60" width="240" height="340" rx="36" fill="url(#bottle)" />
+    <rect x="80" y="180" width="240" height="160" rx="24" fill="#ffffff" opacity="0.92" />
+    <rect x="140" y="220" width="120" height="80" rx="18" fill="#f97316" opacity="0.9" />
+    <circle cx="120" cy="320" r="12" fill="#ffffff" opacity="0.8" />
+    <circle cx="280" cy="320" r="12" fill="#ffffff" opacity="0.8" />
+    <text x="200" y="250" font-family="'Inter', 'Helvetica', 'Arial', sans-serif" font-size="40" font-weight="700" text-anchor="middle" fill="#1f2937">Vitamin</text>
+    <text x="200" y="295" font-family="'Inter', 'Helvetica', 'Arial', sans-serif" font-size="32" font-weight="600" text-anchor="middle" fill="#1f2937">C</text>
+  </g>
+</svg>
