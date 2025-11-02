@@ -115,46 +115,46 @@ export const Hero: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-gray-50 py-8">
+      <div className="bg-gray-50 py-6 sm:py-8">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 p-3 rounded-lg">
-                <FiShield className="w-8 h-8 text-primary" />
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 text-center sm:text-left">
+              <div className="bg-primary/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
+                <FiShield className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Hàng chính hãng</h3>
-                <p className="text-sm text-gray-600">Cam kết 100% chính hãng</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 p-3 rounded-lg">
-                <FiTruck className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Giao hàng nhanh</h3>
-                <p className="text-sm text-gray-600">Giao hàng trong 24h</p>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Hàng chính hãng</h3>
+                <p className="text-xs sm:text-sm text-gray-600">Cam kết 100% chính hãng</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 p-3 rounded-lg">
-                <FaHandHoldingHeart className="w-8 h-8 text-primary" />
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 text-center sm:text-left">
+              <div className="bg-primary/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
+                <FiTruck className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Tư vấn miễn phí</h3>
-                <p className="text-sm text-gray-600">Hỗ trợ 24/7</p>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Giao hàng nhanh</h3>
+                <p className="text-xs sm:text-sm text-gray-600">Giao hàng trong 24h</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 p-3 rounded-lg">
-                <FiAward className="w-8 h-8 text-primary" />
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 text-center sm:text-left">
+              <div className="bg-primary/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
+                <FaHandHoldingHeart className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Ưu đãi hấp dẫn</h3>
-                <p className="text-sm text-gray-600">Giảm giá lên đến 30%</p>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Tư vấn miễn phí</h3>
+                <p className="text-xs sm:text-sm text-gray-600">Hỗ trợ 24/7</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 text-center sm:text-left">
+              <div className="bg-primary/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
+                <FiAward className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Ưu đãi hấp dẫn</h3>
+                <p className="text-xs sm:text-sm text-gray-600">Giảm giá lên đến 30%</p>
               </div>
             </div>
           </div>
