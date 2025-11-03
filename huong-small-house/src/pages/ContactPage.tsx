@@ -12,6 +12,7 @@ import {
   FiMessageCircle,
   FiMessageSquare
 } from 'react-icons/fi';
+import { Select } from '../components/common/Select';
 
 interface ContactFormData {
   fullName: string;
@@ -72,6 +73,13 @@ export const ContactPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
     // Clear error when user starts typing
     if (errors[name as keyof ContactFormData]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const handleSelectChange = (name: keyof ContactFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
@@ -310,21 +318,21 @@ export const ContactPage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Chủ đề <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleInputChange}
-                      className={`block w-full px-3 py-2 border ${
-                        errors.subject ? 'border-red-300' : 'border-gray-300'
-                      } rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary`}
-                    >
-                      <option value="">-- Chọn chủ đề --</option>
-                      <option value="tu-van-san-pham">Tư vấn sản phẩm</option>
-                      <option value="dat-hang">Đặt hàng</option>
-                      <option value="khieu-nai">Khiếu nại</option>
-                      <option value="hop-tac">Hợp tác</option>
-                      <option value="khac">Khác</option>
-                    </select>
+                    <div className={errors.subject ? 'ring-1 ring-red-300 rounded-lg' : ''}>
+                      <Select
+                        value={formData.subject}
+                        onChange={(value) => handleSelectChange('subject', value)}
+                        options={[
+                          { value: '', label: '-- Chọn chủ đề --' },
+                          { value: 'tu-van-san-pham', label: 'Tư vấn sản phẩm' },
+                          { value: 'dat-hang', label: 'Đặt hàng' },
+                          { value: 'khieu-nai', label: 'Khiếu nại' },
+                          { value: 'hop-tac', label: 'Hợp tác' },
+                          { value: 'khac', label: 'Khác' }
+                        ]}
+                        placeholder="Chọn chủ đề"
+                      />
+                    </div>
                     {errors.subject && (
                       <p className="mt-1 text-sm text-red-600">{errors.subject}</p>
                     )}
