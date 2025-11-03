@@ -20,6 +20,7 @@ import {
 import { useCartStore } from '../../store/useCartStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { cn } from '../../utils/cn';
+import logo from '../../assets/logo.png';
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -53,7 +54,7 @@ export const Header: React.FC = () => {
   }, []);
 
   return (
-    <>
+    <div className="fixed top-0 left-0 right-0 z-40">
       <div className="bg-primary text-white py-2" id="top-bar">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap justify-between items-center text-sm">
@@ -75,7 +76,7 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      <header className="sticky top-0 z-40 bg-white shadow-md" id="main-header">
+      <header className="bg-white shadow-md" id="main-header">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
@@ -88,9 +89,11 @@ export const Header: React.FC = () => {
               </button>
 
               <Link to="/" className="flex items-center">
-                <div className="text-xl font-bold text-primary">
-                  Hương Small House
-                </div>
+                <img
+                  src={logo}
+                  alt="Hương Small House"
+                  className="h-10 w-auto object-contain"
+                />
               </Link>
 
               <nav className="hidden lg:flex items-center gap-6">
@@ -297,6 +300,6 @@ export const Header: React.FC = () => {
             </div>
           </nav>
       </header>
-    </>
+    </div>
   );
 };

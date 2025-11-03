@@ -47,14 +47,38 @@ export const LoginPage: React.FC = () => {
     setTimeout(() => {
       // Mock login - in real app, would call API
       if (formData.email === 'admin@example.com' && formData.password === 'password') {
-        login({
-          id: '1',
-          email: formData.email,
-          fullName: 'Nguyễn Văn A',
-          phone: '0336064040',
-          address: '120 Hoàng Quốc Việt, Hà Nội',
-          role: 'customer',
-        });
+        login(
+          {
+            id: '1',
+            email: formData.email,
+            fullName: 'Nguyễn Văn A',
+            phone: '0336064040',
+            role: 'CUSTOMER',
+            avatar: '/images/avatar-placeholder.png',
+            isEmailVerified: true,
+            isPhoneVerified: true,
+            addresses: [
+              {
+                id: 'default',
+                userId: '1',
+                receiverName: 'Nguyễn Văn A',
+                phone: '0336064040',
+                province: 'Hà Nội',
+                district: 'Cầu Giấy',
+                ward: 'Nghĩa Tân',
+                street: '120 Hoàng Quốc Việt',
+                isDefault: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
+            ],
+            defaultAddressId: 'default',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            lastLogin: new Date(),
+          },
+          'mock-auth-token'
+        );
         navigate('/');
       } else {
         setErrors({ password: 'Email hoặc mật khẩu không đúng' });
