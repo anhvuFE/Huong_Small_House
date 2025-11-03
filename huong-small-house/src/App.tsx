@@ -8,6 +8,7 @@ import { ProductDetailPage } from './pages/ProductDetailPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { CategoriesPage } from './pages/CategoriesPage';
 
 function App() {
   return (
@@ -19,7 +20,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/products/:slug" element={<ProductDetailPage />} />
-            <Route path="/categories" element={<ProductsPage />} />
+            <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
