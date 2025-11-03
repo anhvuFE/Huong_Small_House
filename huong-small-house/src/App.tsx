@@ -10,6 +10,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { AboutPage } from './pages/AboutPage';
+import { ContactPage } from './pages/ContactPage';
 
 function App() {
   return (
@@ -26,7 +27,7 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/about" element={<AboutPage />} />
-            <Route path="/contact" element={<div className="container mx-auto px-4 py-8"><h1 className="text-3xl font-bold">Liên hệ</h1></div>} />
+            <Route path="/contact" element={<ContactPage />} />
           </Routes>
         </main>
         <Footer />
