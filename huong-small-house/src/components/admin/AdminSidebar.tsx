@@ -18,7 +18,10 @@ import { useAuthStore } from '../../store/useAuthStore';
 
 interface AdminSidebarProps {
   isCollapsed: boolean;
+  isMobileMenuOpen: boolean;
+  isMobile: boolean;
   onToggle: () => void;
+  onCloseMobile: () => void;
 }
 
 const menuItems = [
@@ -72,7 +75,10 @@ const menuItems = [
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   isCollapsed,
+  isMobileMenuOpen,
+  isMobile,
   onToggle,
+  onCloseMobile,
 }) => {
   const navigate = useNavigate();
   const { logout } = useAuthStore();
@@ -85,21 +91,25 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   return (
     <aside
       className={`fixed left-0 top-0 h-full bg-white shadow-lg z-50 transition-all duration-300 ${
-        isCollapsed ? 'w-16' : 'w-64'
+        isMobile
+          ? `w-64 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`
+          : isCollapsed
+            ? 'w-16'
+            : 'w-48 lg:w-52 xl:w-64'
       }`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-3 lg:p-4 border-b border-gray-200">
 {!isCollapsed ? (
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 lg:space-x-3">
             <img
               src="/assets/logo.png"
               alt="Hương Small House"
-              className="w-8 h-8"
+              className="w-7 h-7 lg:w-8 lg:h-8 flex-shrink-0"
             />
-            <div>
-              <h1 className="text-lg font-bold text-primary">Admin Panel</h1>
-              <p className="text-xs text-gray-600">Hương Small House</p>
+            <div className="min-w-0">
+              <h1 className="text-sm lg:text-lg font-bold text-primary truncate">Admin Panel</h1>
+              <p className="text-xs text-gray-600 truncate hidden lg:block">Hương Small House</p>
             </div>
           </div>
         ) : (
@@ -107,7 +117,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <img
               src="/assets/logo.png"
               alt="Hương Small House"
-              className="w-8 h-8"
+              className="w-7 h-7 lg:w-8 lg:h-8"
             />
           </div>
         )}
@@ -134,6 +144,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 <NavLink
                   to={item.path}
                   end={item.end}
+                  onClick={isMobile ? onCloseMobile : undefined}
                   className={({ isActive }) =>
                     `flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group ${
                       isActive
@@ -148,11 +159,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                     }`}
                   />
                   {!isCollapsed && (
-                    <span className="text-sm font-medium">{item.label}</span>
+                    <span className="text-xs lg:text-sm font-medium truncate">{item.label}</span>
                   )}
 
                   {/* Tooltip for collapsed state */}
-                  {isCollapsed && (
+                  {!isMobile && isCollapsed && (
                     <div className="absolute left-16 ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
                       {item.label}
                     </div>
@@ -178,11 +189,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             }`}
           />
           {!isCollapsed && (
-            <span className="text-sm font-medium">Đăng xuất</span>
+            <span className="text-xs lg:text-sm font-medium">Đăng xuất</span>
           )}
 
           {/* Tooltip for collapsed state */}
-          {isCollapsed && (
+          {!isMobile && isCollapsed && (
             <div className="absolute left-16 ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
               Đăng xuất
             </div>

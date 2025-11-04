@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
-import { FiBell, FiSearch, FiUser, FiChevronDown } from 'react-icons/fi';
+import { FiBell, FiSearch, FiUser, FiChevronDown, FiMenu } from 'react-icons/fi';
 import { useAuthStore } from '../../store/useAuthStore';
 
-export const AdminHeader: React.FC = () => {
+interface AdminHeaderProps {
+  onToggleSidebar: () => void;
+  isMobile: boolean;
+}
+
+export const AdminHeader: React.FC<AdminHeaderProps> = ({
+  onToggleSidebar,
+  isMobile,
+}) => {
   const { user } = useAuthStore();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,29 +46,39 @@ export const AdminHeader: React.FC = () => {
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-      <div className="flex items-center justify-between px-6 py-4">
+      <div className="flex items-center justify-between px-4 lg:px-6 py-4">
+        {/* Mobile menu button */}
+        {isMobile && (
+          <button
+            onClick={onToggleSidebar}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors lg:hidden"
+          >
+            <FiMenu className="w-6 h-6" />
+          </button>
+        )}
+
         {/* Search */}
-        <div className="flex-1 max-w-md">
+        <div className="flex-1 max-w-md mx-4">
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Tìm kiếm sản phẩm, đơn hàng..."
+              placeholder={isMobile ? "Tìm kiếm..." : "Tìm kiếm sản phẩm, đơn hàng..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
             />
           </div>
         </div>
 
         {/* Right section */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 lg:space-x-4">
           {/* Notifications */}
           <div className="relative">
             <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-              <FiBell className="w-6 h-6" />
+              <FiBell className="w-5 h-5 lg:w-6 lg:h-6" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 lg:h-5 lg:w-5 flex items-center justify-center">
                   {unreadCount}
                 </span>
               )}
@@ -73,8 +91,8 @@ export const AdminHeader: React.FC = () => {
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <FiUser className="w-5 h-5 text-white" />
+              <div className="w-7 h-7 lg:w-8 lg:h-8 bg-primary rounded-full flex items-center justify-center">
+                <FiUser className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-gray-900">
@@ -82,7 +100,7 @@ export const AdminHeader: React.FC = () => {
                 </p>
                 <p className="text-xs text-gray-600">Quản trị viên</p>
               </div>
-              <FiChevronDown className="w-4 h-4 text-gray-600" />
+              <FiChevronDown className="w-4 h-4 text-gray-600 hidden sm:block" />
             </button>
 
             {/* Profile dropdown */}

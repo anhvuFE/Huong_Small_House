@@ -57,8 +57,8 @@ export const Select: React.FC<SelectProps> = ({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'w-full px-4 py-2.5 text-left bg-white border rounded-lg transition-all duration-200',
-          'flex items-center justify-between gap-2',
+          'w-full px-3 lg:px-4 py-2 lg:py-2.5 text-left bg-white border rounded-lg transition-all duration-200',
+          'flex items-center justify-between gap-2 text-sm lg:text-base',
           'hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent',
           isOpen ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200'
         )}
@@ -71,7 +71,7 @@ export const Select: React.FC<SelectProps> = ({
         </span>
         <FiChevronDown
           className={cn(
-            'w-5 h-5 text-gray-400 transition-transform duration-200',
+            'w-4 h-4 lg:w-5 lg:h-5 text-gray-400 transition-transform duration-200 flex-shrink-0',
             isOpen && 'rotate-180 text-primary'
           )}
         />
@@ -86,7 +86,7 @@ export const Select: React.FC<SelectProps> = ({
                 type="button"
                 onClick={() => handleSelect(option)}
                 className={cn(
-                  'w-full px-4 py-2.5 text-left flex items-center justify-between',
+                  'w-full px-3 lg:px-4 py-2 lg:py-2.5 text-left flex items-center justify-between text-sm lg:text-base',
                   'hover:bg-primary/5 transition-colors duration-150',
                   option.value === value
                     ? 'bg-primary/10 text-primary font-medium'
@@ -95,7 +95,7 @@ export const Select: React.FC<SelectProps> = ({
               >
                 <span className="truncate">{option.label}</span>
                 {option.value === value && (
-                  <FiCheck className="w-5 h-5 text-primary flex-shrink-0 ml-2" />
+                  <FiCheck className="w-4 h-4 lg:w-5 lg:h-5 text-primary flex-shrink-0 ml-2" />
                 )}
               </button>
             ))}
