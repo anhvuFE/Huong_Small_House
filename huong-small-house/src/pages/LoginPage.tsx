@@ -51,7 +51,7 @@ export const LoginPage: React.FC = () => {
           {
             id: '1',
             email: formData.email,
-            fullName: 'Nguyễn Văn A',
+            fullName: 'Admin Hương Small House',
             phone: '0336064040',
             role: 'CUSTOMER',
             avatar: '/images/avatar-placeholder.png',
@@ -61,6 +61,40 @@ export const LoginPage: React.FC = () => {
               {
                 id: 'default',
                 userId: '1',
+                receiverName: 'Admin Hương Small House',
+                phone: '0336064040',
+                province: 'Hà Nội',
+                district: 'Cầu Giấy',
+                ward: 'Nghĩa Tân',
+                street: '120 Hoàng Quốc Việt',
+                isDefault: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
+            ],
+            defaultAddressId: 'default',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            lastLogin: new Date(),
+          },
+          'mock-auth-token'
+        );
+        navigate('/admin');
+      } else if (formData.email === 'user@example.com' && formData.password === 'password') {
+        login(
+          {
+            id: '2',
+            email: formData.email,
+            fullName: 'Nguyễn Văn A',
+            phone: '0336064040',
+            role: 'CUSTOMER',
+            avatar: '/images/avatar-placeholder.png',
+            isEmailVerified: true,
+            isPhoneVerified: true,
+            addresses: [
+              {
+                id: 'default',
+                userId: '2',
                 receiverName: 'Nguyễn Văn A',
                 phone: '0336064040',
                 province: 'Hà Nội',
@@ -121,6 +155,13 @@ export const LoginPage: React.FC = () => {
               đăng ký tài khoản mới
             </Link>
           </p>
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800 font-medium">Tài khoản demo:</p>
+            <p className="text-xs text-blue-700 mt-1">
+              Admin: admin@example.com / password<br />
+              User: user@example.com / password
+            </p>
+          </div>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

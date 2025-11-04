@@ -4,6 +4,7 @@ import { FiFilter, FiX } from 'react-icons/fi';
 import { ProductList } from '../components/products/ProductList';
 import { PriceRangeSlider } from '../components/common/PriceRangeSlider';
 import { Select } from '../components/common/Select';
+import { Pagination, usePagination } from '../components/common/Pagination';
 import { mockProducts, categories, brands } from '../data/products';
 import { cn } from '../utils/cn';
 
@@ -12,6 +13,14 @@ export const ProductsPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   const [headerHeight, setHeaderHeight] = useState(0);
+
+  const {
+    currentPage,
+    pageSize,
+    handlePageChange,
+    handlePageSizeChange,
+    getPaginatedData,
+  } = usePagination(1, 12);
   const [filters, setFilters] = useState({
     category: searchParams.get('category') || '',
     brand: searchParams.get('brand') || '',
@@ -102,6 +111,10 @@ export const ProductsPage: React.FC = () => {
 
     return products;
   }, [filters, searchParams]);
+
+  const paginatedData = useMemo(() => {
+    return getPaginatedData(filteredProducts);
+  }, [filteredProducts, currentPage, pageSize, getPaginatedData]);
 
   const renderFilterBody = ({ showHeader = true }: { showHeader?: boolean } = {}) => (
     <>
@@ -238,7 +251,7 @@ export const ProductsPage: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl md:text-3xl font-bold">
-            Tất cả sản phẩm ({filteredProducts.length})
+            Tất cả sản phẩm ({paginatedData.totalItems})
           </h1>
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -304,8 +317,18 @@ export const ProductsPage: React.FC = () => {
             </div>
           </aside>
 
-          <div className="flex-1">
-            <ProductList products={filteredProducts} />
+          <div className="flex-1 space-y-6">
+            <ProductList products={paginatedData.items} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={paginatedData.totalPages}
+              totalItems={paginatedData.totalItems}
+              itemsPerPage={pageSize}
+              onPageChange={handlePageChange}
+              showPageSizeSelect={true}
+              onPageSizeChange={handlePageSizeChange}
+              pageSizeOptions={[12, 24, 36, 48]}
+            />
           </div>
         </div>
       </div>
