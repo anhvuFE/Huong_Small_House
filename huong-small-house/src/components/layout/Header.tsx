@@ -58,17 +58,17 @@ export const Header: React.FC = () => {
       <div className="bg-primary text-white py-2" id="top-bar">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap justify-between items-center text-sm">
-            <div className="flex items-center gap-4 text-white">
-              <a href="tel:0336064040" className="flex items-center gap-1 text-white hover:text-white/80">
+            <div className="flex items-center gap-4">
+              <a href="tel:0336064040" className="flex items-center gap-1 hover:text-gray-200">
                 <FiPhone className="w-4 h-4" />
                 <span>0336 064 040</span>
               </a>
-              <a href="mailto:vuquynhhuong171298@gmail.com" className="hidden md:flex items-center gap-1 text-white hover:text-white/80">
+              <a href="mailto:vuquynhhuong171298@gmail.com" className="hidden md:flex items-center gap-1 hover:text-gray-200">
                 <FiMail className="w-4 h-4" />
                 <span>vuquynhhuong171298@gmail.com</span>
               </a>
             </div>
-            <div className="flex items-center gap-1 text-white">
+            <div className="flex items-center gap-1">
               <FiMapPin className="w-4 h-4" />
               <span>120 Hoàng Quốc Việt, Hà Nội</span>
             </div>
