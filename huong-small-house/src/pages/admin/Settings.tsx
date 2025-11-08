@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import {
   FiSave,
   FiUser,
-  FiLock,
-  FiGlobe,
   FiMail,
   FiBell,
   FiShield,
@@ -11,7 +9,6 @@ import {
   FiSettings as FiSettingsIcon,
   FiToggleLeft,
   FiToggleRight,
-  FiEdit,
   FiCamera,
 } from 'react-icons/fi';
 

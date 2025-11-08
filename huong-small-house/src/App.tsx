@@ -27,7 +27,7 @@ import { CategoryManagement } from './pages/admin/CategoryManagement';
 
 // Protected Route Component for Admin
 const ProtectedAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
 
   // For demo purposes, we'll allow admin access with the mock login
   // In production, you'd check for actual admin role

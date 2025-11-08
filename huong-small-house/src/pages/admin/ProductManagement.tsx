@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import {
   FiPlus,
   FiSearch,
-  FiFilter,
   FiEdit,
   FiTrash2,
   FiEye,
@@ -12,14 +11,13 @@ import {
 } from 'react-icons/fi';
 import { mockProducts, categories, brands } from '../../data/products';
 import { Select } from '../../components/common/Select';
-import { Pagination, usePagination } from '../../components/common/Pagination';
+import { Pagination } from '../../components/common/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 
 export const ProductManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-
   const {
     currentPage,
     pageSize,
@@ -42,7 +40,7 @@ export const ProductManagement: React.FC = () => {
 
   const paginatedData = useMemo(() => {
     return getPaginatedData(filteredProducts);
-  }, [filteredProducts, currentPage, pageSize, getPaginatedData]);
+  }, [filteredProducts, getPaginatedData]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {

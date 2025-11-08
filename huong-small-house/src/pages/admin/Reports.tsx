@@ -218,7 +218,7 @@ export const Reports: React.FC = () => {
             <FiBarChart className="w-5 h-5 text-gray-400" />
           </div>
           <div className="space-y-4">
-            {revenueData.slice(-6).map((item, index) => (
+            {revenueData.slice(-6).map((item) => (
               <div key={item.month} className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <span className="text-sm font-medium text-gray-600 w-8">

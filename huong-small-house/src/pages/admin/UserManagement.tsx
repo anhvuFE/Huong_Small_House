@@ -17,6 +17,11 @@ import {
 import { mockUsers } from '../../data/userData';
 import { Select } from '../../components/common/Select';
 
+const getDaysSinceLogin = (lastLogin?: Date) => {
+  if (!lastLogin) return Infinity;
+  return Math.floor((Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24));
+};
+
 export const UserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [verificationFilter, setVerificationFilter] = useState('');
@@ -53,15 +58,9 @@ export const UserManagement: React.FC = () => {
 
       let matchesActivity = true;
       if (activityFilter === 'active') {
-        const daysSinceLogin = Math.floor(
-          (Date.now() - user.lastLogin.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        matchesActivity = daysSinceLogin <= 7;
+        matchesActivity = getDaysSinceLogin(user.lastLogin) <= 7;
       } else if (activityFilter === 'inactive') {
-        const daysSinceLogin = Math.floor(
-          (Date.now() - user.lastLogin.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        matchesActivity = daysSinceLogin > 30;
+        matchesActivity = getDaysSinceLogin(user.lastLogin) > 30;
       }
 
       return matchesSearch && matchesVerification && matchesActivity;
@@ -78,10 +77,8 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const getActivityStatus = (lastLogin: Date) => {
-    const daysSinceLogin = Math.floor(
-      (Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24)
-    );
+  const getActivityStatus = (lastLogin?: Date) => {
+    const daysSinceLogin = getDaysSinceLogin(lastLogin);
 
     if (daysSinceLogin <= 1) {
       return { text: 'Hôm nay', color: 'text-green-600' };
@@ -97,10 +94,7 @@ export const UserManagement: React.FC = () => {
   const getUserStats = () => {
     const totalUsers = mockUsers.length;
     const verifiedUsers = mockUsers.filter(u => u.isEmailVerified && u.isPhoneVerified).length;
-    const activeUsers = mockUsers.filter(u => {
-      const daysSinceLogin = Math.floor((Date.now() - u.lastLogin.getTime()) / (1000 * 60 * 60 * 24));
-      return daysSinceLogin <= 7;
-    }).length;
+    const activeUsers = mockUsers.filter(u => getDaysSinceLogin(u.lastLogin) <= 7).length;
     const newUsers = mockUsers.filter(u => {
       const daysSinceJoin = Math.floor((Date.now() - u.createdAt.getTime()) / (1000 * 60 * 60 * 24));
       return daysSinceJoin <= 30;

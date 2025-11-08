@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import {
   FiPlus,
   FiSearch,
-  FiFilter,
   FiEdit,
   FiTrash2,
   FiEye,
