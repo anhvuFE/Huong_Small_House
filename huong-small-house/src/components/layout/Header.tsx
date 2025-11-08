@@ -58,17 +58,17 @@ export const Header: React.FC = () => {
       <div className="bg-primary text-white py-2" id="top-bar">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap justify-between items-center text-sm">
-            <div className="flex items-center gap-4">
-              <a href="tel:0336064040" className="flex items-center gap-1 hover:text-gray-200">
+            <div className="flex items-center gap-4 text-white">
+              <a href="tel:0336064040" className="flex items-center gap-1 text-white hover:text-white/80">
                 <FiPhone className="w-4 h-4" />
                 <span>0336 064 040</span>
               </a>
-              <a href="mailto:vuquynhhuong171298@gmail.com" className="hidden md:flex items-center gap-1 hover:text-gray-200">
+              <a href="mailto:vuquynhhuong171298@gmail.com" className="hidden md:flex items-center gap-1 text-white hover:text-white/80">
                 <FiMail className="w-4 h-4" />
                 <span>vuquynhhuong171298@gmail.com</span>
               </a>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 text-white">
               <FiMapPin className="w-4 h-4" />
               <span>120 Hoàng Quốc Việt, Hà Nội</span>
             </div>
@@ -88,11 +88,14 @@ export const Header: React.FC = () => {
                 <FiMenu className="w-6 h-6" />
               </button>
 
-              <Link to="/" className="flex items-center">
+              <Link to="/" className="flex items-center" aria-label="Trang chủ Hương Small House">
                 <img
                   src={logo}
                   alt="Hương Small House"
-                  className="h-10 w-auto object-contain"
+                  width={80}
+                  height={32}
+                  loading="eager"
+                  className="h-8 w-20 object-contain"
                 />
               </Link>
 
@@ -142,12 +145,13 @@ export const Header: React.FC = () => {
 
               <Link
                 to={isAuthenticated ? '/account' : '/login'}
+                aria-label={isAuthenticated ? 'Tài khoản của tôi' : 'Đăng nhập'}
                 className="flex items-center gap-1 text-gray-700 hover:text-primary"
               >
                 <FiUser className="w-6 h-6" />
-                {isAuthenticated && user && (
-                  <span className="hidden md:inline text-sm">{user.fullName}</span>
-                )}
+                <span className="hidden md:inline text-sm">
+                  {isAuthenticated && user ? user.fullName : 'Đăng nhập'}
+                </span>
               </Link>
 
               <button

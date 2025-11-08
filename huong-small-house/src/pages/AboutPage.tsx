@@ -12,7 +12,6 @@ import {
   FiStar,
   FiPackage
 } from 'react-icons/fi';
-import { GiMedicines } from 'react-icons/gi';
 
 const milestones = [
   { year: '2015', event: 'Thành lập Hương Small House với 10 sản phẩm đầu tiên' },
@@ -293,7 +292,7 @@ export const AboutPage: React.FC = () => {
             <div className="group">
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 md:p-8 text-center transform transition-all duration-300 hover:scale-105 hover:bg-white/20 border border-white/20">
                 <div className="flex items-center justify-center mb-4">
-                  <GiMedicines className="w-12 h-12 text-white/80" />
+                  <FiPackage className="w-12 h-12 text-white/80" />
                 </div>
                 <div className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight">
                   1,500+

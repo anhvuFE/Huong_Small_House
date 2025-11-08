@@ -14,10 +14,11 @@ import {
   FiSmile,
   FiDroplet,
   FiGrid,
-  FiPackage
+  FiPackage,
+  FiTarget,
+  FiCommand,
+  FiLayers,
 } from 'react-icons/fi';
-import { GiMuscleUp, GiBrain, GiStomach } from 'react-icons/gi';
-import { MdOutlinePregnantWoman } from 'react-icons/md';
 
 interface Category {
   id: number;
@@ -66,7 +67,7 @@ const categories: Category[] = [
     name: 'Sức khỏe xương khớp',
     slug: 'suc-khoe-xuong-khop',
     description: 'Hỗ trợ xương chắc khỏe và khớp linh hoạt',
-    icon: <GiMuscleUp className="w-8 h-8" />,
+    icon: <FiCommand className="w-8 h-8" />,
     productCount: 76,
     color: 'bg-blue-500',
     image: 'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=400&h=300&fit=crop'
@@ -76,7 +77,7 @@ const categories: Category[] = [
     name: 'Sức khỏe não bộ',
     slug: 'suc-khoe-nao-bo',
     description: 'Tăng cường trí nhớ và chức năng não',
-    icon: <GiBrain className="w-8 h-8" />,
+    icon: <FiTarget className="w-8 h-8" />,
     productCount: 92,
     color: 'bg-purple-500',
     image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=300&fit=crop'
@@ -86,7 +87,7 @@ const categories: Category[] = [
     name: 'Tiêu hóa & Gan',
     slug: 'tieu-hoa-gan',
     description: 'Hỗ trợ hệ tiêu hóa và chức năng gan',
-    icon: <GiStomach className="w-8 h-8" />,
+    icon: <FiDroplet className="w-8 h-8" />,
     productCount: 68,
     color: 'bg-yellow-500',
     image: 'https://images.unsplash.com/photo-1550572017-edd951b55104?w=400&h=300&fit=crop'
@@ -126,7 +127,7 @@ const categories: Category[] = [
     name: 'Mẹ và bé',
     slug: 'me-va-be',
     description: 'Dinh dưỡng cho mẹ bầu và trẻ nhỏ',
-    icon: <MdOutlinePregnantWoman className="w-8 h-8" />,
+    icon: <FiLayers className="w-8 h-8" />,
     productCount: 112,
     color: 'bg-rose-500',
     image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=300&fit=crop'
