@@ -8,11 +8,9 @@ import {
   FiPackage,
   FiToggleLeft,
   FiToggleRight,
-  FiImage,
   FiSave,
   FiX,
 } from 'react-icons/fi';
-import { categories } from '../../data/products';
 
 interface Category {
   id: string;

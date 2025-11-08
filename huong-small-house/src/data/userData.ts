@@ -156,7 +156,6 @@ export const mockUsers: User[] = [
     isEmailVerified: false,
     isPhoneVerified: false,
     addresses: [],
-    defaultAddressId: null,
     createdAt: new Date('2024-06-18'),
     updatedAt: new Date('2024-06-18'),
     lastLogin: new Date('2024-10-25'),

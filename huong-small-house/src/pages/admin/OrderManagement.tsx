@@ -17,8 +17,6 @@ export const OrderManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
-
   const statusOptions = [
     { value: '', label: 'Tất cả trạng thái' },
     { value: 'PENDING', label: 'Chờ xác nhận' },

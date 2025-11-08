@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FiFilter, FiX } from 'react-icons/fi';
 import { ProductList } from '../components/products/ProductList';
 import { PriceRangeSlider } from '../components/common/PriceRangeSlider';
 import { Select } from '../components/common/Select';
-import { Pagination, usePagination } from '../components/common/Pagination';
+import { Pagination } from '../components/common/Pagination';
+import { usePagination } from '../hooks/usePagination';
 import { mockProducts, categories, brands } from '../data/products';
 import { cn } from '../utils/cn';
 
@@ -114,7 +115,7 @@ export const ProductsPage: React.FC = () => {
 
   const paginatedData = useMemo(() => {
     return getPaginatedData(filteredProducts);
-  }, [filteredProducts, currentPage, pageSize, getPaginatedData]);
+  }, [filteredProducts, getPaginatedData]);
 
   const renderFilterBody = ({ showHeader = true }: { showHeader?: boolean } = {}) => (
     <>
