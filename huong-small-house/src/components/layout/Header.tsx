@@ -88,11 +88,14 @@ export const Header: React.FC = () => {
                 <FiMenu className="w-6 h-6" />
               </button>
 
-              <Link to="/" className="flex items-center">
+              <Link to="/" className="flex items-center" aria-label="Trang chủ Hương Small House">
                 <img
                   src={logo}
                   alt="Hương Small House"
-                  className="h-10 w-auto object-contain"
+                  width={80}
+                  height={32}
+                  loading="eager"
+                  className="h-8 w-20 object-contain"
                 />
               </Link>
 
@@ -142,12 +145,13 @@ export const Header: React.FC = () => {
 
               <Link
                 to={isAuthenticated ? '/account' : '/login'}
+                aria-label={isAuthenticated ? 'Tài khoản của tôi' : 'Đăng nhập'}
                 className="flex items-center gap-1 text-gray-700 hover:text-primary"
               >
                 <FiUser className="w-6 h-6" />
-                {isAuthenticated && user && (
-                  <span className="hidden md:inline text-sm">{user.fullName}</span>
-                )}
+                <span className="hidden md:inline text-sm">
+                  {isAuthenticated && user ? user.fullName : 'Đăng nhập'}
+                </span>
               </Link>
 
               <button

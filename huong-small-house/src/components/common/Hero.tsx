@@ -1,26 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { FiChevronLeft, FiChevronRight, FiShield, FiTruck, FiAward } from 'react-icons/fi';
-import { FaHandHoldingHeart } from 'react-icons/fa';
+import { FiChevronLeft, FiChevronRight, FiShield, FiTruck, FiAward, FiHeart } from 'react-icons/fi';
 import { cn } from '../../utils/cn';
 
 const slides = [
   {
     id: 1,
-    image: 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=1920&h=600&fit=crop',
+    background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.3), transparent 45%), radial-gradient(circle at 80% 0%, rgba(14,165,233,0.4), transparent 55%), linear-gradient(135deg, #0ea5e9 0%, #2563eb 45%, #7c3aed 100%)',
     title: 'Thực phẩm chức năng chính hãng',
     subtitle: 'Cam kết 100% hàng chính hãng từ Mỹ, Úc, Canada',
     cta: 'Khám phá ngay',
   },
   {
     id: 2,
-    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=1920&h=600&fit=crop',
+    background: 'radial-gradient(circle at 15% 30%, rgba(255,255,255,0.35), transparent 50%), radial-gradient(circle at 85% 20%, rgba(248,113,113,0.35), transparent 50%), linear-gradient(135deg, #f97316 0%, #facc15 45%, #ec4899 100%)',
     title: 'Giảm giá lên đến 30%',
     subtitle: 'Ưu đãi đặc biệt cho khách hàng mới',
     cta: 'Mua sắm ngay',
   },
   {
     id: 3,
-    image: 'https://images.unsplash.com/photo-1550572017-edd951b55104?w=1920&h=600&fit=crop',
+    background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.25), transparent 45%), radial-gradient(circle at 80% 20%, rgba(16,185,129,0.35), transparent 55%), linear-gradient(135deg, #10b981 0%, #34d399 45%, #22d3ee 100%)',
     title: 'Chăm sóc sức khỏe toàn diện',
     subtitle: 'Đa dạng sản phẩm cho mọi nhu cầu',
     cta: 'Xem thêm',
@@ -61,24 +60,28 @@ export const Hero: React.FC = () => {
               index === currentSlide ? 'translate-x-0' : index < currentSlide ? '-translate-x-full' : 'translate-x-full'
             )}
           >
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${slide.image})`,
-              }}
-            >
-              <div className="container mx-auto px-4 h-full flex items-center">
-                <div className="text-white max-w-2xl">
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-                    {slide.title}
-                  </h1>
-                  <p className="text-lg md:text-xl mb-6">
-                    {slide.subtitle}
-                  </p>
-                  <button className="bg-primary hover:bg-secondary text-white px-8 py-3 rounded-lg font-semibold transition-colors">
-                    {slide.cta}
-                  </button>
-                </div>
+            <div className="absolute inset-0" aria-hidden="true">
+              <div
+                className="w-full h-full"
+                style={{
+                  backgroundImage: slide.background,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/10" />
+            </div>
+            <div className="relative z-10 container mx-auto px-4 h-full flex items-center">
+              <div className="text-white max-w-2xl">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                  {slide.title}
+                </h1>
+                <p className="text-lg md:text-xl mb-6">
+                  {slide.subtitle}
+                </p>
+                <button className="bg-primary hover:bg-secondary text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+                  {slide.cta}
+                </button>
               </div>
             </div>
           </div>
@@ -117,6 +120,7 @@ export const Hero: React.FC = () => {
 
       <div className="bg-gray-50 py-6 sm:py-8">
         <div className="container mx-auto px-4">
+          <h2 className="sr-only">Lợi ích khi mua tại Hương Small House</h2>
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 text-center sm:text-left">
               <div className="bg-primary/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -140,7 +144,7 @@ export const Hero: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 text-center sm:text-left">
               <div className="bg-primary/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <FaHandHoldingHeart className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+                <FiHeart className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
               <div className="min-w-0">
                 <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Tư vấn miễn phí</h3>

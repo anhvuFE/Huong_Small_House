@@ -9,8 +9,6 @@ import {
   FiInstagram,
   FiYoutube,
 } from 'react-icons/fi';
-import { FaCcVisa, FaCcMastercard } from 'react-icons/fa';
-import { SiCashapp } from 'react-icons/si';
 
 export const Footer: React.FC = () => {
   return (
@@ -144,13 +142,17 @@ export const Footer: React.FC = () => {
             <p className="text-gray-400 text-sm text-center md:text-left">
               © 2025 Hương Small House. Tất cả quyền được bảo lưu.
             </p>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-gray-400">
-                <span className="text-sm">Thanh toán:</span>
-                <FaCcVisa className="w-10 h-6 text-blue-500" />
-                <FaCcMastercard className="w-10 h-6 text-red-500" />
-                <SiCashapp className="w-8 h-6 text-green-500" />
-              </div>
+            <div className="flex items-center gap-2 text-gray-400 text-sm">
+              <span>Thanh toán:</span>
+              <span className="px-2 py-1 rounded-md bg-white/10 text-xs font-semibold tracking-wider">
+                VISA
+              </span>
+              <span className="px-2 py-1 rounded-md bg-white/10 text-xs font-semibold tracking-wider">
+                MASTERCARD
+              </span>
+              <span className="px-2 py-1 rounded-md bg-white/10 text-xs font-semibold tracking-wider">
+                VNPAY
+              </span>
             </div>
           </div>
         </div>

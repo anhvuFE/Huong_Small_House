@@ -9,8 +9,9 @@ import {
   FiHeart,
   FiSun,
   FiMoon,
+  FiStar,
+  FiTrendingDown,
 } from 'react-icons/fi';
-import { FaBone, FaLeaf, FaWeightScale, FaSpa } from 'react-icons/fa6';
 
 interface CategoriesProps {
   className?: string;
@@ -19,12 +20,12 @@ interface CategoriesProps {
 const iconComponents = {
   vitamin: FiActivity,
   collagen: FiFeather,
-  bone: FaBone,
-  scale: FaWeightScale,
+  bone: FiActivity,
+  scale: FiTrendingDown,
   shield: FiShield,
-  leaf: FaLeaf,
+  leaf: FiFeather,
   heart: FiHeart,
-  beauty: FaSpa,
+  beauty: FiStar,
   energy: FiSun,
   sleep: FiMoon,
 } as const;
