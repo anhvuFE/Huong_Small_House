@@ -15,9 +15,11 @@ export const AccountPage: React.FC = () => {
   const [formSuccess, setFormSuccess] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  const shouldSyncProfile = user?.role !== "ADMIN";
+
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!isAuthenticated) return;
+      if (!isAuthenticated || !shouldSyncProfile) return;
       setIsLoading(true);
       setError('');
 
@@ -36,7 +38,7 @@ export const AccountPage: React.FC = () => {
     };
 
     fetchProfile();
-  }, [isAuthenticated, logout, updateUser]);
+  }, [isAuthenticated, shouldSyncProfile, logout, updateUser]);
 
   const formattedCreatedAt = useMemo(() => {
     if (!user?.createdAt) return 'Không xác định';
