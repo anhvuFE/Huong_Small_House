@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiPhone } from 'react-icons/fi';
-import { SocialBadge } from '../components/common/SocialBadge';
 import { useAuthStore } from '../store/useAuthStore';
 import { authApi } from '../services/authApi';
 import { getErrorMessage } from '../utils/error';
@@ -22,6 +21,14 @@ export const RegisterPage: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -320,35 +327,6 @@ export const RegisterPage: React.FC = () => {
           {formError && (
             <p className="text-sm text-red-600 text-center">{formError}</p>
           )}
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 text-gray-500">Hoặc đăng ký với</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-              >
-                <SocialBadge label="G" background="#fff" color="#4285F4" borderColor="#d1d5db" />
-                <span className="ml-2">Google</span>
-              </button>
-
-              <button
-                type="button"
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-              >
-                <SocialBadge label="f" background="#1877F2" color="#fff" borderColor="#1877F2" />
-                <span className="ml-2">Facebook</span>
-              </button>
-            </div>
-          </div>
         </form>
       </div>
     </div>
