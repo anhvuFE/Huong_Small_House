@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiMail, FiArrowLeft } from 'react-icons/fi';
+import { authApi } from '../services/authApi';
+import { getErrorMessage } from '../utils/error';
 
 export const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [apiMessage, setApiMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -27,12 +30,17 @@ export const ForgotPasswordPage: React.FC = () => {
 
     setIsLoading(true);
     setError('');
+    setApiMessage('');
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const message = await authApi.forgotPassword({ email });
+      setApiMessage(message);
       setIsSuccess(true);
+    } catch (error) {
+      setError(getErrorMessage(error, 'Không thể gửi email khôi phục. Vui lòng thử lại.'));
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   if (isSuccess) {
@@ -75,6 +83,9 @@ export const ForgotPasswordPage: React.FC = () => {
               Vui lòng kiểm tra hộp thư đến và làm theo hướng dẫn để đặt lại mật khẩu.
               Nếu không thấy email, hãy kiểm tra thư mục spam.
             </p>
+            {apiMessage && (
+              <p className="mt-2 text-sm text-green-700">{apiMessage}</p>
+            )}
             <div className="mt-6 space-y-3">
               <Link
                 to="/login"
@@ -86,6 +97,8 @@ export const ForgotPasswordPage: React.FC = () => {
                 onClick={() => {
                   setIsSuccess(false);
                   setEmail('');
+                  setApiMessage('');
+                  setError('');
                 }}
                 className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               >
@@ -144,6 +157,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 onChange={(e) => {
                   setEmail(e.target.value);
                   setError('');
+                  setApiMessage('');
                 }}
                 className={`appearance-none block w-full pl-10 pr-3 py-2 border ${
                   error ? 'border-red-300' : 'border-gray-300'

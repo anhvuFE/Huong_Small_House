@@ -11,6 +11,7 @@ export interface User {
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
   addresses: Address[];
+  address?: string;
   defaultAddressId?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -24,14 +25,15 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData {
+  name: string;
   email: string;
-  phone: string;
+  phone?: string;
   password: string;
-  fullName: string;
+  address?: string;
 }
 
 export interface AuthResponse {
   user: User;
-  token: string;
+  accessToken: string;
   refreshToken: string;
 }

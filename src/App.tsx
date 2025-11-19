@@ -26,6 +26,7 @@ const ForgotPasswordPage = lazyComponent(() => import('./pages/ForgotPasswordPag
 const CategoriesPage = lazyComponent(() => import('./pages/CategoriesPage'), 'CategoriesPage');
 const AboutPage = lazyComponent(() => import('./pages/AboutPage'), 'AboutPage');
 const ContactPage = lazyComponent(() => import('./pages/ContactPage'), 'ContactPage');
+const AccountPage = lazyComponent(() => import('./pages/AccountPage'), 'AccountPage');
 const AdminDashboard = lazyComponent(() => import('./pages/admin/AdminDashboard'), 'AdminDashboard');
 const ProductManagement = lazyComponent(() => import('./pages/admin/ProductManagement'), 'ProductManagement');
 const OrderManagement = lazyComponent(() => import('./pages/admin/OrderManagement'), 'OrderManagement');
@@ -117,6 +118,7 @@ function App() {
                     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/account" element={<AccountPage />} />
                   </Routes>
                 </main>
                 <Footer />

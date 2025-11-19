@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuthStore } from '../store/useAuthStore';
 import { SocialBadge } from '../components/common/SocialBadge';
+import { authApi } from '../services/authApi';
+import { getErrorMessage } from '../utils/error';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ export const LoginPage: React.FC = () => {
     remember: false,
   });
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [formError, setFormError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = () => {
@@ -41,83 +44,23 @@ export const LoginPage: React.FC = () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setFormError('');
 
-    // Simulate API call
-    setTimeout(() => {
-      // Mock login - in real app, would call API
-      if (formData.email === 'admin@example.com' && formData.password === 'password') {
-        login(
-          {
-            id: '1',
-            email: formData.email,
-            fullName: 'Admin Hương Small House',
-            phone: '0336064040',
-            role: 'CUSTOMER',
-            avatar: '/images/avatar-placeholder.png',
-            isEmailVerified: true,
-            isPhoneVerified: true,
-            addresses: [
-              {
-                id: 'default',
-                userId: '1',
-                receiverName: 'Admin Hương Small House',
-                phone: '0336064040',
-                province: 'Hà Nội',
-                district: 'Cầu Giấy',
-                ward: 'Nghĩa Tân',
-                street: '120 Hoàng Quốc Việt',
-                isDefault: true,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              },
-            ],
-            defaultAddressId: 'default',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            lastLogin: new Date(),
-          },
-          'mock-auth-token'
-        );
-        navigate('/admin');
-      } else if (formData.email === 'user@example.com' && formData.password === 'password') {
-        login(
-          {
-            id: '2',
-            email: formData.email,
-            fullName: 'Nguyễn Văn A',
-            phone: '0336064040',
-            role: 'CUSTOMER',
-            avatar: '/images/avatar-placeholder.png',
-            isEmailVerified: true,
-            isPhoneVerified: true,
-            addresses: [
-              {
-                id: 'default',
-                userId: '2',
-                receiverName: 'Nguyễn Văn A',
-                phone: '0336064040',
-                province: 'Hà Nội',
-                district: 'Cầu Giấy',
-                ward: 'Nghĩa Tân',
-                street: '120 Hoàng Quốc Việt',
-                isDefault: true,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              },
-            ],
-            defaultAddressId: 'default',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            lastLogin: new Date(),
-          },
-          'mock-auth-token'
-        );
-        navigate('/');
-      } else {
-        setErrors({ password: 'Email hoặc mật khẩu không đúng' });
-      }
+    try {
+      const result = await authApi.login({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      login(result.user, result.accessToken, result.refreshToken);
+      const destination = result.user.role === 'ADMIN' ? '/admin' : '/';
+      navigate(destination);
+    } catch (error) {
+      const message = getErrorMessage(error, 'Đăng nhập thất bại, vui lòng thử lại.');
+      setFormError(message);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,6 +72,9 @@ export const LoginPage: React.FC = () => {
     // Clear error when user starts typing
     if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+    if (formError) {
+      setFormError('');
     }
   };
 
@@ -260,6 +206,9 @@ export const LoginPage: React.FC = () => {
               {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
           </div>
+          {formError && (
+            <p className="text-sm text-red-600 text-center">{formError}</p>
+          )}
 
           <div className="mt-6">
             <div className="relative">

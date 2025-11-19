@@ -2,9 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiPhone } from 'react-icons/fi';
 import { SocialBadge } from '../components/common/SocialBadge';
+import { useAuthStore } from '../store/useAuthStore';
+import { authApi } from '../services/authApi';
+import { getErrorMessage } from '../utils/error';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -16,6 +20,7 @@ export const RegisterPage: React.FC = () => {
     agree: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = () => {
@@ -65,14 +70,24 @@ export const RegisterPage: React.FC = () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setFormError('');
 
-    // Simulate API call
-    setTimeout(() => {
-      // Mock registration - in real app, would call API
-      alert('Đăng ký thành công! Vui lòng đăng nhập.');
-      navigate('/login');
+    try {
+      const result = await authApi.register({
+        name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+      });
+
+      login(result.user, result.accessToken, result.refreshToken);
+      navigate(result.user.role === 'ADMIN' ? '/admin' : '/');
+    } catch (error) {
+      const message = getErrorMessage(error, 'Đăng ký thất bại, vui lòng thử lại.');
+      setFormError(message);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,6 +99,9 @@ export const RegisterPage: React.FC = () => {
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+    if (formError) {
+      setFormError('');
     }
   };
 
@@ -299,6 +317,9 @@ export const RegisterPage: React.FC = () => {
               {isLoading ? 'Đang đăng ký...' : 'Đăng ký'}
             </button>
           </div>
+          {formError && (
+            <p className="text-sm text-red-600 text-center">{formError}</p>
+          )}
 
           <div className="mt-6">
             <div className="relative">
