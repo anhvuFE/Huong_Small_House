@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FiPlus,
   FiSearch,
@@ -13,13 +13,20 @@ import {
   FiUsers,
   FiTag,
 } from 'react-icons/fi';
-import { mockPromotionCodes } from '../../data/adminData';
 import { Select } from '../../components/common/Select';
+import { promotionApi } from '../../services/promotionApi';
+import { useAuthStore } from '../../store/useAuthStore';
+import { mockPromotionCodes } from '../../data/adminData';
+import type { PromotionCode } from '../../types/admin';
 
 export const PromotionManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [promotions, setPromotions] = useState<PromotionCode[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const userRole = useAuthStore((state) => state.user?.role);
 
   const statusOptions = [
     { value: '', label: 'Tất cả trạng thái' },
@@ -34,8 +41,35 @@ export const PromotionManagement: React.FC = () => {
     { value: 'FIXED_AMOUNT', label: 'Giảm cố định' },
   ];
 
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+        const data = await promotionApi.listPromotions();
+        setPromotions(data);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Không thể tải khuyến mãi. Hiển thị dữ liệu mẫu.';
+        setError(message);
+        setPromotions(mockPromotionCodes);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (userRole !== 'ADMIN') {
+      setError('Bạn không có quyền truy cập trang quản lý khuyến mãi.');
+      setPromotions([]);
+      setIsLoading(false);
+      return;
+    }
+
+    fetchPromotions();
+  }, [userRole]);
+
   const filteredPromotions = useMemo(() => {
-    return mockPromotionCodes.filter((promo) => {
+    return promotions.filter((promo) => {
       const matchesSearch =
         promo.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         promo.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -53,7 +87,7 @@ export const PromotionManagement: React.FC = () => {
 
       return matchesSearch && matchesStatus && matchesType;
     });
-  }, [searchTerm, statusFilter, typeFilter]);
+  }, [promotions, searchTerm, statusFilter, typeFilter]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -62,31 +96,31 @@ export const PromotionManagement: React.FC = () => {
     }).format(amount);
   };
 
-  const getPromotionStatus = (promo: typeof mockPromotionCodes[0]) => {
+  const getPromotionStatus = (promo: PromotionCode) => {
     const now = new Date();
     if (!promo.isActive) {
       return { text: 'Tạm dừng', color: 'bg-gray-100 text-gray-800' };
     } else if (now > promo.endDate) {
       return { text: 'Đã hết hạn', color: 'bg-red-100 text-red-800' };
-    } else if (now < promo.startDate) {
+    } else if (promo.startDate && now < promo.startDate) {
       return { text: 'Chưa bắt đầu', color: 'bg-yellow-100 text-yellow-800' };
     } else {
       return { text: 'Đang hoạt động', color: 'bg-green-100 text-green-800' };
     }
   };
 
-  const getUsagePercentage = (promo: typeof mockPromotionCodes[0]) => {
+  const getUsagePercentage = (promo: PromotionCode) => {
     if (!promo.usageLimit) return null;
     return Math.round((promo.usedCount / promo.usageLimit) * 100);
   };
 
   const getPromotionStats = () => {
-    const total = mockPromotionCodes.length;
-    const active = mockPromotionCodes.filter(p =>
-      p.isActive && new Date() >= p.startDate && new Date() <= p.endDate
+    const total = promotions.length;
+    const active = promotions.filter(p =>
+      p.isActive && (!p.startDate || new Date() >= p.startDate) && new Date() <= p.endDate
     ).length;
-    const expired = mockPromotionCodes.filter(p => new Date() > p.endDate).length;
-    const totalUsage = mockPromotionCodes.reduce((sum, p) => sum + p.usedCount, 0);
+    const expired = promotions.filter(p => new Date() > p.endDate).length;
+    const totalUsage = promotions.reduce((sum, p) => sum + (p.usedCount || 0), 0);
 
     return { total, active, expired, totalUsage };
   };
@@ -109,6 +143,12 @@ export const PromotionManagement: React.FC = () => {
           <span className="sm:hidden">Tạo mã</span>
         </button>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -202,6 +242,9 @@ export const PromotionManagement: React.FC = () => {
 
       {/* Promotions Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        {isLoading && (
+          <div className="p-4 text-gray-600 text-sm border-b border-gray-200">Đang tải danh sách khuyến mãi...</div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px]">
             <thead className="bg-gray-50 border-b border-gray-200">
