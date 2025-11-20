@@ -65,6 +65,13 @@ export interface Category {
   categoryId: number;
   name: string;
   slug: string;
+  nameEn?: string;
+  description?: string;
+  icon?: string;
+  image?: string;
+  isActive?: boolean;
+  productCount?: number;
+  order?: number;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -1,5 +1,6 @@
 import apiClient from '../lib/http';
 import type { Category, Product } from '../types';
+import { useAuthStore } from '../store/useAuthStore';
 import { slugify } from '../utils/slugify';
 
 interface ApiResponse<T> {
@@ -33,6 +34,13 @@ export interface BackendCategory {
   categoryId: number;
   name: string;
   slug: string;
+  nameEn?: string;
+  description?: string;
+  icon?: string;
+  image?: string;
+  isActive?: boolean;
+  productCount?: number;
+  order?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -53,13 +61,22 @@ export interface CategoryPayload {
 }
 
 const toCategory = (payload: BackendCategory): Category => {
+  const name = payload.name || 'Danh mục';
+  const slug = payload.slug || slugify(name, payload.categoryId);
   const createdAt = payload.createdAt ? new Date(payload.createdAt) : new Date();
   const updatedAt = payload.updatedAt ? new Date(payload.updatedAt) : createdAt;
   return {
     id: payload._id ?? payload.categoryId.toString(),
     categoryId: payload.categoryId,
-    name: payload.name,
-    slug: payload.slug,
+    name,
+    slug,
+    nameEn: payload.nameEn,
+    description: payload.description,
+    icon: payload.icon,
+    image: payload.image,
+    isActive: payload.isActive ?? true,
+    productCount: payload.productCount,
+    order: payload.order,
     createdAt,
     updatedAt,
   };
@@ -71,7 +88,7 @@ const toProduct = (payload: BackendProduct, categories?: Map<number, BackendCate
   const categoryMeta = categories?.get(payload.categoryId);
   const categoryName = categoryMeta?.name ?? 'Sản phẩm';
   const categorySlug = categoryMeta?.slug ?? 'products';
-    const images = payload.images?.map((image) => image.url) ?? [];
+  const images = payload.images?.map((image) => image.url) ?? [];
   const thumbnail = images[0] ?? 'https://placehold.co/600x400?text=Small+House';
 
   return {
@@ -154,13 +171,18 @@ export const productApi = {
     await apiClient.delete(`/products/${productId}`);
   },
 
-  async listCategories(): Promise<Category[]> {
-    const response = await apiClient.get<ApiResponse<BackendCategory[]>>('/products/categories/all');
+  async listCategories(role: 'customer' | 'admin' = 'customer'): Promise<Category[]> {
+    const endpoint = role === 'admin' ? '/products/categories/all' : '/products/categories';
+    const response = await apiClient.get<ApiResponse<BackendCategory[]>>(endpoint);
     return response.data.data.map(toCategory);
   },
 
   async createCategory(payload: CategoryPayload): Promise<Category> {
-    const response = await apiClient.post<ApiResponse<BackendCategory>>('/products/categories', payload);
+    const { user } = useAuthStore.getState();
+    if (user?.role !== 'ADMIN') {
+      throw new Error('Chỉ admin mới có thể tạo danh mục');
+    }
+    const response = await apiClient.post<ApiResponse<BackendCategory>>('/admin/products/categories', payload);
     return toCategory(response.data.data);
   },
 };
