@@ -41,7 +41,7 @@ export const ProductDetailPage: React.FC = () => {
           .filter((item) => item.categoryId === detail.categoryId && item.id !== detail.id)
           .slice(0, 4);
         setRelatedProducts(related);
-      } catch (err) {
+      } catch {
         setError('Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.');
       } finally {
         setIsLoading(false);

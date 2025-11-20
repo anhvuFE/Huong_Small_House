@@ -53,7 +53,7 @@ export const HomePage: React.FC = () => {
         setError('');
         const data = await productApi.listProducts();
         setProducts(data);
-      } catch (err) {
+      } catch {
         setError('Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.');
       } finally {
         setIsLoading(false);

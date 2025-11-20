@@ -71,7 +71,7 @@ export const ProductManagement: React.FC = () => {
         setProducts(productData);
         const brandSet = new Set(productData.map((product) => product.brand));
         setBrands([...brandSet]);
-      } catch (err) {
+      } catch {
         setError('Không thể tải dữ liệu sản phẩm. Vui lòng thử lại sau.');
       } finally {
         setIsLoading(false);
@@ -147,7 +147,7 @@ export const ProductManagement: React.FC = () => {
       setIsFormOpen(false);
       setEditingProduct(null);
       setFormState(defaultFormState);
-    } catch (err) {
+    } catch {
       setError('Không thể lưu sản phẩm. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
@@ -161,7 +161,7 @@ export const ProductManagement: React.FC = () => {
     try {
       await productApi.deleteProduct(product.productId);
       setProducts((prev) => prev.filter((item) => item.productId !== product.productId));
-    } catch (err) {
+    } catch {
       setError('Không thể xóa sản phẩm. Vui lòng thử lại.');
     }
   };
@@ -174,7 +174,7 @@ export const ProductManagement: React.FC = () => {
       setCategories((prev) => [...prev, category]);
       setCategoryStatus('Tạo danh mục thành công');
       setCategoryName('');
-    } catch (err) {
+    } catch {
       setCategoryStatus('Không thể tạo danh mục. Vui lòng thử lại.');
     }
   };

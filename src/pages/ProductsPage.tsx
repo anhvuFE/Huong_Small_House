@@ -68,7 +68,7 @@ export const ProductsPage: React.FC = () => {
             filters.maxPrice ? Number(filters.maxPrice) : maxPrice,
           ]);
         }
-      } catch (err) {
+      } catch {
         setError('Không thể tải dữ liệu sản phẩm. Vui lòng thử lại sau.');
       } finally {
         setIsLoading(false);
@@ -76,7 +76,7 @@ export const ProductsPage: React.FC = () => {
     };
 
     fetchInitialData();
-  }, []);
+  }, [filters.maxPrice, filters.minPrice]);
 
   useEffect(() => {
     const calculateHeaderHeight = () => {
