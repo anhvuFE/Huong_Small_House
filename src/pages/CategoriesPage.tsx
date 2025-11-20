@@ -22,7 +22,7 @@ import {
 import { productApi } from '../services/productApi';
 import type { Category } from '../types';
 
-const ICON_MAP: Record<string, JSX.Element> = {
+const ICON_MAP: Record<string, React.JSX.Element> = {
   heart: <FiHeart className="w-8 h-8" />,
   activity: <FiActivity className="w-8 h-8" />,
   battery: <FiBattery className="w-8 h-8" />,
