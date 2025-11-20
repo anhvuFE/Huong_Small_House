@@ -1,17 +1,17 @@
-import type { ProductCategory, ProductUnit } from './enums';
+import type { ProductUnit } from './enums';
 
 export interface Product {
   id: string;
   name: string;
   nameEn?: string;
   slug: string;
-  category: ProductCategory;
+  category: string;
   subcategory?: string;
   brand: string;
   price: number;
   originalPrice?: number;
   discount?: number;
-  unit: ProductUnit;
+  unit?: ProductUnit;
   quantity: number;
   stock: number;
   images: string[];
@@ -26,6 +26,8 @@ export interface Product {
   rating: number;
   reviewCount: number;
   soldCount: number;
+  productId?: number;
+  categoryId?: number;
   isNew?: boolean;
   isBestSeller?: boolean;
   isFeatured?: boolean;
@@ -48,7 +50,7 @@ export interface ProductReview {
 }
 
 export interface ProductFilter {
-  category?: ProductCategory;
+  category?: string;
   brand?: string;
   minPrice?: number;
   maxPrice?: number;
@@ -56,4 +58,13 @@ export interface ProductFilter {
   inStock?: boolean;
   search?: string;
   sortBy?: 'price-asc' | 'price-desc' | 'rating' | 'newest' | 'best-selling';
+}
+
+export interface Category {
+  id: string;
+  categoryId: number;
+  name: string;
+  slug: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

@@ -1,25 +1,82 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { FiChevronLeft, FiShoppingCart, FiPlus, FiMinus, FiStar, FiCheck } from 'react-icons/fi';
-import { mockProducts } from '../data/products';
 import { ProductList } from '../components/products/ProductList';
 import { useCartStore } from '../store/useCartStore';
 import { formatCurrency, calculateDiscount } from '../utils/format';
 import { cn } from '../utils/cn';
+import { productApi } from '../services/productApi';
+import type { Product } from '../types';
+import { extractIdFromSlug } from '../utils/slugify';
 
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const { addItem } = useCartStore();
 
-  const product = mockProducts.find(p => p.slug === slug);
+  useEffect(() => {
+    const productId = extractIdFromSlug(slug);
+    if (!productId) {
+      setError('Sản phẩm không tồn tại.');
+      setIsLoading(false);
+      return;
+    }
 
-  if (!product) {
+    const fetchProduct = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+        const categories = await productApi.listCategories();
+        const [detail, list] = await Promise.all([
+          productApi.getProduct(productId, categories),
+          productApi.listProducts(categories),
+        ]);
+        setProduct(detail);
+        const related = list
+          .filter((item) => item.categoryId === detail.categoryId && item.id !== detail.id)
+          .slice(0, 4);
+        setRelatedProducts(related);
+      } catch (err) {
+        setError('Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [slug]);
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    addItem(product, quantity);
+  };
+
+  const handleQuantityChange = (delta: number) => {
+    if (!product) return;
+    const newQuantity = quantity + delta;
+    if (newQuantity >= 1 && newQuantity <= product.stock) {
+      setQuantity(newQuantity);
+    }
+  };
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-500">Đang tải thông tin sản phẩm...</div>
+      </div>
+    );
+  }
+
+  if (!product || error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Sản phẩm không tồn tại</h1>
+          <h1 className="text-2xl font-bold mb-4 text-red-600">{error || 'Sản phẩm không tồn tại'}</h1>
           <Link to="/products" className="text-primary hover:underline">
             Quay lại danh sách sản phẩm
           </Link>
@@ -28,24 +85,9 @@ export const ProductDetailPage: React.FC = () => {
     );
   }
 
-  const relatedProducts = mockProducts
-    .filter(p => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
-
   const discountPercent = product.originalPrice
     ? calculateDiscount(product.price, product.originalPrice)
     : 0;
-
-  const handleAddToCart = () => {
-    addItem(product, quantity);
-  };
-
-  const handleQuantityChange = (delta: number) => {
-    const newQuantity = quantity + delta;
-    if (newQuantity >= 1 && newQuantity <= product.stock) {
-      setQuantity(newQuantity);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -88,9 +130,7 @@ export const ProductDetailPage: React.FC = () => {
 
             <div>
               <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
-              {product.nameEn && (
-                <p className="text-gray-600 mb-4">{product.nameEn}</p>
-              )}
+              {product.nameEn && <p className="text-gray-600 mb-4">{product.nameEn}</p>}
 
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center">
@@ -109,9 +149,7 @@ export const ProductDetailPage: React.FC = () => {
                 <span className="text-gray-600">
                   {product.rating} ({product.reviewCount} đánh giá)
                 </span>
-                <span className="text-gray-600">
-                  Đã bán: {product.soldCount}
-                </span>
+                <span className="text-gray-600">Đã bán: {product.soldCount}</span>
               </div>
 
               <div className="mb-6">
@@ -142,21 +180,20 @@ export const ProductDetailPage: React.FC = () => {
                   <span className="ml-2 font-semibold">{product.brand}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Xuất xứ:</span>
-                  <span className="ml-2 font-semibold">{product.origin}</span>
+                  <span className="text-gray-600">Danh mục:</span>
+                  <span className="ml-2 font-semibold">{product.category}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Tồn kho:</span>
+                  <span className="ml-2 font-semibold">{product.stock}</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Đơn vị:</span>
-                  <span className="ml-2 font-semibold">{product.quantity} viên/{product.unit}</span>
+                  <span className="ml-2 font-semibold">{product.quantity} {product.unit || 'sản phẩm'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Tình trạng:</span>
-                  <span className={cn(
-                    'ml-2 font-semibold',
-                    product.stock > 0 ? 'text-green-600' : 'text-red-600'
-                  )}>
-                    {product.stock > 0 ? `Còn hàng (${product.stock})` : 'Hết hàng'}
-                  </span>
+                  <span className="text-gray-600">Mã sản phẩm:</span>
+                  <span className="ml-2 font-semibold">#{product.productId}</span>
                 </div>
               </div>
 
@@ -201,52 +238,37 @@ export const ProductDetailPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {product.benefits && product.benefits.length > 0 && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold mb-4">Công dụng</h2>
-              <ul className="space-y-2">
-                {product.benefits.map((benefit, index) => (
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h2 className="text-2xl font-bold mb-4">Thông tin chi tiết</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Thành phần</h3>
+              <ul className="space-y-2 text-gray-700">
+                {(product.ingredients || ['Đang cập nhật']).map((item, index) => (
                   <li key={index} className="flex items-start gap-2">
-                    <FiCheck className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">{benefit}</span>
+                    <FiCheck className="w-5 h-5 text-primary mt-1" />
+                    <span>{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
-          )}
-
-          {product.ingredients && product.ingredients.length > 0 && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold mb-4">Thành phần</h2>
-              <ul className="space-y-2">
-                {product.ingredients.map((ingredient, index) => (
-                  <li key={index} className="text-gray-700">• {ingredient}</li>
-                ))}
-              </ul>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Hướng dẫn sử dụng</h3>
+              <p className="text-gray-700">
+                {product.usage || 'Sử dụng 1-2 viên mỗi ngày sau bữa ăn. Tham khảo ý kiến bác sĩ nếu bạn đang mang thai, cho con bú hoặc điều trị bệnh.'}
+              </p>
             </div>
-          )}
-
-          {product.usage && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold mb-4">Hướng dẫn sử dụng</h2>
-              <p className="text-gray-700">{product.usage}</p>
-              {product.warnings && (
-                <>
-                  <h3 className="font-semibold mt-4 mb-2">Lưu ý:</h3>
-                  <p className="text-gray-600">{product.warnings}</p>
-                </>
-              )}
-            </div>
-          )}
+          </div>
         </div>
 
-        {relatedProducts.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-bold mb-6">Sản phẩm liên quan</h2>
+        <div>
+          <h2 className="text-2xl font-bold mb-6">Sản phẩm liên quan</h2>
+          {relatedProducts.length > 0 ? (
             <ProductList products={relatedProducts} />
-          </div>
-        )}
+          ) : (
+            <p className="text-gray-500">Không có sản phẩm liên quan.</p>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,35 +1,90 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FiArrowRight } from 'react-icons/fi';
 import { Hero } from '../components/common/Hero';
 import { Categories } from '../components/common/Categories';
 import { ProductList } from '../components/products/ProductList';
-import { mockProducts } from '../data/products';
-import { FiArrowRight } from 'react-icons/fi';
+import { productApi } from '../services/productApi';
+import type { Product } from '../types';
+
+const SectionWrapper: React.FC<{
+  title: string;
+  link: string;
+  cta?: string;
+  isLoading: boolean;
+  error: string;
+  products: Product[];
+}> = ({ title, link, cta = 'Xem tất cả', isLoading, error, products }) => (
+  <section className="py-12 bg-gray-50">
+    <div className="container mx-auto px-4">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-2xl md:text-3xl font-bold">{title}</h2>
+        <Link
+          to={link}
+          className="flex items-center gap-2 text-primary hover:text-secondary font-medium transition-colors"
+        >
+          {cta} <FiArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+
+      {error && <p className="text-red-600 text-center py-6">{error}</p>}
+      {isLoading ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-64 bg-gray-100 animate-pulse rounded-lg" />
+          ))}
+        </div>
+      ) : (
+        <ProductList products={products} />
+      )}
+    </div>
+  </section>
+);
 
 export const HomePage: React.FC = () => {
-  const featuredProducts = mockProducts.filter(p => p.isFeatured).slice(0, 4);
-  const bestSellers = mockProducts.filter(p => p.isBestSeller).slice(0, 4);
-  const newProducts = mockProducts.filter(p => p.isNew).slice(0, 4);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+        const data = await productApi.listProducts();
+        setProducts(data);
+      } catch (err) {
+        setError('Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  const featuredProducts = useMemo(() => products.slice(0, 4), [products]);
+  const bestSellers = useMemo(
+    () => [...products].sort((a, b) => b.soldCount - a.soldCount).slice(0, 4),
+    [products]
+  );
+  const newProducts = useMemo(
+    () => [...products].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 4),
+    [products]
+  );
 
   return (
     <>
       <Hero />
       <Categories />
 
-      <section className="py-12 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold">Sản phẩm nổi bật</h2>
-            <Link
-              to="/products?featured=true"
-              className="flex items-center gap-2 text-primary hover:text-secondary font-medium transition-colors"
-            >
-              Xem tất cả <FiArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <ProductList products={featuredProducts} />
-        </div>
-      </section>
+      <SectionWrapper
+        title="Sản phẩm nổi bật"
+        link="/products?featured=true"
+        isLoading={isLoading}
+        error={error}
+        products={featuredProducts}
+      />
 
       <section className="py-12">
         <div className="container mx-auto px-4">
@@ -42,24 +97,26 @@ export const HomePage: React.FC = () => {
               Xem tất cả <FiArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          <ProductList products={bestSellers} />
+          {error && <p className="text-red-600 text-center py-6">{error}</p>}
+          {isLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="h-64 bg-gray-100 animate-pulse rounded-lg" />
+              ))}
+            </div>
+          ) : (
+            <ProductList products={bestSellers} />
+          )}
         </div>
       </section>
 
-      <section className="py-12 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold">Sản phẩm mới</h2>
-            <Link
-              to="/products?new=true"
-              className="flex items-center gap-2 text-primary hover:text-secondary font-medium transition-colors"
-            >
-              Xem tất cả <FiArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <ProductList products={newProducts} />
-        </div>
-      </section>
+      <SectionWrapper
+        title="Sản phẩm mới"
+        link="/products?new=true"
+        isLoading={isLoading}
+        error={error}
+        products={newProducts}
+      />
 
       <section className="py-12 bg-primary">
         <div className="container mx-auto px-4">

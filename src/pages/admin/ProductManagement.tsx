@@ -1,23 +1,55 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FiPlus,
   FiSearch,
   FiEdit,
   FiTrash2,
   FiEye,
-  FiToggleLeft,
-  FiToggleRight,
   FiPackage,
 } from 'react-icons/fi';
-import { mockProducts, categories, brands } from '../../data/products';
 import { Select } from '../../components/common/Select';
 import { Pagination } from '../../components/common/Pagination';
 import { usePagination } from '../../hooks/usePagination';
+import { productApi } from '../../services/productApi';
+import type { Category, Product } from '../../types';
+import { formatCurrency } from '../../utils/format';
+
+interface ProductFormState {
+  name: string;
+  brand: string;
+  categoryId: string;
+  description: string;
+  price: string;
+  stock: string;
+  images: string;
+}
+
+const defaultFormState: ProductFormState = {
+  name: '',
+  brand: '',
+  categoryId: '',
+  description: '',
+  price: '',
+  stock: '',
+  images: '',
+};
 
 export const ProductManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formState, setFormState] = useState<ProductFormState>(defaultFormState);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryStatus, setCategoryStatus] = useState('');
+
   const {
     currentPage,
     pageSize,
@@ -26,27 +58,125 @@ export const ProductManagement: React.FC = () => {
     getPaginatedData,
   } = usePagination(1, 10);
 
-  const filteredProducts = useMemo(() => {
-    return mockProducts.filter((product) => {
-      const matchesSearch = product.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      const matchesCategory = !selectedCategory || product.category === selectedCategory;
-      const matchesBrand = !selectedBrand || product.brand === selectedBrand;
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+        const [categoryData, productData] = await Promise.all([
+          productApi.listCategories(),
+          productApi.listProducts(),
+        ]);
+        setCategories(categoryData);
+        setProducts(productData);
+        const brandSet = new Set(productData.map((product) => product.brand));
+        setBrands([...brandSet]);
+      } catch (err) {
+        setError('Không thể tải dữ liệu sản phẩm. Vui lòng thử lại sau.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
+    fetchData();
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = !selectedCategory || product.categoryId?.toString() === selectedCategory;
+      const matchesBrand = !selectedBrand || product.brand === selectedBrand;
       return matchesSearch && matchesCategory && matchesBrand;
     });
-  }, [searchTerm, selectedCategory, selectedBrand]);
+  }, [products, searchTerm, selectedCategory, selectedBrand]);
 
-  const paginatedData = useMemo(() => {
-    return getPaginatedData(filteredProducts);
-  }, [filteredProducts, getPaginatedData]);
+  const paginatedData = useMemo(() => getPaginatedData(filteredProducts), [filteredProducts, getPaginatedData]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
+  const openCreateModal = () => {
+    setFormState(defaultFormState);
+    setEditingProduct(null);
+    setIsFormOpen(true);
+  };
+
+  const openEditModal = (product: Product) => {
+    setEditingProduct(product);
+    setFormState({
+      name: product.name,
+      brand: product.brand,
+      categoryId: product.categoryId?.toString() ?? '',
+      description: product.description,
+      price: product.price.toString(),
+      stock: product.stock.toString(),
+      images: product.images.join('\n'),
+    });
+    setIsFormOpen(true);
+  };
+
+  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!formState.categoryId) return;
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        name: formState.name,
+        brand: formState.brand,
+        categoryId: Number(formState.categoryId),
+        description: formState.description,
+        price: Number(formState.price),
+        stock: Number(formState.stock),
+        images: formState.images
+          .split('\n')
+          .map((url) => url.trim())
+          .filter(Boolean)
+          .map((url) => ({ url })),
+      };
+
+      if (editingProduct?.productId) {
+        await productApi.updateProduct(editingProduct.productId, payload);
+      } else {
+        await productApi.createProduct(payload);
+      }
+
+      const [categoryData, productData] = await Promise.all([
+        productApi.listCategories(),
+        productApi.listProducts(),
+      ]);
+      setCategories(categoryData);
+      setProducts(productData);
+      setBrands([...new Set(productData.map((product) => product.brand))]);
+      setIsFormOpen(false);
+      setEditingProduct(null);
+      setFormState(defaultFormState);
+    } catch (err) {
+      setError('Không thể lưu sản phẩm. Vui lòng thử lại.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteProduct = async (product: Product) => {
+    if (!product.productId) return;
+    const confirmed = window.confirm(`Bạn có chắc muốn xóa sản phẩm '${product.name}'?`);
+    if (!confirmed) return;
+    try {
+      await productApi.deleteProduct(product.productId);
+      setProducts((prev) => prev.filter((item) => item.productId !== product.productId));
+    } catch (err) {
+      setError('Không thể xóa sản phẩm. Vui lòng thử lại.');
+    }
+  };
+
+  const handleCreateCategory = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!categoryName.trim()) return;
+    try {
+      const category = await productApi.createCategory({ name: categoryName });
+      setCategories((prev) => [...prev, category]);
+      setCategoryStatus('Tạo danh mục thành công');
+      setCategoryName('');
+    } catch (err) {
+      setCategoryStatus('Không thể tạo danh mục. Vui lòng thử lại.');
+    }
   };
 
   const getStockStatus = (stock: number) => {
@@ -55,32 +185,37 @@ export const ProductManagement: React.FC = () => {
     return { text: 'Còn hàng', color: 'bg-green-100 text-green-800' };
   };
 
-  const getCategoryName = (categoryId: string) => {
-    const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.name : categoryId;
-  };
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+        Đang tải dữ liệu sản phẩm...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Quản lý sản phẩm</h1>
-          <p className="text-sm lg:text-base text-gray-600">
-            Quản lý thông tin và trạng thái các sản phẩm
-          </p>
+          <p className="text-sm lg:text-base text-gray-600">Quản lý thông tin và trạng thái các sản phẩm</p>
         </div>
-        <button className="inline-flex items-center px-3 lg:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm lg:text-base">
+        <button
+          onClick={openCreateModal}
+          className="inline-flex items-center px-3 lg:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm lg:text-base"
+        >
           <FiPlus className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
           <span className="hidden sm:inline">Thêm sản phẩm</span>
           <span className="sm:hidden">Thêm</span>
         </button>
       </div>
 
-      {/* Filters */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">{error}</div>
+      )}
+
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
         <div className="flex flex-col lg:flex-row gap-4">
-          {/* Search */}
           <div className="flex-1">
             <div className="relative">
               <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 lg:w-5 lg:h-5" />
@@ -94,27 +229,25 @@ export const ProductManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* Category Filter */}
           <div className="w-full lg:w-48">
             <Select
               value={selectedCategory}
               onChange={setSelectedCategory}
               options={[
                 { value: '', label: 'Tất cả danh mục' },
-                ...categories.map(cat => ({ value: cat.id, label: cat.name }))
+                ...categories.map((cat) => ({ value: cat.categoryId.toString(), label: cat.name })),
               ]}
               placeholder="Chọn danh mục"
             />
           </div>
 
-          {/* Brand Filter */}
           <div className="w-full lg:w-48">
             <Select
               value={selectedBrand}
               onChange={setSelectedBrand}
               options={[
                 { value: '', label: 'Tất cả thương hiệu' },
-                ...brands.map(brand => ({ value: brand, label: brand }))
+                ...brands.map((brand) => ({ value: brand, label: brand })),
               ]}
               placeholder="Chọn thương hiệu"
             />
@@ -122,121 +255,62 @@ export const ProductManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Products Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px]">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="text-left py-3 px-2 lg:px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sản phẩm
-                </th>
-                <th className="text-left py-3 px-2 lg:px-4 text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                  Danh mục
-                </th>
-                <th className="text-left py-3 px-2 lg:px-4 text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-                  Thương hiệu
-                </th>
-                <th className="text-left py-3 px-2 lg:px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Giá
-                </th>
-                <th className="text-left py-3 px-2 lg:px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tồn kho
-                </th>
-                <th className="text-left py-3 px-2 lg:px-4 text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                  Đã bán
-                </th>
-                <th className="text-left py-3 px-2 lg:px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trạng thái
-                </th>
-                <th className="text-left py-3 px-2 lg:px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thao tác
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sản phẩm</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Danh mục</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giá</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tồn kho</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {paginatedData.items.map((product) => {
                 const stockStatus = getStockStatus(product.stock);
                 return (
-                  <tr key={product.id} className="hover:bg-gray-50">
-                    <td className="py-3 lg:py-4 px-2 lg:px-4">
-                      <div className="flex items-center space-x-2 lg:space-x-3">
-                        <img
-                          src={product.thumbnail}
-                          alt={product.name}
-                          className="w-10 h-10 lg:w-12 lg:h-12 object-cover rounded-lg flex-shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <p className="text-xs lg:text-sm font-medium text-gray-900 line-clamp-2">
-                            {product.name}
-                          </p>
-                          <p className="text-xs text-gray-500 lg:block hidden">
-                            ID: {product.id}
-                          </p>
-                          {/* Mobile: Show category and brand */}
-                          <div className="md:hidden text-xs text-gray-500 space-y-1">
-                            <div>{getCategoryName(product.category)}</div>
-                            <div className="lg:hidden">{product.brand}</div>
-                          </div>
+                  <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <img src={product.thumbnail} alt={product.name} className="w-16 h-16 rounded-lg object-cover mr-4" />
+                        <div>
+                          <p className="font-medium text-gray-900">{product.name}</p>
+                          <p className="text-sm text-gray-500">{product.brand}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 lg:py-4 px-2 lg:px-4 hidden md:table-cell">
-                      <span className="text-xs lg:text-sm text-gray-900">
-                        {getCategoryName(product.category)}
+                    <td className="px-6 py-4">
+                      <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        {product.category}
                       </span>
                     </td>
-                    <td className="py-3 lg:py-4 px-2 lg:px-4 hidden lg:table-cell">
-                      <span className="text-xs lg:text-sm text-gray-900">
-                        {product.brand}
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-semibold text-gray-900">{formatCurrency(product.price)}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${stockStatus.color}`}>
+                        {stockStatus.text}
                       </span>
+                      <div className="text-xs text-gray-500 mt-1">Còn {product.stock} sản phẩm</div>
                     </td>
-                    <td className="py-3 lg:py-4 px-2 lg:px-4">
-                      <div>
-                        <p className="text-xs lg:text-sm font-medium text-gray-900">
-                          {formatCurrency(product.price)}
-                        </p>
-                        {product.originalPrice && product.originalPrice > product.price && (
-                          <p className="text-xs text-gray-500 line-through">
-                            {formatCurrency(product.originalPrice)}
-                          </p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 lg:py-4 px-2 lg:px-4">
-                      <div>
-                        <p className="text-xs lg:text-sm font-medium text-gray-900">
-                          {product.stock}
-                        </p>
-                        <span className={`inline-flex items-center px-1.5 lg:px-2 py-0.5 rounded-full text-xs font-medium ${stockStatus.color}`}>
-                          {stockStatus.text}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 lg:py-4 px-2 lg:px-4 hidden sm:table-cell">
-                      <span className="text-xs lg:text-sm text-gray-900">
-                        {product.soldCount}
-                      </span>
-                    </td>
-                    <td className="py-3 lg:py-4 px-2 lg:px-4">
-                      <button className="inline-flex items-center">
-                        {product.stock > 0 ? (
-                          <FiToggleRight className="w-6 h-6 lg:w-8 lg:h-8 text-green-500" />
-                        ) : (
-                          <FiToggleLeft className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400" />
-                        )}
-                      </button>
-                    </td>
-                    <td className="py-3 lg:py-4 px-2 lg:px-4">
-                      <div className="flex items-center space-x-1 lg:space-x-2">
-                        <button className="p-1 lg:p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
-                          <FiEye className="w-3 h-3 lg:w-4 lg:h-4" />
+                    <td className="px-6 py-4">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => openEditModal(product)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                        >
+                          <FiEdit className="w-4 h-4" />
                         </button>
-                        <button className="p-1 lg:p-1.5 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors">
-                          <FiEdit className="w-3 h-3 lg:w-4 lg:h-4" />
+                        <button className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg">
+                          <FiEye className="w-4 h-4" />
                         </button>
-                        <button className="p-1 lg:p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
-                          <FiTrash2 className="w-3 h-3 lg:w-4 lg:h-4" />
+                        <button
+                          onClick={() => handleDeleteProduct(product)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                        >
+                          <FiTrash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -247,21 +321,15 @@ export const ProductManagement: React.FC = () => {
           </table>
         </div>
 
-        {/* Empty State */}
         {paginatedData.totalItems === 0 && (
           <div className="text-center py-12">
             <FiPackage className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Không tìm thấy sản phẩm nào
-            </h3>
-            <p className="text-gray-500">
-              Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm
-            </p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy sản phẩm nào</h3>
+            <p className="text-gray-500">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
           </div>
         )}
       </div>
 
-      {/* Pagination */}
       <Pagination
         currentPage={currentPage}
         totalPages={paginatedData.totalPages}
@@ -271,6 +339,138 @@ export const ProductManagement: React.FC = () => {
         showPageSizeSelect={true}
         onPageSizeChange={handlePageSizeChange}
       />
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold mb-4">Thêm danh mục</h3>
+        <form onSubmit={handleCreateCategory} className="flex flex-col sm:flex-row gap-4">
+          <input
+            type="text"
+            value={categoryName}
+            onChange={(e) => setCategoryName(e.target.value)}
+            placeholder="Tên danh mục"
+            className="flex-1 border border-gray-300 rounded-lg px-4 py-2"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-primary"
+          >
+            Tạo danh mục
+          </button>
+        </form>
+        {categoryStatus && <p className="text-sm text-gray-600 mt-2">{categoryStatus}</p>}
+      </div>
+
+      {isFormOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6">
+            <h2 className="text-xl font-bold mb-4">
+              {editingProduct ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
+            </h2>
+            <form onSubmit={handleFormSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tên sản phẩm</label>
+                  <input
+                    type="text"
+                    value={formState.name}
+                    onChange={(e) => setFormState((prev) => ({ ...prev, name: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Thương hiệu</label>
+                  <input
+                    type="text"
+                    value={formState.brand}
+                    onChange={(e) => setFormState((prev) => ({ ...prev, brand: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Danh mục</label>
+                  <select
+                    value={formState.categoryId}
+                    onChange={(e) => setFormState((prev) => ({ ...prev, categoryId: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                    required
+                  >
+                    <option value="">Chọn danh mục</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.categoryId}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Giá</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={formState.price}
+                    onChange={(e) => setFormState((prev) => ({ ...prev, price: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tồn kho</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={formState.stock}
+                    onChange={(e) => setFormState((prev) => ({ ...prev, stock: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+                <textarea
+                  rows={3}
+                  value={formState.description}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, description: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh sản phẩm (mỗi dòng một URL)</label>
+                <textarea
+                  rows={3}
+                  value={formState.images}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, images: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  className="px-4 py-2 border border-gray-300 rounded-lg"
+                  onClick={() => {
+                    setIsFormOpen(false);
+                    setEditingProduct(null);
+                  }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Đang lưu...' : 'Lưu sản phẩm'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

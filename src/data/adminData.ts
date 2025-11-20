@@ -1,5 +1,4 @@
 import type { Order, DashboardStats, PromotionCode, AdminNotification } from '../types/admin';
-import { mockProducts } from './products';
 
 // Mock orders data
 export const mockOrders: Order[] = [
@@ -215,7 +214,7 @@ export const mockPromotionCodes: PromotionCode[] = [
 export const mockDashboardStats: DashboardStats = {
   totalRevenue: 45670000,
   totalOrders: 1234,
-  totalProducts: mockProducts.length,
+  totalProducts: 0,
   totalUsers: 5678,
   revenueGrowth: 12.5,
   ordersGrowth: 8.3,
