@@ -6,14 +6,27 @@ import { PriceRangeSlider } from '../components/common/PriceRangeSlider';
 import { Select } from '../components/common/Select';
 import { Pagination } from '../components/common/Pagination';
 import { usePagination } from '../hooks/usePagination';
-import { mockProducts, categories, brands } from '../data/products';
 import { cn } from '../utils/cn';
+import { productApi } from '../services/productApi';
+import type { Category, Product } from '../types';
+
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Mới nhất' },
+  { value: 'best-selling', label: 'Bán chạy' },
+  { value: 'rating', label: 'Đánh giá cao' },
+  { value: 'price-asc', label: 'Giá thấp đến cao' },
+  { value: 'price-desc', label: 'Giá cao đến thấp' },
+];
 
 export const ProductsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
-
   const [headerHeight, setHeaderHeight] = useState(0);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const {
     currentPage,
@@ -22,6 +35,7 @@ export const ProductsPage: React.FC = () => {
     handlePageSizeChange,
     getPaginatedData,
   } = usePagination(1, 12);
+
   const [filters, setFilters] = useState({
     category: searchParams.get('category') || '',
     brand: searchParams.get('brand') || '',
@@ -30,92 +44,128 @@ export const ProductsPage: React.FC = () => {
     sortBy: searchParams.get('sortBy') || 'newest',
   });
 
-  const [priceRange, setPriceRange] = useState<[number, number]>([
-    filters.minPrice ? Number(filters.minPrice) : 0,
-    filters.maxPrice ? Number(filters.maxPrice) : 2000000,
-  ]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000000]);
+
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+        const [categoryData, productData] = await Promise.all([
+          productApi.listCategories(),
+          productApi.listProducts(),
+        ]);
+        setCategories(categoryData);
+        setProducts(productData);
+        const brandSet = new Set(productData.map((product) => product.brand));
+        setBrands([...brandSet]);
+        if (productData.length > 0) {
+          const prices = productData.map((product) => product.price);
+          const maxPrice = Math.max(...prices);
+          const minPrice = Math.min(...prices);
+          setPriceRange([
+            filters.minPrice ? Number(filters.minPrice) : minPrice,
+            filters.maxPrice ? Number(filters.maxPrice) : maxPrice,
+          ]);
+        }
+      } catch {
+        setError('Không thể tải dữ liệu sản phẩm. Vui lòng thử lại sau.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, [filters.maxPrice, filters.minPrice]);
 
   useEffect(() => {
     const calculateHeaderHeight = () => {
       const mainHeader = document.getElementById('main-header');
       const topBar = document.getElementById('top-bar');
-
       if (!mainHeader || !topBar) {
-        setHeaderHeight(96); // Default combined height
+        setHeaderHeight(96);
         return;
       }
-
-      // Calculate total height of both sticky elements
       const totalHeight = mainHeader.offsetHeight + topBar.offsetHeight;
       setHeaderHeight(totalHeight);
     };
-
-    // Calculate immediately
     calculateHeaderHeight();
-
-    // Recalculate after DOM ready
     setTimeout(calculateHeaderHeight, 100);
-
-    // Listen for resize only (no scroll needed since header is fully sticky)
     window.addEventListener('resize', calculateHeaderHeight);
-
-    return () => {
-      window.removeEventListener('resize', calculateHeaderHeight);
-    };
+    return () => window.removeEventListener('resize', calculateHeaderHeight);
   }, []);
 
   const filteredProducts = useMemo(() => {
-    let products = [...mockProducts];
+    let list = [...products];
 
     if (filters.category) {
-      products = products.filter(p => p.category === filters.category);
+      list = list.filter(
+        (product) =>
+          product.categoryId?.toString() === filters.category ||
+          product.category === filters.category
+      );
     }
 
     if (filters.brand) {
-      products = products.filter(p => p.brand === filters.brand);
+      list = list.filter((product) => product.brand === filters.brand);
     }
 
     if (filters.minPrice) {
-      products = products.filter(p => p.price >= Number(filters.minPrice));
+      list = list.filter((product) => product.price >= Number(filters.minPrice));
     }
 
     if (filters.maxPrice) {
-      products = products.filter(p => p.price <= Number(filters.maxPrice));
+      list = list.filter((product) => product.price <= Number(filters.maxPrice));
     }
 
     const search = searchParams.get('search');
     if (search) {
       const searchLower = search.toLowerCase();
-      products = products.filter(p =>
-        p.name.toLowerCase().includes(searchLower) ||
-        p.brand.toLowerCase().includes(searchLower) ||
-        p.description.toLowerCase().includes(searchLower)
+      list = list.filter(
+        (product) =>
+          product.name.toLowerCase().includes(searchLower) ||
+          product.brand.toLowerCase().includes(searchLower) ||
+          product.description.toLowerCase().includes(searchLower)
       );
     }
 
     switch (filters.sortBy) {
       case 'price-asc':
-        products.sort((a, b) => a.price - b.price);
+        list.sort((a, b) => a.price - b.price);
         break;
       case 'price-desc':
-        products.sort((a, b) => b.price - a.price);
+        list.sort((a, b) => b.price - a.price);
         break;
       case 'rating':
-        products.sort((a, b) => b.rating - a.rating);
+        list.sort((a, b) => b.rating - a.rating);
         break;
       case 'best-selling':
-        products.sort((a, b) => b.soldCount - a.soldCount);
+        list.sort((a, b) => b.soldCount - a.soldCount);
         break;
       default:
-        products.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     }
 
-    return products;
-  }, [filters, searchParams]);
+    return list;
+  }, [products, filters, searchParams]);
 
-  const paginatedData = useMemo(() => {
-    return getPaginatedData(filteredProducts);
-  }, [filteredProducts, getPaginatedData]);
+  const paginatedData = useMemo(() => getPaginatedData(filteredProducts), [filteredProducts, getPaginatedData]);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    if (value) {
+      searchParams.set(key, value);
+    } else {
+      searchParams.delete(key);
+    }
+    setSearchParams(searchParams);
+  };
+
+  const clearFilters = () => {
+    setFilters({ category: '', brand: '', minPrice: '', maxPrice: '', sortBy: 'newest' });
+    setPriceRange([0, priceRange[1]]);
+    setSearchParams({});
+  };
 
   const renderFilterBody = ({ showHeader = true }: { showHeader?: boolean } = {}) => (
     <>
@@ -136,17 +186,7 @@ export const ProductsPage: React.FC = () => {
           <span className="w-1 h-4 bg-primary mr-2 rounded-full"></span>
           Sắp xếp
         </h3>
-        <Select
-          value={filters.sortBy}
-          onChange={(value) => handleFilterChange('sortBy', value)}
-          options={[
-            { value: 'newest', label: 'Mới nhất' },
-            { value: 'best-selling', label: 'Bán chạy' },
-            { value: 'rating', label: 'Đánh giá cao' },
-            { value: 'price-asc', label: 'Giá thấp đến cao' },
-            { value: 'price-desc', label: 'Giá cao đến thấp' },
-          ]}
-        />
+        <Select value={filters.sortBy} onChange={(value) => handleFilterChange('sortBy', value)} options={SORT_OPTIONS} />
       </div>
 
       <div className="mb-6">
@@ -166,17 +206,17 @@ export const ProductsPage: React.FC = () => {
             />
             <span className="ml-3 text-gray-700">Tất cả</span>
           </label>
-          {categories.map(cat => (
-            <label key={cat.id} className="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
+          {categories.map((category) => (
+            <label key={category.id} className="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
               <input
                 type="radio"
                 name="category"
-                value={cat.id}
-                checked={filters.category === cat.id}
+                value={category.categoryId.toString()}
+                checked={filters.category === category.categoryId.toString()}
                 onChange={(e) => handleFilterChange('category', e.target.value)}
                 className="w-4 h-4 text-primary focus:ring-primary border-gray-300"
               />
-              <span className="ml-3 text-gray-700">{cat.name}</span>
+              <span className="ml-3 text-gray-700">{category.name}</span>
             </label>
           ))}
         </div>
@@ -192,7 +232,7 @@ export const ProductsPage: React.FC = () => {
           onChange={(value) => handleFilterChange('brand', value)}
           options={[
             { value: '', label: 'Tất cả' },
-            ...brands.map(brand => ({ value: brand, label: brand }))
+            ...brands.map((brand) => ({ value: brand, label: brand })),
           ]}
           placeholder="Chọn thương hiệu"
         />
@@ -205,7 +245,7 @@ export const ProductsPage: React.FC = () => {
         </h3>
         <PriceRangeSlider
           min={0}
-          max={2000000}
+          max={Math.max(priceRange[1], 2000000)}
           step={50000}
           value={priceRange}
           onChange={(value) => {
@@ -225,28 +265,6 @@ export const ProductsPage: React.FC = () => {
     </>
   );
 
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    if (value) {
-      searchParams.set(key, value);
-    } else {
-      searchParams.delete(key);
-    }
-    setSearchParams(searchParams);
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      category: '',
-      brand: '',
-      minPrice: '',
-      maxPrice: '',
-      sortBy: 'newest',
-    });
-    setPriceRange([0, 2000000]);
-    setSearchParams({});
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
@@ -263,15 +281,12 @@ export const ProductsPage: React.FC = () => {
           </button>
         </div>
 
+        {error && <p className="text-red-600 text-center mb-4">{error}</p>}
+
         {showFilters && (
           <div
             className="fixed z-20 bg-black/40 lg:hidden"
-            style={{
-              top: `${headerHeight}px`,
-              left: 0,
-              right: 0,
-              bottom: 0
-            }}
+            style={{ top: `${headerHeight}px`, left: 0, right: 0, bottom: 0 }}
             onClick={() => setShowFilters(false)}
           />
         )}
@@ -281,10 +296,7 @@ export const ProductsPage: React.FC = () => {
             'lg:hidden fixed left-0 w-64 max-w-[80vw] bg-white shadow-lg transition-transform duration-300 ease-in-out z-30 flex flex-col',
             showFilters ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
           )}
-          style={{
-            top: `${headerHeight}px`,
-            height: `calc(100vh - ${headerHeight}px)`,
-          }}
+          style={{ top: `${headerHeight}px`, height: `calc(100vh - ${headerHeight}px)` }}
           aria-hidden={!showFilters}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
@@ -300,18 +312,13 @@ export const ProductsPage: React.FC = () => {
               <FiX className="w-5 h-5" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            {renderFilterBody({ showHeader: false })}
-          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-5">{renderFilterBody({ showHeader: false })}</div>
         </aside>
 
         <div className="flex gap-6">
           <aside
             className="hidden lg:block w-64 flex-shrink-0 lg:sticky"
-            style={{
-              top: `${headerHeight}px`,
-              maxHeight: `calc(100vh - ${headerHeight}px)`,
-            }}
+            style={{ top: `${headerHeight}px`, maxHeight: `calc(100vh - ${headerHeight}px)` }}
           >
             <div className="bg-white p-6 rounded-xl shadow-lg h-full overflow-y-auto border border-gray-100">
               {renderFilterBody()}
@@ -319,7 +326,15 @@ export const ProductsPage: React.FC = () => {
           </aside>
 
           <div className="flex-1 space-y-6">
-            <ProductList products={paginatedData.items} />
+            {isLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <div key={index} className="h-72 bg-white rounded-xl shadow animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <ProductList products={paginatedData.items} />
+            )}
             <Pagination
               currentPage={currentPage}
               totalPages={paginatedData.totalPages}
