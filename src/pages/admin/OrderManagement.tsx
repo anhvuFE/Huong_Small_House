@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FiSearch,
   FiFilter,
@@ -9,14 +9,20 @@ import {
   FiUser,
   FiCalendar,
 } from 'react-icons/fi';
-import { mockOrders } from '../../data/adminData';
 import { Select } from '../../components/common/Select';
-import type { OrderStatus, PaymentStatus } from '../../types/admin';
+import { orderApi } from '../../services/orderApi';
+import type { Order as AdminOrder, OrderStatus, PaymentStatus } from '../../types/admin';
+import { useAuthStore } from '../../store/useAuthStore';
+import { mockOrders } from '../../data/adminData';
 
 export const OrderManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState('');
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const userRole = useAuthStore((state) => state.user?.role);
   const statusOptions = [
     { value: '', label: 'Tất cả trạng thái' },
     { value: 'PENDING', label: 'Chờ xác nhận' },
@@ -36,8 +42,44 @@ export const OrderManagement: React.FC = () => {
     { value: 'REFUNDED', label: 'Đã hoàn tiền' },
   ];
 
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+        const data = await orderApi.listAdminOrders();
+        setOrders(data);
+      } catch (err) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Không thể tải đơn hàng từ API. Hiển thị dữ liệu mẫu.';
+
+        // Nếu token hết hạn/không hợp lệ, yêu cầu đăng nhập lại và không gắn mock để tránh hiểu nhầm.
+        if (message.toLowerCase().includes('đăng nhập') || status === 401) {
+          setError(message);
+          setOrders([]);
+        } else {
+          setError(`${message} Đang hiển thị dữ liệu mẫu.`);
+          setOrders(mockOrders);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (userRole !== 'ADMIN') {
+      setError('Bạn không có quyền truy cập trang quản lý đơn hàng.');
+      setIsLoading(false);
+      return;
+    }
+
+    fetchOrders();
+  }, [userRole]);
+
   const filteredOrders = useMemo(() => {
-    return mockOrders.filter((order) => {
+    return orders.filter((order) => {
       const matchesSearch =
         order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -48,7 +90,7 @@ export const OrderManagement: React.FC = () => {
 
       return matchesSearch && matchesStatus && matchesPaymentStatus;
     });
-  }, [searchTerm, selectedStatus, selectedPaymentStatus]);
+  }, [orders, searchTerm, selectedStatus, selectedPaymentStatus]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -126,6 +168,18 @@ export const OrderManagement: React.FC = () => {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 text-sm text-gray-600">
+          Đang tải danh sách đơn hàng...
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -175,7 +229,7 @@ export const OrderManagement: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Chờ xác nhận</p>
               <p className="text-lg font-bold text-gray-900">
-                {mockOrders.filter(o => o.status === 'PENDING').length}
+                {orders.filter(o => o.status === 'PENDING').length}
               </p>
             </div>
           </div>
@@ -189,7 +243,7 @@ export const OrderManagement: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Đang xử lý</p>
               <p className="text-lg font-bold text-gray-900">
-                {mockOrders.filter(o => ['CONFIRMED', 'PROCESSING'].includes(o.status)).length}
+                {orders.filter(o => ['CONFIRMED', 'PROCESSING'].includes(o.status)).length}
               </p>
             </div>
           </div>
@@ -203,7 +257,7 @@ export const OrderManagement: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Đang giao</p>
               <p className="text-lg font-bold text-gray-900">
-                {mockOrders.filter(o => o.status === 'SHIPPING').length}
+                {orders.filter(o => o.status === 'SHIPPING').length}
               </p>
             </div>
           </div>
@@ -217,7 +271,7 @@ export const OrderManagement: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Hoàn thành</p>
               <p className="text-lg font-bold text-gray-900">
-                {mockOrders.filter(o => o.status === 'DELIVERED').length}
+                {orders.filter(o => o.status === 'DELIVERED').length}
               </p>
             </div>
           </div>

@@ -13,9 +13,11 @@ export type ProductCategory =
 export type OrderStatus =
   | 'PENDING'
   | 'CONFIRMED'
+  | 'PROCESSING'
   | 'SHIPPING'
   | 'DELIVERED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'RETURNED';
 
 export type PaymentMethod =
   | 'COD'
