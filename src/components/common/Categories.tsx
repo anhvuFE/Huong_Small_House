@@ -46,7 +46,7 @@ export const Categories: FC<CategoriesProps> = ({ className }) => {
       try {
         setIsLoading(true);
         setError('');
-        const data = await productApi.listCategories();
+        const data = await productApi.listCategories('customer');
         setItems(data);
       } catch {
         setError('Không thể tải danh mục.');

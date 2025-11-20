@@ -64,7 +64,7 @@ export const ProductManagement: React.FC = () => {
         setIsLoading(true);
         setError('');
         const [categoryData, productData] = await Promise.all([
-          productApi.listCategories(),
+          productApi.listCategories('admin'),
           productApi.listProducts(),
         ]);
         setCategories(categoryData);
@@ -138,7 +138,7 @@ export const ProductManagement: React.FC = () => {
       }
 
       const [categoryData, productData] = await Promise.all([
-        productApi.listCategories(),
+        productApi.listCategories('admin'),
         productApi.listProducts(),
       ]);
       setCategories(categoryData);

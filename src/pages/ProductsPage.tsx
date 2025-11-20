@@ -52,7 +52,7 @@ export const ProductsPage: React.FC = () => {
         setIsLoading(true);
         setError('');
         const [categoryData, productData] = await Promise.all([
-          productApi.listCategories(),
+          productApi.listCategories('customer'),
           productApi.listProducts(),
         ]);
         setCategories(categoryData);
