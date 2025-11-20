@@ -174,6 +174,12 @@ export const OrderManagement: React.FC = () => {
         </div>
       )}
 
+      {isLoading && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 text-sm text-gray-600">
+          Đang tải danh sách đơn hàng...
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
