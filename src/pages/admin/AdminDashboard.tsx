@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from "react";
 import {
   FiDollarSign,
   FiShoppingCart,
@@ -7,9 +7,48 @@ import {
   FiTrendingUp,
   FiTrendingDown,
   FiEye,
-} from 'react-icons/fi';
-import { Link } from 'react-router-dom';
-import { mockDashboardStats } from '../../data/adminData';
+  FiBarChart,
+} from "react-icons/fi";
+import { Link } from "react-router-dom";
+import { mockDashboardStats } from "../../data/adminData";
+import { orderApi } from "../../services/orderApi";
+import { reportApi } from "../../services/reportApi";
+import { productApi } from "../../services/productApi";
+import { userApi } from "../../services/userApi";
+import { useAuthStore } from "../../store/useAuthStore";
+import type { OrderStatus } from "../../types/admin";
+
+interface DashboardCache {
+  stats: typeof mockDashboardStats;
+  error: string;
+  revenueChart: { month: string; revenue: number; orders: number }[];
+}
+
+let dashboardCache: DashboardCache | null = null;
+
+const STATUS_ORDER: OrderStatus[] = [
+  "PENDING",
+  "CONFIRMED",
+  "PROCESSING",
+  "SHIPPING",
+  "DELIVERED",
+  "CANCELLED",
+  "RETURNED",
+];
+const FALLBACK_REVENUE = [
+  { month: "T1", revenue: 0, orders: 0 },
+  { month: "T2", revenue: 0, orders: 0 },
+  { month: "T3", revenue: 0, orders: 0 },
+  { month: "T4", revenue: 0, orders: 0 },
+  { month: "T5", revenue: 0, orders: 0 },
+  { month: "T6", revenue: 0, orders: 0 },
+  { month: "T7", revenue: 0, orders: 0 },
+  { month: "T8", revenue: 0, orders: 0 },
+  { month: "T9", revenue: 0, orders: 0 },
+  { month: "T10", revenue: 0, orders: 0 },
+  { month: "T11", revenue: 0, orders: 0 },
+  { month: "T12", revenue: 0, orders: 0 },
+];
 
 const StatCard: React.FC<{
   title: string;
@@ -34,12 +73,15 @@ const StatCard: React.FC<{
             )}
             <span
               className={`text-sm font-medium ${
-                isPositive ? 'text-green-600' : 'text-red-600'
+                isPositive ? "text-green-600" : "text-red-600"
               }`}
             >
-              {isPositive ? '+' : ''}{growth}%
+              {isPositive ? "+" : ""}
+              {growth}%
             </span>
-            <span className="text-sm text-gray-500 ml-1">so với tháng trước</span>
+            <span className="text-sm text-gray-500 ml-1">
+              so với tháng trước
+            </span>
           </div>
         </div>
         <div className={`p-3 rounded-xl ${color}`}>
@@ -56,13 +98,13 @@ const OrderStatusCard: React.FC<{
   color: string;
 }> = ({ status, count, color }) => {
   const statusNames = {
-    PENDING: 'Chờ xác nhận',
-    CONFIRMED: 'Đã xác nhận',
-    PROCESSING: 'Đang xử lý',
-    SHIPPING: 'Đang giao',
-    DELIVERED: 'Đã giao',
-    CANCELLED: 'Đã hủy',
-    RETURNED: 'Đã trả',
+    PENDING: "Chờ xác nhận",
+    CONFIRMED: "Đã xác nhận",
+    PROCESSING: "Đang xử lý",
+    SHIPPING: "Đang giao",
+    DELIVERED: "Đã giao",
+    CANCELLED: "Đã hủy",
+    RETURNED: "Đã trả",
   };
 
   return (
@@ -80,21 +122,169 @@ const OrderStatusCard: React.FC<{
 };
 
 export const AdminDashboard: React.FC = () => {
-  const stats = mockDashboardStats;
-
+  const [stats, setStats] = useState(mockDashboardStats);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [revenueChart, setRevenueChart] = useState<
+    { month: string; revenue: number; orders: number }[]
+  >([]);
+  const userRole = useAuthStore((state) => state.user?.role);
+  const hasFetched = useRef(false);
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
     }).format(amount);
   };
 
   const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('vi-VN').format(num);
+    return new Intl.NumberFormat("vi-VN").format(num);
   };
+
+  useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    if (dashboardCache) {
+      setStats(dashboardCache.stats);
+      setError(dashboardCache.error);
+      setRevenueChart(dashboardCache.revenueChart);
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchDashboard = async () => {
+      try {
+        setIsLoading(true);
+        setError("");
+        const now = new Date();
+        const year = now.getFullYear();
+        const yearly = await reportApi.getYearlyReport(year);
+        await sleep(300);
+        const topProducts = await reportApi.getTopProducts(5);
+        await sleep(300);
+        const orders = await orderApi.listAdminOrders();
+        await sleep(300);
+        const products = await productApi.listProducts();
+        await sleep(300);
+        const users = await userApi.listUsers();
+
+        const statusCounts = orders.reduce<Record<OrderStatus, number>>(
+          (acc, order) => {
+            const status = order.status as OrderStatus;
+            acc[status] = (acc[status] ?? 0) + 1;
+            return acc;
+          },
+          {
+            PENDING: 0,
+            CONFIRMED: 0,
+            PROCESSING: 0,
+            SHIPPING: 0,
+            DELIVERED: 0,
+            CANCELLED: 0,
+            RETURNED: 0,
+          }
+        );
+
+        const ordersByStatus = STATUS_ORDER.filter(
+          (status) => statusCounts[status] !== undefined
+        ).map((status) => ({ status, count: statusCounts[status] ?? 0 }));
+
+        const topSellingProducts = topProducts.map((item, index) => ({
+          product: {
+            id: String(item.productId ?? index),
+            name: item.name,
+            thumbnail: "https://placehold.co/80x80?text=Product",
+          },
+          quantity: item.totalSold,
+          revenue: item.totalSold,
+        }));
+
+        const chartData =
+          yearly.monthlyBreakdown?.map((item) => ({
+            month: item.month,
+            revenue: item.totalRevenue,
+            orders: item.totalOrders,
+          })) ?? FALLBACK_REVENUE;
+
+        setStats({
+          totalRevenue: yearly.totalRevenue ?? mockDashboardStats.totalRevenue,
+          totalOrders:
+            yearly.totalOrders ??
+            orders.length ??
+            mockDashboardStats.totalOrders,
+          totalProducts: products.length ?? mockDashboardStats.totalProducts,
+          totalUsers: users.length ?? mockDashboardStats.totalUsers,
+          revenueGrowth: mockDashboardStats.revenueGrowth,
+          ordersGrowth: mockDashboardStats.ordersGrowth,
+          productsGrowth: mockDashboardStats.productsGrowth,
+          usersGrowth: mockDashboardStats.usersGrowth,
+          topSellingProducts,
+          recentOrders: orders.slice(0, 5),
+          ordersByStatus,
+        });
+        setRevenueChart(chartData);
+        dashboardCache = {
+          stats: {
+            totalRevenue:
+              yearly.totalRevenue ?? mockDashboardStats.totalRevenue,
+            totalOrders:
+              yearly.totalOrders ??
+              orders.length ??
+              mockDashboardStats.totalOrders,
+            totalProducts: products.length ?? mockDashboardStats.totalProducts,
+            totalUsers: users.length ?? mockDashboardStats.totalUsers,
+            revenueGrowth: mockDashboardStats.revenueGrowth,
+            ordersGrowth: mockDashboardStats.ordersGrowth,
+            productsGrowth: mockDashboardStats.productsGrowth,
+            usersGrowth: mockDashboardStats.usersGrowth,
+            topSellingProducts,
+            recentOrders: orders.slice(0, 5),
+            ordersByStatus,
+          },
+          error: "",
+          revenueChart: chartData.length ? chartData : FALLBACK_REVENUE,
+        };
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Không thể tải dashboard.";
+        setError(message);
+        setStats(mockDashboardStats);
+        setRevenueChart(FALLBACK_REVENUE);
+        dashboardCache = {
+          stats: mockDashboardStats,
+          error: message,
+          revenueChart: FALLBACK_REVENUE,
+        };
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (userRole !== "ADMIN") {
+      setError(
+        "Bạn không có quyền xem dashboard admin. Vui lòng đăng nhập admin."
+      );
+      setIsLoading(false);
+      return;
+    }
+
+    fetchDashboard();
+  }, [userRole]);
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+      {isLoading && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4 text-sm text-gray-600">
+          Đang tải dữ liệu dashboard...
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
@@ -154,15 +344,16 @@ export const AdminDashboard: React.FC = () => {
                 status={order.status}
                 count={order.count}
                 color={
-                  order.status === 'PENDING'
-                    ? 'bg-yellow-50 border border-yellow-200'
-                    : order.status === 'CONFIRMED' || order.status === 'PROCESSING'
-                    ? 'bg-blue-50 border border-blue-200'
-                    : order.status === 'SHIPPING'
-                    ? 'bg-purple-50 border border-purple-200'
-                    : order.status === 'DELIVERED'
-                    ? 'bg-green-50 border border-green-200'
-                    : 'bg-red-50 border border-red-200'
+                  order.status === "PENDING"
+                    ? "bg-yellow-50 border border-yellow-200"
+                    : order.status === "CONFIRMED" ||
+                      order.status === "PROCESSING"
+                    ? "bg-blue-50 border border-blue-200"
+                    : order.status === "SHIPPING"
+                    ? "bg-purple-50 border border-purple-200"
+                    : order.status === "DELIVERED"
+                    ? "bg-green-50 border border-green-200"
+                    : "bg-red-50 border border-red-200"
                 }
               />
             ))}
@@ -220,10 +411,49 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Revenue Chart */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Doanh thu theo tháng
+          </h2>
+          <FiBarChart className="w-5 h-5 text-gray-500" />
+        </div>
+        <div className="grid grid-cols-12 gap-3 items-end h-56">
+          {revenueChart.map((item, index) => {
+            const maxRevenue = Math.max(
+              ...revenueChart.map((d) => d.revenue || 0),
+              1
+            );
+            const value = item.revenue || 0;
+            const barHeight = Math.max((value / maxRevenue) * 180, 24); // px, ensure visible even khi 0
+            return (
+              <div
+                key={`${item.month}-${index}`}
+                className="flex flex-col items-center justify-end space-y-2"
+              >
+                <div
+                  className="w-full bg-gradient-to-t from-primary/20 to-primary rounded-md transition-all"
+                  style={{ height: `${barHeight}px` }}
+                  title={`${item.month}: ${formatCurrency(value)}`}
+                />
+                <span className="text-xs text-gray-600">{item.month}</span>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-4 text-sm text-gray-600 flex items-center justify-between">
+          <span>Tổng doanh thu: {formatCurrency(stats.totalRevenue)}</span>
+          <span>Tổng đơn hàng: {formatNumber(stats.totalOrders)}</span>
+        </div>
+      </div>
+
       {/* Recent Orders */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Đơn hàng gần đây</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Đơn hàng gần đây
+          </h2>
           <Link
             to="/admin/orders"
             className="text-sm text-primary hover:text-primary-dark font-medium"
@@ -268,32 +498,34 @@ export const AdminDashboard: React.FC = () => {
                       <p className="text-sm font-medium text-gray-900">
                         {order.user.fullName}
                       </p>
-                      <p className="text-xs text-gray-500">{order.user.email}</p>
+                      <p className="text-xs text-gray-500">
+                        {order.user.email}
+                      </p>
                     </div>
                   </td>
                   <td className="py-3 px-2">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        order.status === 'PENDING'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : order.status === 'CONFIRMED'
-                          ? 'bg-blue-100 text-blue-800'
-                          : order.status === 'SHIPPING'
-                          ? 'bg-purple-100 text-purple-800'
-                          : order.status === 'DELIVERED'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                        order.status === "PENDING"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : order.status === "CONFIRMED"
+                          ? "bg-blue-100 text-blue-800"
+                          : order.status === "SHIPPING"
+                          ? "bg-purple-100 text-purple-800"
+                          : order.status === "DELIVERED"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {order.status === 'PENDING'
-                        ? 'Chờ xác nhận'
-                        : order.status === 'CONFIRMED'
-                        ? 'Đã xác nhận'
-                        : order.status === 'SHIPPING'
-                        ? 'Đang giao'
-                        : order.status === 'DELIVERED'
-                        ? 'Đã giao'
-                        : 'Đã hủy'}
+                      {order.status === "PENDING"
+                        ? "Chờ xác nhận"
+                        : order.status === "CONFIRMED"
+                        ? "Đã xác nhận"
+                        : order.status === "SHIPPING"
+                        ? "Đang giao"
+                        : order.status === "DELIVERED"
+                        ? "Đã giao"
+                        : "Đã hủy"}
                     </span>
                   </td>
                   <td className="py-3 px-2">
@@ -303,7 +535,7 @@ export const AdminDashboard: React.FC = () => {
                   </td>
                   <td className="py-3 px-2">
                     <span className="text-sm text-gray-500">
-                      {order.createdAt.toLocaleDateString('vi-VN')}
+                      {order.createdAt.toLocaleDateString("vi-VN")}
                     </span>
                   </td>
                   <td className="py-3 px-2">
@@ -323,3 +555,4 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 };
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
