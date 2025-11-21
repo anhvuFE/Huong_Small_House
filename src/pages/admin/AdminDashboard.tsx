@@ -222,6 +222,7 @@ export const AdminDashboard: React.FC = () => {
           topSellingProducts,
           recentOrders: orders.slice(0, 5),
           ordersByStatus,
+          revenueByMonth: chartData,
         });
         setRevenueChart(chartData);
         dashboardCache = {
@@ -241,6 +242,7 @@ export const AdminDashboard: React.FC = () => {
             topSellingProducts,
             recentOrders: orders.slice(0, 5),
             ordersByStatus,
+            revenueByMonth: chartData,
           },
           error: "",
           revenueChart: chartData.length ? chartData : FALLBACK_REVENUE,
