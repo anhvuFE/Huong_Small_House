@@ -131,6 +131,22 @@ const toAddress = (payload?: BackendAddress, userId?: string): Address => {
 
 const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
+const isBrowser = typeof window !== 'undefined';
+const ORDER_RATE_LIMIT_KEY = 'hs_order_rate_limit_until';
+
+const getOrderRateLimitUntil = (): number => {
+  if (!isBrowser) return 0;
+  const raw = window.localStorage.getItem(ORDER_RATE_LIMIT_KEY);
+  const parsed = raw ? Number(raw) : 0;
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const setOrderRateLimitUntil = (timestamp: number): void => {
+  if (isBrowser) {
+    window.localStorage.setItem(ORDER_RATE_LIMIT_KEY, String(timestamp));
+  }
+};
+
 const toAdminOrder = (payload: BackendOrder): AdminOrder => {
   const createdAt = parseDate(payload.createdAt);
   const updatedAt = parseDate(payload.updatedAt ?? createdAt);
@@ -219,6 +235,15 @@ const toCustomerOrder = (payload: BackendOrder): CustomerOrder => {
 };
 
 export const orderApi = {
+  _rateLimitedUntil: getOrderRateLimitUntil(),
+
+  _ensureNotRateLimited() {
+    const now = Date.now();
+    if (this._rateLimitedUntil > now) {
+      throw new Error('Server giới hạn số lần gọi. Vui lòng thử lại sau ít phút.');
+    }
+  },
+
   async listCustomerOrders(): Promise<CustomerOrder[]> {
     const response = await apiClient.get<ApiResponse<BackendOrder[]>>('/orders/me');
     return response.data.data.map(toCustomerOrder);
@@ -234,6 +259,7 @@ export const orderApi = {
     if (!accessToken || user?.role !== 'ADMIN') {
       throw new Error('Bạn cần đăng nhập admin để xem danh sách đơn hàng.');
     }
+    orderApi._ensureNotRateLimited();
 
     // Backend swagger: /orders is admin list, /orders/{id} for detail.
     const endpoints = ['/orders'];
@@ -250,6 +276,11 @@ export const orderApi = {
         if (status === 401) {
           useAuthStore.getState().logout();
           throw new Error(message || 'Token không hợp lệ, vui lòng đăng nhập lại (admin).');
+        }
+        if (status === 429) {
+          orderApi._rateLimitedUntil = Date.now() + 60_000;
+          setOrderRateLimitUntil(orderApi._rateLimitedUntil);
+          throw new Error(message || 'Server giới hạn số lần gọi. Vui lòng thử lại sau ít phút.');
         }
 
         lastError = error;

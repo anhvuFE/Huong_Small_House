@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FiDownload,
   FiCalendar,
@@ -12,10 +12,31 @@ import {
   FiFilter,
 } from 'react-icons/fi';
 import { Select } from '../../components/common/Select';
+import { reportApi } from '../../services/reportApi';
+import { useAuthStore } from '../../store/useAuthStore';
+
+interface ReportsCache {
+  monthlyRevenue: number;
+  monthlyOrders: number;
+  yearlyRevenueData: { month: string; revenue: number; orders: number }[];
+  topProductsData: { name: string; revenue: number; quantity: number; growth: number }[];
+  error: string;
+}
+
+let reportsCache: ReportsCache | null = null;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const Reports: React.FC = () => {
   const [dateRange, setDateRange] = useState('30days');
   const [reportType, setReportType] = useState('overview');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [monthlyRevenue, setMonthlyRevenue] = useState(0);
+  const [monthlyOrders, setMonthlyOrders] = useState(0);
+  const [yearlyRevenueData, setYearlyRevenueData] = useState<{ month: string; revenue: number; orders: number }[]>([]);
+  const [topProductsData, setTopProductsData] = useState<{ name: string; revenue: number; quantity: number; growth: number }[]>([]);
+  const userRole = useAuthStore((state) => state.user?.role);
+  const hasFetched = useRef(false);
 
   const dateRangeOptions = [
     { value: '7days', label: '7 ngày qua' },
@@ -33,28 +54,9 @@ export const Reports: React.FC = () => {
     { value: 'orders', label: 'Đơn hàng' },
   ];
 
-  // Mock data for charts
-  const revenueData = [
-    { month: 'T1', revenue: 3200000, orders: 45 },
-    { month: 'T2', revenue: 3800000, orders: 52 },
-    { month: 'T3', revenue: 4200000, orders: 58 },
-    { month: 'T4', revenue: 3900000, orders: 51 },
-    { month: 'T5', revenue: 4500000, orders: 62 },
-    { month: 'T6', revenue: 4800000, orders: 65 },
-    { month: 'T7', revenue: 5200000, orders: 71 },
-    { month: 'T8', revenue: 4900000, orders: 67 },
-    { month: 'T9', revenue: 5100000, orders: 69 },
-    { month: 'T10', revenue: 5400000, orders: 74 },
-    { month: 'T11', revenue: 4567000, orders: 63 },
-  ];
+  const revenueData = useMemo(() => yearlyRevenueData, [yearlyRevenueData]);
 
-  const topProducts = [
-    { name: 'Vitamin C 1000mg', revenue: 5625000, quantity: 1250, growth: 12.5 },
-    { name: 'Biotin 10000mcg', revenue: 4689200, quantity: 1234, growth: 8.3 },
-    { name: 'Collagen Youtheory', revenue: 6052000, quantity: 890, growth: -2.1 },
-    { name: 'Melatonin 5mg', revenue: 2676800, quantity: 956, growth: 15.7 },
-    { name: 'Green Tea Extract', revenue: 3746400, quantity: 892, growth: 5.2 },
-  ];
+  const topProducts = useMemo(() => topProductsData, [topProductsData]);
 
   const customerStats = [
     { metric: 'Khách hàng mới', value: 245, growth: 18.2 },
@@ -62,6 +64,99 @@ export const Reports: React.FC = () => {
     { metric: 'Tỷ lệ chuyển đổi', value: '3.2%', growth: 8.7 },
     { metric: 'Giá trị đơn TB', value: '850.000đ', growth: 5.3 },
   ];
+
+  useEffect(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    if (reportsCache) {
+      setMonthlyRevenue(reportsCache.monthlyRevenue);
+      setMonthlyOrders(reportsCache.monthlyOrders);
+      setYearlyRevenueData(reportsCache.yearlyRevenueData);
+      setTopProductsData(reportsCache.topProductsData);
+      setError(reportsCache.error);
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchReports = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+        const monthly = await reportApi.getMonthlyReport(year, month);
+        await sleep(300);
+        const yearly = await reportApi.getYearlyReport(year);
+        await sleep(300);
+        const topProductsRes = await reportApi.getTopProducts(5);
+
+        setMonthlyRevenue(monthly.totalRevenue ?? 0);
+        setMonthlyOrders(monthly.totalOrders ?? 0);
+
+        const yearlyData = (yearly.monthlyBreakdown ?? []).map((item) => ({
+          month: item.month,
+          revenue: item.totalRevenue,
+          orders: item.totalOrders,
+        }));
+        setYearlyRevenueData(yearlyData);
+
+        const topMapped = topProductsRes.map((item) => ({
+          name: item.name,
+          revenue: item.totalSold, // backend không trả revenue, dùng totalSold làm proxy
+          quantity: item.totalSold,
+          growth: 0,
+        }));
+        setTopProductsData(topMapped);
+        reportsCache = {
+          monthlyRevenue: monthly.totalRevenue ?? 0,
+          monthlyOrders: monthly.totalOrders ?? 0,
+          yearlyRevenueData: yearlyData,
+          topProductsData: topMapped,
+          error: '',
+        };
+      } catch (err) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        const message = err instanceof Error ? err.message : 'Không thể tải báo cáo.';
+        // Nếu 401/token lỗi, không hiển thị mock.
+        if (message.toLowerCase().includes('đăng nhập') || status === 401) {
+          setError(message);
+          setYearlyRevenueData([]);
+          setTopProductsData([]);
+          reportsCache = {
+            monthlyRevenue: 0,
+            monthlyOrders: 0,
+            yearlyRevenueData: [],
+            topProductsData: [],
+            error: message,
+          };
+        } else {
+          setError(message);
+          setYearlyRevenueData([]);
+          setTopProductsData([]);
+          reportsCache = {
+            monthlyRevenue: 0,
+            monthlyOrders: 0,
+            yearlyRevenueData: [],
+            topProductsData: [],
+            error: message,
+          };
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (userRole !== 'ADMIN') {
+      setError('Bạn không có quyền xem báo cáo. Vui lòng đăng nhập admin.');
+      setIsLoading(false);
+      return;
+    }
+
+    fetchReports();
+  }, [userRole]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -72,6 +167,17 @@ export const Reports: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4 text-sm text-gray-600">
+          Đang tải báo cáo...
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -143,12 +249,10 @@ export const Reports: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Doanh thu tháng này</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatCurrency(4567000)}
+                {formatCurrency(monthlyRevenue)}
               </p>
-              <div className="flex items-center mt-2">
-                <FiTrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm font-medium text-green-600">+12.5%</span>
-                <span className="text-sm text-gray-500 ml-1">so với tháng trước</span>
+              <div className="flex items-center mt-2 text-sm text-gray-500">
+                <span>so với tháng trước</span>
               </div>
             </div>
             <div className="p-3 bg-blue-100 rounded-xl">
@@ -161,11 +265,9 @@ export const Reports: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Đơn hàng tháng này</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">63</p>
-              <div className="flex items-center mt-2">
-                <FiTrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm font-medium text-green-600">+8.3%</span>
-                <span className="text-sm text-gray-500 ml-1">so với tháng trước</span>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{monthlyOrders}</p>
+              <div className="flex items-center mt-2 text-sm text-gray-500">
+                <span>so với tháng trước</span>
               </div>
             </div>
             <div className="p-3 bg-green-100 rounded-xl">
