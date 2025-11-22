@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FiSearch,
   FiFilter,
@@ -10,12 +11,14 @@ import {
   FiCheckCircle,
   FiXCircle,
   FiMoreHorizontal,
-  FiEdit,
   FiEye,
   FiLock,
+  FiUnlock,
 } from 'react-icons/fi';
-import { mockUsers } from '../../data/userData';
 import { Select } from '../../components/common/Select';
+import { userApi } from '../../services/userApi';
+import { getErrorMessage } from '../../utils/error';
+import type { User } from '../../types';
 
 const getDaysSinceLogin = (lastLogin?: Date) => {
   if (!lastLogin) return Infinity;
@@ -26,6 +29,12 @@ export const UserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [verificationFilter, setVerificationFilter] = useState('');
   const [activityFilter, setActivityFilter] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [lockedUsers, setLockedUsers] = useState<Record<string, boolean>>({});
 
   const verificationOptions = [
     { value: '', label: 'Tất cả' },
@@ -40,8 +49,25 @@ export const UserManagement: React.FC = () => {
     { value: 'inactive', label: 'Không hoạt động' },
   ];
 
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        const data = await userApi.listUsers();
+        setUsers(data);
+      } catch (err) {
+        setError(getErrorMessage(err, 'Không thể tải danh sách người dùng.'));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
   const filteredUsers = useMemo(() => {
-    return mockUsers.filter((user) => {
+    return users.filter((user) => {
       const matchesSearch =
         user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -65,9 +91,9 @@ export const UserManagement: React.FC = () => {
 
       return matchesSearch && matchesVerification && matchesActivity;
     });
-  }, [searchTerm, verificationFilter, activityFilter]);
+  }, [users, searchTerm, verificationFilter, activityFilter]);
 
-  const getVerificationStatus = (user: typeof mockUsers[0]) => {
+  const getVerificationStatus = (user: User) => {
     if (user.isEmailVerified && user.isPhoneVerified) {
       return { text: 'Đã xác minh', color: 'bg-green-100 text-green-800', icon: FiCheckCircle };
     } else if (!user.isEmailVerified && !user.isPhoneVerified) {
@@ -91,19 +117,28 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const getUserStats = () => {
-    const totalUsers = mockUsers.length;
-    const verifiedUsers = mockUsers.filter(u => u.isEmailVerified && u.isPhoneVerified).length;
-    const activeUsers = mockUsers.filter(u => getDaysSinceLogin(u.lastLogin) <= 7).length;
-    const newUsers = mockUsers.filter(u => {
+  const stats = useMemo(() => {
+    const totalUsers = users.length;
+    const verifiedUsers = users.filter(u => u.isEmailVerified && u.isPhoneVerified).length;
+    const activeUsers = users.filter(u => getDaysSinceLogin(u.lastLogin) <= 7).length;
+    const newUsers = users.filter(u => {
       const daysSinceJoin = Math.floor((Date.now() - u.createdAt.getTime()) / (1000 * 60 * 60 * 24));
       return daysSinceJoin <= 30;
     }).length;
-
     return { totalUsers, verifiedUsers, activeUsers, newUsers };
+  }, [users]);
+
+  const handleOpenDetail = (user: User) => {
+    setSelectedUser(user);
+    setIsDetailOpen(true);
   };
 
-  const stats = getUserStats();
+  const handleToggleLock = (userId: string) => {
+    setLockedUsers((prev) => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }));
+  };
 
   return (
     <div className="space-y-6">
@@ -215,6 +250,11 @@ export const UserManagement: React.FC = () => {
 
       {/* Users Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        {error && (
+          <div className="px-4 py-3 bg-red-50 border-b border-red-100 text-red-700 text-sm">
+            {error}
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -243,7 +283,14 @@ export const UserManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredUsers.map((user) => {
+              {isLoading && (
+                <tr>
+                  <td colSpan={7} className="py-6 px-4 text-center text-sm text-gray-500">
+                    Đang tải danh sách người dùng...
+                  </td>
+                </tr>
+              )}
+              {!isLoading && filteredUsers.map((user) => {
                 const verificationStatus = getVerificationStatus(user);
                 const activityStatus = getActivityStatus(user.lastLogin);
                 const VerificationIcon = verificationStatus.icon;
@@ -324,14 +371,23 @@ export const UserManagement: React.FC = () => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center space-x-2">
-                        <button className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
+                        <button
+                          className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          onClick={() => handleOpenDetail(user)}
+                          aria-label="Xem chi tiết người dùng"
+                        >
                           <FiEye className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors">
-                          <FiEdit className="w-4 h-4" />
-                        </button>
-                        <button className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
-                          <FiLock className="w-4 h-4" />
+                        <button
+                          className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          onClick={() => handleToggleLock(user.id)}
+                          aria-label={lockedUsers[user.id] ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                        >
+                          {lockedUsers[user.id] ? (
+                            <FiUnlock className="w-4 h-4" />
+                          ) : (
+                            <FiLock className="w-4 h-4" />
+                          )}
                         </button>
                         <button className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors">
                           <FiMoreHorizontal className="w-4 h-4" />
@@ -380,6 +436,74 @@ export const UserManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {isDetailOpen && selectedUser && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
+            <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
+              <div>
+                <p className="text-xs uppercase tracking-[0.12em] text-gray-400 font-semibold">Chi tiết người dùng</p>
+                <h3 className="text-2xl font-semibold text-gray-900 mt-1">{selectedUser.fullName}</h3>
+                <p className="text-xs text-gray-500 mt-1">ID: {selectedUser.id}</p>
+              </div>
+              <button
+                onClick={() => setIsDetailOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm text-gray-700">
+              <div className="space-y-1.5">
+                <p className="text-gray-500">Email</p>
+                <p className="font-semibold text-gray-900">{selectedUser.email}</p>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-gray-500">Số điện thoại</p>
+                <p className="font-semibold text-gray-900">{selectedUser.phone || 'Chưa có'}</p>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-gray-500">Ngày tham gia</p>
+                <p className="font-semibold text-gray-900">
+                  {selectedUser.createdAt ? selectedUser.createdAt.toLocaleDateString('vi-VN') : 'Không rõ'}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-gray-500">Hoạt động cuối</p>
+                <p className="font-semibold text-gray-900">
+                  {selectedUser.lastLogin ? selectedUser.lastLogin.toLocaleString('vi-VN') : 'Chưa xác định'}
+                </p>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <p className="text-gray-500">Địa chỉ</p>
+                {selectedUser.addresses?.length ? (
+                  <div className="space-y-1">
+                    <p className="font-semibold text-gray-900">{selectedUser.addresses[0].street}</p>
+                    <p className="text-xs text-gray-500">
+                      {[selectedUser.addresses[0].ward, selectedUser.addresses[0].district, selectedUser.addresses[0].province]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="font-semibold text-gray-500">Chưa có địa chỉ</p>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setIsDetailOpen(false)}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
     </div>
   );
 };
