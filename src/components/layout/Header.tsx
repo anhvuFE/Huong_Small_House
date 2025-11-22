@@ -17,6 +17,7 @@ import {
   FiGrid,
   FiInfo,
   FiMessageCircle,
+  FiFileText,
 } from 'react-icons/fi';
 import { useCartStore } from '../../store/useCartStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -29,6 +30,7 @@ const navItems = [
   { label: 'Danh mục', href: '/categories', icon: FiGrid },
   { label: 'Giới thiệu', href: '/about', icon: FiInfo },
   { label: 'Liên hệ', href: '/contact', icon: FiMessageCircle },
+  { label: 'Blog', href: '/blog', icon: FiFileText },
 ];
 
 export const Header: React.FC = () => {
