@@ -26,6 +26,8 @@ const ForgotPasswordPage = lazyComponent(() => import('./pages/ForgotPasswordPag
 const CategoriesPage = lazyComponent(() => import('./pages/CategoriesPage'), 'CategoriesPage');
 const AboutPage = lazyComponent(() => import('./pages/AboutPage'), 'AboutPage');
 const ContactPage = lazyComponent(() => import('./pages/ContactPage'), 'ContactPage');
+const BlogListPage = lazyComponent(() => import('./pages/BlogListPage'), 'BlogListPage');
+const BlogDetailPage = lazyComponent(() => import('./pages/BlogDetailPage'), 'BlogDetailPage');
 const AccountPage = lazyComponent(() => import('./pages/AccountPage'), 'AccountPage');
 const AdminDashboard = lazyComponent(() => import('./pages/admin/AdminDashboard'), 'AdminDashboard');
 const ProductManagement = lazyComponent(() => import('./pages/admin/ProductManagement'), 'ProductManagement');
@@ -113,6 +115,8 @@ function App() {
                     <Route path="/products" element={<ProductsPage />} />
                     <Route path="/products/:slug" element={<ProductDetailPage />} />
                     <Route path="/categories" element={<CategoriesPage />} />
+                    <Route path="/blog" element={<BlogListPage />} />
+                    <Route path="/blog/:slug" element={<BlogDetailPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
