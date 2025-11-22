@@ -2,6 +2,7 @@ import apiClient from '../lib/http';
 import type { User } from '../types';
 import type { BackendUser } from './authApi';
 import { transformBackendUser } from './authApi';
+import { useAuthStore } from '../store/useAuthStore';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -22,8 +23,20 @@ interface ChangePasswordPayload {
 
 export const profileApi = {
   async getProfile(): Promise<User> {
-    const response = await apiClient.get<ApiResponse<BackendUser>>('/profile');
-    return transformBackendUser(response.data.data);
+    const response = await apiClient.get<ApiResponse<BackendUser | null>>('/profile');
+    const backendUser = response.data?.data;
+
+    if (backendUser) {
+      return transformBackendUser(backendUser);
+    }
+
+    // Fallback: keep using current user in store to avoid breaking UI when API returns null
+    const existingUser = useAuthStore.getState().user;
+    if (existingUser) {
+      return existingUser;
+    }
+
+    throw new Error('Dữ liệu hồ sơ trống');
   },
 
   async updateProfile(payload: UpdateProfilePayload): Promise<User> {

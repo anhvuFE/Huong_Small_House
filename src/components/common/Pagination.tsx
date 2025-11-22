@@ -1,5 +1,6 @@
 import React from 'react';
 import { FiChevronLeft, FiChevronRight, FiMoreHorizontal } from 'react-icons/fi';
+import { Select } from './Select';
 
 interface PaginationProps {
   currentPage: number;
@@ -123,17 +124,15 @@ export const Pagination: React.FC<PaginationProps> = ({
         {showPageSizeSelect && onPageSizeChange && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-700">Hiển thị:</span>
-            <select
-              value={itemsPerPage}
-              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              {pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={String(itemsPerPage)}
+              onChange={(val) => handlePageSizeChange(Number(val))}
+              options={pageSizeOptions.map((size) => ({
+                value: String(size),
+                label: String(size),
+              }))}
+              className="w-28"
+            />
             <span className="text-sm text-gray-700">mục</span>
           </div>
         )}
