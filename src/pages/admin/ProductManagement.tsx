@@ -396,7 +396,7 @@ export const ProductManagement: React.FC = () => {
                     options={[
                       { value: '', label: 'Chọn danh mục' },
                       ...categories.map((cat) => ({
-                        value: cat.categoryId,
+                        value: cat.categoryId.toString(),
                         label: cat.name,
                       })),
                     ]}
