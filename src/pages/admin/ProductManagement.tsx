@@ -389,20 +389,18 @@ export const ProductManagement: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Danh mục</label>
-                  <select
+                  <Select
+                    label="Danh mục"
                     value={formState.categoryId}
-                    onChange={(e) => setFormState((prev) => ({ ...prev, categoryId: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                    required
-                  >
-                    <option value="">Chọn danh mục</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.categoryId}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormState((prev) => ({ ...prev, categoryId: val }))}
+                    options={[
+                      { value: '', label: 'Chọn danh mục' },
+                      ...categories.map((cat) => ({
+                        value: cat.categoryId,
+                        label: cat.name,
+                      })),
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Giá</label>

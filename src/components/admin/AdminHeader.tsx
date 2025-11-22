@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FiBell, FiSearch, FiUser, FiChevronDown, FiMenu } from 'react-icons/fi';
 import { useAuthStore } from '../../store/useAuthStore';
+import { profileApi } from '../../services/profileApi';
 
 interface AdminHeaderProps {
   onToggleSidebar: () => void;
@@ -11,9 +13,50 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onToggleSidebar,
   isMobile,
 }) => {
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
+  const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const hasFetchedProfile = useRef(false);
+
+  useEffect(() => {
+    if (hasFetchedProfile.current) return;
+    hasFetchedProfile.current = true;
+
+    const loadProfile = async () => {
+      try {
+        const profile = await profileApi.getProfile();
+        updateUser(profile);
+      } catch (error) {
+        console.error('Không thể tải thông tin hồ sơ:', error);
+      }
+    };
+
+    loadProfile();
+  }, [updateUser]);
+
+  const handleOpenProfile = async () => {
+    try {
+      const profile = await profileApi.getProfile();
+      updateUser(profile);
+      navigate('/admin/settings?tab=profile');
+    } catch (error) {
+      console.error('Không thể tải thông tin hồ sơ:', error);
+    } finally {
+      setShowProfileMenu(false);
+    }
+  };
+
+  const handleLogout = () => {
+    useAuthStore.getState().logout();
+    setShowProfileMenu(false);
+    navigate('/login');
+  };
+
+  const handleOpenSettings = () => {
+    setShowProfileMenu(false);
+    navigate('/admin/settings');
+  };
 
   const notifications = [
     {
@@ -106,14 +149,23 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             {/* Profile dropdown */}
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <button
+                  onClick={handleOpenProfile}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
                   Thông tin cá nhân
                 </button>
-                <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <button
+                  onClick={handleOpenSettings}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
                   Cài đặt
                 </button>
                 <hr className="my-1" />
-                <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                >
                   Đăng xuất
                 </button>
               </div>

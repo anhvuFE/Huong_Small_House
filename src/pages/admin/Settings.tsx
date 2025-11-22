@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FiSave,
   FiUser,
@@ -11,9 +11,23 @@ import {
   FiToggleRight,
   FiCamera,
 } from 'react-icons/fi';
+import { useSearchParams } from 'react-router-dom';
+import { Select } from '../../components/common/Select';
+import { profileApi } from '../../services/profileApi';
+import { getErrorMessage } from '../../utils/error';
 
 export const Settings: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('general');
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [passwordForm, setPasswordForm] = useState({
+    current: '',
+    next: '',
+    confirm: '',
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [settings, setSettings] = useState({
     // General Settings
     siteName: 'Hương Small House',
@@ -57,6 +71,60 @@ export const Settings: React.FC = () => {
     maintenanceMode: false,
   });
 
+  const timezoneOptions = useMemo(
+    () => [
+      { value: 'Asia/Ho_Chi_Minh', label: 'Việt Nam (GMT+7)' },
+      { value: 'Asia/Bangkok', label: 'Bangkok (GMT+7)' },
+      { value: 'Asia/Singapore', label: 'Singapore (GMT+8)' },
+    ],
+    [],
+  );
+
+  const languageOptions = useMemo(
+    () => [
+      { value: 'vi', label: 'Tiếng Việt' },
+      { value: 'en', label: 'English' },
+    ],
+    [],
+  );
+
+  const currencyOptions = useMemo(
+    () => [
+      { value: 'VND', label: 'VND (Việt Nam Đồng)' },
+      { value: 'USD', label: 'USD (US Dollar)' },
+    ],
+    [],
+  );
+
+  const passwordPolicyOptions = useMemo(
+    () => [
+      { value: 'weak', label: 'Yếu (6+ ký tự)' },
+      { value: 'medium', label: 'Trung bình (8+ ký tự, số và chữ)' },
+      { value: 'strong', label: 'Mạnh (12+ ký tự, số, chữ và ký tự đặc biệt)' },
+    ],
+    [],
+  );
+
+  const logLevelOptions = useMemo(
+    () => [
+      { value: 'error', label: 'Chỉ lỗi' },
+      { value: 'warning', label: 'Cảnh báo và lỗi' },
+      { value: 'info', label: 'Thông tin, cảnh báo và lỗi' },
+      { value: 'debug', label: 'Tất cả (Debug)' },
+    ],
+    [],
+  );
+
+  const backupOptions = useMemo(
+    () => [
+      { value: 'hourly', label: 'Mỗi giờ' },
+      { value: 'daily', label: 'Hàng ngày' },
+      { value: 'weekly', label: 'Hàng tuần' },
+      { value: 'monthly', label: 'Hàng tháng' },
+    ],
+    [],
+  );
+
   const tabs = [
     { id: 'general', label: 'Tổng quan', icon: FiSettingsIcon },
     { id: 'profile', label: 'Hồ sơ', icon: FiUser },
@@ -65,6 +133,19 @@ export const Settings: React.FC = () => {
     { id: 'security', label: 'Bảo mật', icon: FiShield },
     { id: 'system', label: 'Hệ thống', icon: FiDatabase },
   ];
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const validTabs = tabs.map((t) => t.id);
+    if (tab && validTabs.includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleSelectTab = (id: string) => {
+    setActiveTab(id);
+    setSearchParams({ tab: id });
+  };
 
   const handleToggle = (key: string) => {
     setSettings(prev => ({
@@ -80,9 +161,49 @@ export const Settings: React.FC = () => {
     }));
   };
 
+  const handlePasswordInputChange = (key: keyof typeof passwordForm, value: string) => {
+    setPasswordForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+    if (passwordError) setPasswordError('');
+    if (passwordSuccess) setPasswordSuccess('');
+  };
+
+  const handleChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!passwordForm.current || !passwordForm.next || !passwordForm.confirm) {
+      setPasswordError('Vui lòng nhập đầy đủ thông tin.');
+      return;
+    }
+
+    if (passwordForm.next !== passwordForm.confirm) {
+      setPasswordError('Mật khẩu mới và xác nhận không khớp.');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const message = await profileApi.changePassword({
+        currentPassword: passwordForm.current,
+        newPassword: passwordForm.next,
+      });
+      setPasswordSuccess(message || 'Đổi mật khẩu thành công.');
+      setPasswordForm({ current: '', next: '', confirm: '' });
+    } catch (error) {
+      setPasswordError(getErrorMessage(error, 'Không thể đổi mật khẩu. Vui lòng thử lại.'));
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   const handleSave = () => {
     // In real app, would call API to save settings
-    alert('Cài đặt đã được lưu thành công!');
+    setFeedback('Cài đặt đã được lưu thành công!');
+    setTimeout(() => setFeedback(null), 2500);
   };
 
   const renderGeneralSettings = () => (
@@ -133,41 +254,31 @@ export const Settings: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Múi giờ
             </label>
-            <select
+            <Select
               value={settings.timezone}
-              onChange={(e) => handleInputChange('timezone', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="Asia/Ho_Chi_Minh">Việt Nam (GMT+7)</option>
-              <option value="Asia/Bangkok">Bangkok (GMT+7)</option>
-              <option value="Asia/Singapore">Singapore (GMT+8)</option>
-            </select>
+              onChange={(val) => handleInputChange('timezone', val)}
+              options={timezoneOptions}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Ngôn ngữ
             </label>
-            <select
+            <Select
               value={settings.language}
-              onChange={(e) => handleInputChange('language', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="vi">Tiếng Việt</option>
-              <option value="en">English</option>
-            </select>
+              onChange={(val) => handleInputChange('language', val)}
+              options={languageOptions}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tiền tệ
             </label>
-            <select
+            <Select
               value={settings.currency}
-              onChange={(e) => handleInputChange('currency', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="VND">VND (Việt Nam Đồng)</option>
-              <option value="USD">USD (US Dollar)</option>
-            </select>
+              onChange={(val) => handleInputChange('currency', val)}
+              options={currencyOptions}
+            />
           </div>
         </div>
       </div>
@@ -229,35 +340,59 @@ export const Settings: React.FC = () => {
 
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Đổi mật khẩu</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mật khẩu hiện tại
-            </label>
-            <input
-              type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
+        <form className="space-y-4" onSubmit={handleChangePassword}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mật khẩu hiện tại
+              </label>
+              <input
+                type="password"
+                value={passwordForm.current}
+                onChange={(e) => handlePasswordInputChange('current', e.target.value)}
+                autoComplete="current-password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mật khẩu mới
+              </label>
+              <input
+                type="password"
+                value={passwordForm.next}
+                onChange={(e) => handlePasswordInputChange('next', e.target.value)}
+                autoComplete="new-password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Xác nhận mật khẩu
+              </label>
+              <input
+                type="password"
+                value={passwordForm.confirm}
+                onChange={(e) => handlePasswordInputChange('confirm', e.target.value)}
+                autoComplete="new-password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mật khẩu mới
-            </label>
-            <input
-              type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
+
+          {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+          {passwordSuccess && <p className="text-sm text-emerald-600">{passwordSuccess}</p>}
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={isChangingPassword}
+              className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isChangingPassword ? 'Đang đổi mật khẩu...' : 'Cập nhật mật khẩu'}
+            </button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Xác nhận mật khẩu
-            </label>
-            <input
-              type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-          </div>
-        </div>
+        </form>
       </div>
     </div>
   );
@@ -341,15 +476,12 @@ export const Settings: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Chính sách mật khẩu
             </label>
-            <select
+            <Select
               value={settings.passwordPolicy}
-              onChange={(e) => handleInputChange('passwordPolicy', e.target.value)}
-              className="w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="weak">Yếu (6+ ký tự)</option>
-              <option value="medium">Trung bình (8+ ký tự, số và chữ)</option>
-              <option value="strong">Mạnh (12+ ký tự, số, chữ và ký tự đặc biệt)</option>
-            </select>
+              onChange={(val) => handleInputChange('passwordPolicy', val)}
+              options={passwordPolicyOptions}
+              className="md:w-1/2"
+            />
           </div>
         </div>
       </div>
@@ -398,31 +530,21 @@ export const Settings: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Mức độ log
             </label>
-            <select
+            <Select
               value={settings.logLevel}
-              onChange={(e) => handleInputChange('logLevel', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="error">Chỉ lỗi</option>
-              <option value="warning">Cảnh báo và lỗi</option>
-              <option value="info">Thông tin, cảnh báo và lỗi</option>
-              <option value="debug">Tất cả (Debug)</option>
-            </select>
+              onChange={(val) => handleInputChange('logLevel', val)}
+              options={logLevelOptions}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tần suất backup
             </label>
-            <select
+            <Select
               value={settings.backupFrequency}
-              onChange={(e) => handleInputChange('backupFrequency', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="hourly">Mỗi giờ</option>
-              <option value="daily">Hàng ngày</option>
-              <option value="weekly">Hàng tuần</option>
-              <option value="monthly">Hàng tháng</option>
-            </select>
+              onChange={(val) => handleInputChange('backupFrequency', val)}
+              options={backupOptions}
+            />
           </div>
         </div>
       </div>
@@ -463,7 +585,7 @@ export const Settings: React.FC = () => {
           <FiSave className="w-4 h-4 mr-2" />
           Lưu cài đặt
         </button>
-      </div>
+    </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar */}
@@ -475,7 +597,7 @@ export const Settings: React.FC = () => {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => handleSelectTab(tab.id)}
                     className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                       activeTab === tab.id
                         ? 'bg-primary text-white'
@@ -498,6 +620,22 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Feedback toast */}
+      {feedback && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3">
+            <FiSave className="w-5 h-5" />
+            <span className="text-sm font-medium">{feedback}</span>
+            <button
+              onClick={() => setFeedback(null)}
+              className="text-white/80 hover:text-white text-sm underline"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
