@@ -15,6 +15,7 @@ import type { Order as AdminOrder, OrderStatus, PaymentStatus } from '../../type
 import { useAuthStore } from '../../store/useAuthStore';
 import { Loader } from '../../components/common/Loader';
 import { useToast } from '../../components/common/Toast';
+import { Portal } from '../../components/common/Portal';
 
 export const OrderManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,6 +24,14 @@ export const OrderManagement: React.FC = () => {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
+  const [orderDetail, setOrderDetail] = useState<AdminOrder | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isFetchingDetail, setIsFetchingDetail] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editStatus, setEditStatus] = useState<OrderStatus>('PENDING');
+  const [editPaymentStatus, setEditPaymentStatus] = useState<PaymentStatus>('PENDING');
+  const [isUpdating, setIsUpdating] = useState(false);
   const userRole = useAuthStore((state) => state.user?.role);
   const { showToast } = useToast();
   const statusOptions = [
@@ -43,6 +52,31 @@ export const OrderManagement: React.FC = () => {
     { value: 'FAILED', label: 'Thất bại' },
     { value: 'REFUNDED', label: 'Đã hoàn tiền' },
   ];
+  const orderedStatuses: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'RETURNED'];
+  const orderedPaymentStatuses: PaymentStatus[] = ['PENDING', 'PAID', 'REFUNDED', 'FAILED'];
+
+  const isStatusDisabled = (target: OrderStatus, current: OrderStatus) => {
+    const currentIndex = orderedStatuses.indexOf(current);
+    const targetIndex = orderedStatuses.indexOf(target);
+    if (targetIndex < currentIndex) return true; // không lùi trạng thái
+
+    // Không thể hủy khi đã giao/đã trả
+    if (target === 'CANCELLED' && ['SHIPPING', 'DELIVERED', 'RETURNED'].includes(current)) {
+      return true;
+    }
+
+    // Không cho chuyển sang ĐÃ TRẢ trừ khi đã ở trạng thái đó (tránh đổi sau khi đã giao)
+    if (target === 'RETURNED' && current !== 'RETURNED') {
+      return true;
+    }
+
+    // Khi đã hủy/đã trả rồi thì khóa các trạng thái khác
+    if (['CANCELLED', 'RETURNED'].includes(current) && target !== current) {
+      return true;
+    }
+
+    return false;
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -141,6 +175,45 @@ export const OrderManagement: React.FC = () => {
     return methods[method as keyof typeof methods] || method;
   };
 
+  const handleViewOrder = async (order: AdminOrder) => {
+    setSelectedOrder(order);
+    setIsDetailOpen(true);
+    setIsFetchingDetail(true);
+    try {
+      const detail = await orderApi.getAdminOrder(order.id);
+      setOrderDetail(detail);
+    } catch {
+      // Giữ modal mở nhưng không hiển thị toast để tránh gây khó chịu
+      setOrderDetail(null);
+    } finally {
+      setIsFetchingDetail(false);
+    }
+  };
+
+  const handleOpenEdit = (order: AdminOrder) => {
+    setSelectedOrder(order);
+    setEditStatus(order.status);
+    setEditPaymentStatus(order.paymentStatus);
+    setIsEditOpen(true);
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!selectedOrder) return;
+    try {
+      setIsUpdating(true);
+      const updated = await orderApi.updateAdminOrderStatus(selectedOrder.id, editStatus, editPaymentStatus);
+      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      setOrderDetail((prev) => (prev && prev.id === updated.id ? updated : prev));
+      showToast({ title: 'Đã cập nhật đơn hàng', variant: 'success' });
+      setIsEditOpen(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái đơn hàng.';
+      showToast({ title: 'Cập nhật thất bại', message, variant: 'error' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -169,6 +242,204 @@ export const OrderManagement: React.FC = () => {
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
+      )}
+
+      {/* View Order Modal */}
+      {isDetailOpen && selectedOrder && (
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="absolute inset-0" onClick={() => setIsDetailOpen(false)} />
+            <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden max-h-[90vh]">
+            <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
+              <div>
+                <p className="text-xs uppercase tracking-[0.12em] text-gray-400 font-semibold">Chi tiết đơn hàng</p>
+                <h3 className="text-2xl font-semibold text-gray-900 mt-1">{selectedOrder.orderNumber}</h3>
+                <p className="text-xs text-gray-500 mt-1">Khách: {selectedOrder.user.fullName}</p>
+              </div>
+              <button
+                onClick={() => setIsDetailOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-6 py-4 space-y-4 overflow-y-auto">
+              {isFetchingDetail && <Loader />}
+              {!isFetchingDetail && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-500">Trạng thái</p>
+                      {getOrderStatusBadge(orderDetail?.status ?? selectedOrder.status)}
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Thanh toán</p>
+                      {getPaymentStatusBadge(orderDetail?.paymentStatus ?? selectedOrder.paymentStatus)}
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Tổng tiền</p>
+                      <p className="font-semibold text-gray-900">{formatCurrency(orderDetail?.total ?? selectedOrder.total)}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm font-semibold text-gray-900 mb-2">Sản phẩm ({orderDetail?.items.length ?? selectedOrder.items.length})</p>
+                    <div className="divide-y divide-gray-200">
+                      {(orderDetail?.items ?? selectedOrder.items).map((item) => (
+                        <div key={item.id} className="py-2 flex items-center gap-3">
+                          <img src={item.product.thumbnail} alt={item.product.name} className="w-12 h-12 rounded-lg object-cover" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{item.product.name}</p>
+                            <p className="text-xs text-gray-500">SL: {item.quantity} × {formatCurrency(item.price)}</p>
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900">{formatCurrency(item.total)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+              <div className="px-6 py-4 bg-gray-50 flex justify-end">
+                <button
+                  onClick={() => setIsDetailOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {/* Edit Status Modal */}
+      {isEditOpen && selectedOrder && (
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="absolute inset-0" onClick={() => setIsEditOpen(false)} />
+            <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
+              <div>
+                <p className="text-xs uppercase tracking-[0.12em] text-gray-400 font-semibold">Cập nhật trạng thái</p>
+                <h3 className="text-xl font-semibold text-gray-900 mt-1">{selectedOrder.orderNumber}</h3>
+              </div>
+              <button
+                onClick={() => setIsEditOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4 overflow-y-auto">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-3">Trạng thái đơn hàng</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-1 uppercase">Luồng chính</p>
+                    <Select
+                      value={editStatus}
+                      onChange={(val) => setEditStatus(val as OrderStatus)}
+                      options={statusOptions
+                        .filter((s) => s.value && !['CANCELLED', 'RETURNED'].includes(s.value))
+                        .map((s) => ({
+                          ...s,
+                          disabled: isStatusDisabled(s.value as OrderStatus, selectedOrder.status),
+                        }))}
+                      placeholder="Chọn trạng thái"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                      Chỉ đi tới các bước tiếp theo, không thể lùi.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-1 uppercase">Huỷ / Trả</p>
+                    <Select
+                      value={editStatus}
+                      onChange={(val) => setEditStatus(val as OrderStatus)}
+                      options={statusOptions
+                        .filter((s) => ['CANCELLED', 'RETURNED'].includes(s.value))
+                        .map((s) => ({
+                          ...s,
+                          disabled: isStatusDisabled(s.value as OrderStatus, selectedOrder.status),
+                        }))}
+                      placeholder="Chọn trạng thái"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                      Chỉ dùng cho huỷ/hoàn đơn, tùy thuộc trạng thái hiện tại.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-3">Trạng thái thanh toán</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-1 uppercase">Luồng chính</p>
+                    <Select
+                      value={editPaymentStatus}
+                      onChange={(val) => setEditPaymentStatus(val as PaymentStatus)}
+                      options={paymentStatusOptions
+                        .filter((p) => ['PENDING', 'PAID'].includes(p.value))
+                        .map((p) => ({
+                          ...p,
+                          disabled:
+                            orderedPaymentStatuses.indexOf(p.value as PaymentStatus) <
+                            orderedPaymentStatuses.indexOf(selectedOrder.paymentStatus),
+                        }))}
+                      placeholder="Chọn trạng thái thanh toán"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                      Tiến trình chính (chờ thanh toán → đã thanh toán), không thể lùi.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-1 uppercase">Hoàn tiền / Thất bại</p>
+                    <Select
+                      value={editPaymentStatus}
+                      onChange={(val) => setEditPaymentStatus(val as PaymentStatus)}
+                      options={paymentStatusOptions
+                        .filter((p) => ['REFUNDED', 'FAILED'].includes(p.value))
+                        .map((p) => ({
+                          ...p,
+                          disabled:
+                            orderedPaymentStatuses.indexOf(p.value as PaymentStatus) <
+                            orderedPaymentStatuses.indexOf(selectedOrder.paymentStatus),
+                        }))}
+                      placeholder="Chọn trạng thái thanh toán"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                      Dùng khi hoàn tiền hoặc thất bại, theo thứ tự tiến lên.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+              <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsEditOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleUpdateStatus}
+                  disabled={isUpdating}
+                  className="px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary-dark disabled:opacity-60"
+                >
+                  {isUpdating ? 'Đang lưu...' : 'Lưu'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
       )}
 
       {isLoading && (
@@ -401,10 +672,16 @@ export const OrderManagement: React.FC = () => {
                   </td>
                   <td className="py-3 lg:py-4 px-2 lg:px-4">
                     <div className="flex items-center space-x-1 lg:space-x-2">
-                      <button className="p-1 lg:p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
+                      <button
+                        onClick={() => handleViewOrder(order)}
+                        className="p-1 lg:p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      >
                         <FiEye className="w-3 h-3 lg:w-4 lg:h-4" />
                       </button>
-                      <button className="p-1 lg:p-1.5 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors">
+                      <button
+                        onClick={() => handleOpenEdit(order)}
+                        className="p-1 lg:p-1.5 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                      >
                         <FiEdit className="w-3 h-3 lg:w-4 lg:h-4" />
                       </button>
                     </div>

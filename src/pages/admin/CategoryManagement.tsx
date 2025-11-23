@@ -17,6 +17,7 @@ import type { Category } from '../../types';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Loader } from '../../components/common/Loader';
 import { useToast } from '../../components/common/Toast';
+import { Portal } from '../../components/common/Portal';
 
 const defaultFormState = {
   name: '',
@@ -377,8 +378,9 @@ export const CategoryManagement: React.FC = () => {
 
       {/* Add/Edit Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <Portal>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">
                 {editingCategory ? 'Sửa danh mục' : 'Thêm danh mục mới'}
@@ -476,7 +478,8 @@ export const CategoryManagement: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+          </div>
+        </Portal>
       )}
 
       {viewCategory && (
