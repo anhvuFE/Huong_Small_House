@@ -14,6 +14,7 @@ import { productApi } from '../../services/productApi';
 import type { Category, Product } from '../../types';
 import { formatCurrency } from '../../utils/format';
 import { Loader } from '../../components/common/Loader';
+import { useToast } from '../../components/common/Toast';
 
 interface ProductFormState {
   name: string;
@@ -50,6 +51,7 @@ export const ProductManagement: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [categoryName, setCategoryName] = useState('');
   const [categoryStatus, setCategoryStatus] = useState('');
+  const { showToast } = useToast();
 
   const {
     currentPage,
@@ -148,8 +150,10 @@ export const ProductManagement: React.FC = () => {
       setIsFormOpen(false);
       setEditingProduct(null);
       setFormState(defaultFormState);
+      showToast({ title: editingProduct ? 'Đã cập nhật sản phẩm' : 'Đã tạo sản phẩm', variant: 'success' });
     } catch {
       setError('Không thể lưu sản phẩm. Vui lòng thử lại.');
+      showToast({ title: 'Lưu sản phẩm thất bại', variant: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -252,7 +256,7 @@ export const ProductManagement: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hidden lg:block">
           <table className="w-full min-w-[800px]">
             <thead className="bg-gray-50">
               <tr>
@@ -299,9 +303,13 @@ export const ProductManagement: React.FC = () => {
                         >
                           <FiEdit className="w-4 h-4" />
                         </button>
-                        <button className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg">
-                          <FiEye className="w-4 h-4" />
-                        </button>
+                      <button
+                        onClick={() => openEditModal(product)}
+                        className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                        aria-label="Xem chi tiết"
+                      >
+                        <FiEye className="w-4 h-4" />
+                      </button>
                         <button
                           onClick={() => handleDeleteProduct(product)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
@@ -315,6 +323,63 @@ export const ProductManagement: React.FC = () => {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="lg:hidden divide-y divide-gray-200 border-t border-gray-200">
+          {filteredProducts.map((product) => {
+            const stockStatus = getStockStatus(product.stock);
+            return (
+              <div
+                key={product.id}
+                className="p-4 bg-white flex gap-3"
+              >
+                <img src={product.thumbnail} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-gray-900 leading-snug text-sm">{product.name}</p>
+                      <p className="text-xs text-gray-500">{product.brand}</p>
+                    </div>
+                    <button
+                      onClick={() => openEditModal(product)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg shrink-0"
+                      aria-label="Chỉnh sửa"
+                    >
+                      <FiEdit className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                      {product.category}
+                    </span>
+                    <span className="text-sm font-bold text-gray-900">{formatCurrency(product.price)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${stockStatus.color}`}>
+                      {stockStatus.text}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openEditModal(product)}
+                        className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                        aria-label="Xem chi tiết"
+                      >
+                        <FiEye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProduct(product)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                        aria-label="Xóa"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {paginatedData.totalItems === 0 && (
@@ -489,8 +554,10 @@ export const ProductManagement: React.FC = () => {
                   try {
                     await productApi.deleteProduct(deleteProductTarget.productId);
                     setProducts((prev) => prev.filter((item) => item.productId !== deleteProductTarget.productId));
+                    showToast({ title: 'Đã xóa sản phẩm', variant: 'error' });
                   } catch {
                     setError('Không thể xóa sản phẩm. Vui lòng thử lại.');
+                    showToast({ title: 'Xóa sản phẩm thất bại', variant: 'error' });
                   } finally {
                     setDeleteProductTarget(null);
                   }

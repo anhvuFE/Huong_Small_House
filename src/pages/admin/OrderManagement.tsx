@@ -14,6 +14,7 @@ import { orderApi } from '../../services/orderApi';
 import type { Order as AdminOrder, OrderStatus, PaymentStatus } from '../../types/admin';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Loader } from '../../components/common/Loader';
+import { useToast } from '../../components/common/Toast';
 
 export const OrderManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,6 +24,7 @@ export const OrderManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const userRole = useAuthStore((state) => state.user?.role);
+  const { showToast } = useToast();
   const statusOptions = [
     { value: '', label: 'Tất cả trạng thái' },
     { value: 'PENDING', label: 'Chờ xác nhận' },
@@ -58,6 +60,7 @@ export const OrderManagement: React.FC = () => {
         // Nếu token hết hạn/không hợp lệ, yêu cầu đăng nhập lại và không gắn mock để tránh hiểu nhầm.
         setError(message);
         setOrders([]);
+        showToast({ title: 'Không thể tải đơn hàng', message, variant: 'error' });
       } finally {
         setIsLoading(false);
       }

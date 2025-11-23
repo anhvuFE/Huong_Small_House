@@ -19,6 +19,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { mockPromotionCodes } from '../../data/adminData';
 import type { PromotionCode } from '../../types/admin';
 import { Loader } from '../../components/common/Loader';
+import { useToast } from '../../components/common/Toast';
 
 export const PromotionManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,6 +29,7 @@ export const PromotionManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const userRole = useAuthStore((state) => state.user?.role);
+  const { showToast } = useToast();
 
   const statusOptions = [
     { value: '', label: 'Tất cả trạng thái' },
@@ -50,14 +52,15 @@ export const PromotionManagement: React.FC = () => {
         const data = await promotionApi.listPromotions();
         setPromotions(data);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Không thể tải khuyến mãi. Hiển thị dữ liệu mẫu.';
-        setError(message);
-        setPromotions(mockPromotionCodes);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      const message =
+        err instanceof Error ? err.message : 'Không thể tải khuyến mãi. Hiển thị dữ liệu mẫu.';
+      setError(message);
+      setPromotions(mockPromotionCodes);
+      showToast({ title: 'Không thể tải khuyến mãi', variant: 'error' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
     if (userRole !== 'ADMIN') {
       setError('Bạn không có quyền truy cập trang quản lý khuyến mãi.');

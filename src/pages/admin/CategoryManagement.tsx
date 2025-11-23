@@ -16,6 +16,7 @@ import { productApi } from '../../services/productApi';
 import type { Category } from '../../types';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Loader } from '../../components/common/Loader';
+import { useToast } from '../../components/common/Toast';
 
 const defaultFormState = {
   name: '',
@@ -35,6 +36,7 @@ export const CategoryManagement: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const userRole = useAuthStore((state) => state.user?.role);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -453,9 +455,10 @@ export const CategoryManagement: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  setCategories((prev) => prev.filter((category) => category.id !== deleteTarget.id));
-                  setDeleteTarget(null);
-                  setStatusMessage('Đã ẩn danh mục khỏi danh sách (chưa gọi API).');
+      setCategories((prev) => prev.filter((category) => category.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      setStatusMessage('Đã ẩn danh mục khỏi danh sách (chưa gọi API).');
+      showToast({ title: 'Đã ẩn danh mục', variant: 'info' });
                 }}
                 className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
               >
