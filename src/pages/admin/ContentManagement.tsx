@@ -17,6 +17,7 @@ import { Select } from '../../components/common/Select';
 import { contentApi } from '../../services/contentApi';
 import { getErrorMessage } from '../../utils/error';
 import type { ContentItem } from '../../types';
+import { Loader } from '../../components/common/Loader';
 
 export const ContentManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -386,8 +387,8 @@ export const ContentManagement: React.FC = () => {
             <tbody className="divide-y divide-gray-200">
               {isLoading && (
                 <tr>
-                  <td colSpan={7} className="py-6 px-4 text-center text-sm text-gray-500">
-                    Đang tải nội dung...
+                  <td colSpan={7} className="py-6 px-4">
+                    <Loader />
                   </td>
                 </tr>
               )}

@@ -14,6 +14,7 @@ import {
 import { Select } from '../../components/common/Select';
 import { reportApi } from '../../services/reportApi';
 import { useAuthStore } from '../../store/useAuthStore';
+import { Loader } from '../../components/common/Loader';
 
 interface ReportsCache {
   monthlyRevenue: number;
@@ -174,8 +175,8 @@ export const Reports: React.FC = () => {
       )}
 
       {isLoading && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4 text-sm text-gray-600">
-          Đang tải báo cáo...
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <Loader />
         </div>
       )}
       {/* Header */}

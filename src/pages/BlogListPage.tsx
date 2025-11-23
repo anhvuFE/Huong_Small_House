@@ -4,6 +4,7 @@ import { FiClock, FiEye, FiFilter, FiSearch, FiTag, FiUser } from 'react-icons/f
 import { contentApi } from '../services/contentApi';
 import type { ContentItem } from '../types';
 import { getErrorMessage } from '../utils/error';
+import { Loader } from '../components/common/Loader';
 
 const formatDate = (value?: Date) => {
   if (!value) return 'Không rõ';
@@ -143,7 +144,9 @@ export const BlogListPage: React.FC = () => {
         </div>
 
         {isLoading && (
-          <div className="text-center text-gray-500 py-10">Đang tải bài viết...</div>
+          <div className="py-10">
+            <Loader />
+          </div>
         )}
 
         {!isLoading && featured && (

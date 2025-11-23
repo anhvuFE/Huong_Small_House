@@ -13,6 +13,7 @@ import { usePagination } from '../../hooks/usePagination';
 import { productApi } from '../../services/productApi';
 import type { Category, Product } from '../../types';
 import { formatCurrency } from '../../utils/format';
+import { Loader } from '../../components/common/Loader';
 
 interface ProductFormState {
   name: string;
@@ -154,16 +155,11 @@ export const ProductManagement: React.FC = () => {
     }
   };
 
+  const [deleteProductTarget, setDeleteProductTarget] = useState<Product | null>(null);
+
   const handleDeleteProduct = async (product: Product) => {
     if (!product.productId) return;
-    const confirmed = window.confirm(`Bạn có chắc muốn xóa sản phẩm '${product.name}'?`);
-    if (!confirmed) return;
-    try {
-      await productApi.deleteProduct(product.productId);
-      setProducts((prev) => prev.filter((item) => item.productId !== product.productId));
-    } catch {
-      setError('Không thể xóa sản phẩm. Vui lòng thử lại.');
-    }
+    setDeleteProductTarget(product);
   };
 
   const handleCreateCategory = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -187,8 +183,8 @@ export const ProductManagement: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
-        Đang tải dữ liệu sản phẩm...
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <Loader />
       </div>
     );
   }
@@ -466,6 +462,44 @@ export const ProductManagement: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteProductTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="absolute inset-0" onClick={() => setDeleteProductTarget(null)} />
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h3 className="text-xl font-semibold text-gray-900">Xóa sản phẩm</h3>
+              <p className="text-sm text-gray-600 mt-2">
+                Bạn có chắc muốn xóa “{deleteProductTarget.name}”? Hành động này không thể hoàn tác.
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteProductTarget(null)}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={async () => {
+                  if (!deleteProductTarget?.productId) return;
+                  try {
+                    await productApi.deleteProduct(deleteProductTarget.productId);
+                    setProducts((prev) => prev.filter((item) => item.productId !== deleteProductTarget.productId));
+                  } catch {
+                    setError('Không thể xóa sản phẩm. Vui lòng thử lại.');
+                  } finally {
+                    setDeleteProductTarget(null);
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
+              >
+                Xóa
+              </button>
+            </div>
           </div>
         </div>
       )}

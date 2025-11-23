@@ -4,6 +4,7 @@ import { FiArrowLeft, FiClock, FiEye, FiTag, FiUser } from 'react-icons/fi';
 import { contentApi } from '../services/contentApi';
 import type { ContentItem } from '../types';
 import { getErrorMessage } from '../utils/error';
+import { Loader } from '../components/common/Loader';
 
 const formatDateTime = (value?: Date) => {
   if (!value) return 'Không rõ';
@@ -58,7 +59,11 @@ export const BlogDetailPage: React.FC = () => {
   }, [post]);
 
   if (isLoading) {
-    return <div className="container mx-auto px-4 py-16 text-center text-gray-600">Đang tải bài viết...</div>;
+    return (
+      <div className="container mx-auto px-4 py-16 flex justify-center">
+        <Loader />
+      </div>
+    );
   }
 
   if (error) {
