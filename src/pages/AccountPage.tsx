@@ -5,6 +5,7 @@ import { profileApi } from '../services/profileApi';
 import { useAuthStore } from '../store/useAuthStore';
 import { getErrorMessage } from '../utils/error';
 import { Loader } from '../components/common/Loader';
+import { Portal } from '../components/common/Portal';
 
 export const AccountPage: React.FC = () => {
   const { user, updateUser, logout, isAuthenticated } = useAuthStore();
@@ -252,83 +253,85 @@ export const AccountPage: React.FC = () => {
       </div>
 
       {isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm uppercase tracking-wide text-gray-400">Cập nhật thông tin</p>
-                <h3 className="text-xl font-semibold text-gray-900">Chỉnh sửa hồ sơ</h3>
-              </div>
-              <button
-                type="button"
-                onClick={closeEditModal}
-                className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
-                aria-label="Đóng"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form className="space-y-5" onSubmit={handleSaveProfile}>
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
-                <input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  value={editData.fullName}
-                  onChange={handleEditChange}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Nhập họ tên đầy đủ"
-                />
-              </div>
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={editData.phone}
-                  onChange={handleEditChange}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Nhập số điện thoại"
-                />
-              </div>
-              <div>
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
-                <textarea
-                  id="address"
-                  name="address"
-                  rows={3}
-                  value={editData.address}
-                  onChange={handleEditChange}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Nhập địa chỉ mặc định"
-                />
-              </div>
-
-              {formError && <p className="text-sm text-red-600">{formError}</p>}
-              {formSuccess && <p className="text-sm text-emerald-600">{formSuccess}</p>}
-
-              <div className="flex justify-end gap-3">
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm uppercase tracking-wide text-gray-400">Cập nhật thông tin</p>
+                  <h3 className="text-xl font-semibold text-gray-900">Chỉnh sửa hồ sơ</h3>
+                </div>
                 <button
                   type="button"
                   onClick={closeEditModal}
-                  className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50"
+                  className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
+                  aria-label="Đóng"
                 >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-5 py-2.5 rounded-xl bg-primary text-white font-medium hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  <FiX className="w-5 h-5" />
                 </button>
               </div>
-            </form>
+
+              <form className="space-y-5" onSubmit={handleSaveProfile}>
+                <div>
+                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
+                  <input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    value={editData.fullName}
+                    onChange={handleEditChange}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Nhập họ tên đầy đủ"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    value={editData.phone}
+                    onChange={handleEditChange}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Nhập số điện thoại"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
+                  <textarea
+                    id="address"
+                    name="address"
+                    rows={3}
+                    value={editData.address}
+                    onChange={handleEditChange}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Nhập địa chỉ mặc định"
+                  />
+                </div>
+
+                {formError && <p className="text-sm text-red-600">{formError}</p>}
+                {formSuccess && <p className="text-sm text-emerald-600">{formSuccess}</p>}
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={closeEditModal}
+                    className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-5 py-2.5 rounded-xl bg-primary text-white font-medium hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );

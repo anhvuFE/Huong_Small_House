@@ -5,6 +5,7 @@ import { cn } from '../../utils/cn';
 interface SelectOption {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
 interface SelectProps {
@@ -41,6 +42,7 @@ export const Select: React.FC<SelectProps> = ({
   }, []);
 
   const handleSelect = (option: SelectOption) => {
+    if (option.disabled) return;
     onChange(option.value);
     setIsOpen(false);
   };
@@ -84,17 +86,19 @@ export const Select: React.FC<SelectProps> = ({
               <button
                 key={option.value}
                 type="button"
+                disabled={option.disabled}
                 onClick={() => handleSelect(option)}
                 className={cn(
                   'w-full px-3 lg:px-4 py-2 lg:py-2.5 text-left flex items-center justify-between text-sm lg:text-base',
-                  'hover:bg-primary/5 transition-colors duration-150',
-                  option.value === value
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-gray-700 hover:text-gray-900'
+                  'transition-colors duration-150',
+                  option.disabled
+                    ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+                    : 'hover:bg-primary/5 text-gray-700 hover:text-gray-900',
+                  option.value === value && !option.disabled && 'bg-primary/10 text-primary font-medium'
                 )}
               >
                 <span className="truncate">{option.label}</span>
-                {option.value === value && (
+                {option.value === value && !option.disabled && (
                   <FiCheck className="w-4 h-4 lg:w-5 lg:h-5 text-primary flex-shrink-0 ml-2" />
                 )}
               </button>
