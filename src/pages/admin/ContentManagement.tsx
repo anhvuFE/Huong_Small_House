@@ -18,6 +18,7 @@ import { contentApi } from '../../services/contentApi';
 import { getErrorMessage } from '../../utils/error';
 import type { ContentItem } from '../../types';
 import { Loader } from '../../components/common/Loader';
+import { useToast } from '../../components/common/Toast';
 
 export const ContentManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,6 +42,7 @@ export const ContentManagement: React.FC = () => {
   });
   const [editError, setEditError] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const { showToast } = useToast();
 
   const typeOptions = [
     { value: '', label: 'Tất cả loại' },
@@ -147,10 +149,12 @@ export const ContentManagement: React.FC = () => {
       .then((updated) => {
         setContent((prev) => prev.map((item) => (item.id === id ? updated : item)));
         setActionMessage(next ? 'Đã bật nội dung' : 'Đã tắt nội dung');
+        showToast({ title: next ? 'Đã bật nội dung' : 'Đã tắt nội dung', variant: 'success' });
       })
       .catch((err) => {
         setContent((prev) => prev.map((item) => (item.id === id ? { ...item, published: !next, isActive: !next, status: !next ? 'PUBLISHED' : 'DRAFT' } : item)));
         setError(getErrorMessage(err, 'Không thể cập nhật trạng thái.'));
+        showToast({ title: 'Cập nhật trạng thái thất bại', variant: 'error' });
       })
       .finally(() => setIsWorking(null));
   };
@@ -171,8 +175,10 @@ export const ContentManagement: React.FC = () => {
       await contentApi.deleteContent(deleteTarget.id);
       setContent((prev) => prev.filter((item) => item.id !== deleteTarget.id));
       setActionMessage('Đã xóa nội dung.');
+      showToast({ title: 'Đã xóa nội dung', variant: 'error' });
     } catch (err) {
       setError(getErrorMessage(err, 'Không thể xóa nội dung.'));
+      showToast({ title: 'Xóa nội dung thất bại', variant: 'error' });
     } finally {
       setIsWorking(null);
       setDeleteTarget(null);
@@ -226,8 +232,10 @@ export const ContentManagement: React.FC = () => {
       setContent((prev) => prev.map((item) => (item.id === selectedContent.id ? updated : item)));
       setIsEditOpen(false);
       setActionMessage('Đã cập nhật nội dung.');
+      showToast({ title: 'Đã lưu nội dung', variant: 'success' });
     } catch (err) {
       setEditError(getErrorMessage(err, 'Không thể lưu nội dung.'));
+      showToast({ title: 'Lưu nội dung thất bại', variant: 'error' });
     } finally {
       setIsSavingEdit(false);
     }
