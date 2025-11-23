@@ -488,7 +488,7 @@ export const OrderManagement: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 rounded-lg">
@@ -546,8 +546,69 @@ export const OrderManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Orders Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* Orders Cards (mobile) */}
+      <div className="space-y-3 md:hidden">
+        {filteredOrders.map((order) => (
+          <div key={order.id} className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-primary uppercase tracking-wide">{order.orderNumber}</p>
+                <p className="text-sm font-medium text-gray-900">{order.user.fullName}</p>
+                <p className="text-xs text-gray-500">{order.user.phone}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleViewOrder(order)}
+                  className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  aria-label="Xem đơn"
+                >
+                  <FiEye className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleOpenEdit(order)}
+                  className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                  aria-label="Sửa đơn"
+                >
+                  <FiEdit className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Sản phẩm</span>
+              <span className="font-medium text-gray-900">{order.items.length} sản phẩm</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Tổng tiền</span>
+              <span className="font-semibold text-gray-900">{formatCurrency(order.total)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Thanh toán</span>
+              {getPaymentStatusBadge(order.paymentStatus)}
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Trạng thái</span>
+              {getOrderStatusBadge(order.status)}
+            </div>
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center gap-1">
+                <FiCalendar className="w-4 h-4" />
+                {order.createdAt.toLocaleDateString('vi-VN')}
+              </div>
+              <span>{getPaymentMethodText(order.paymentMethod)}</span>
+            </div>
+          </div>
+        ))}
+
+        {!filteredOrders.length && (
+          <div className="text-center py-8 text-gray-600 bg-white border border-gray-200 rounded-xl">
+            Không tìm thấy đơn hàng nào.
+          </div>
+        )}
+      </div>
+
+      {/* Orders Table (desktop) */}
+      <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1000px]">
             <thead className="bg-gray-50 border-b border-gray-200">
