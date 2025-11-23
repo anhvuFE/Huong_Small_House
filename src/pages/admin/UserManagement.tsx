@@ -10,7 +10,6 @@ import {
   FiCalendar,
   FiCheckCircle,
   FiXCircle,
-  FiMoreHorizontal,
   FiEye,
   FiLock,
   FiUnlock,
@@ -20,6 +19,7 @@ import { userApi } from '../../services/userApi';
 import { getErrorMessage } from '../../utils/error';
 import type { User } from '../../types';
 import { Loader } from '../../components/common/Loader';
+import { useToast } from '../../components/common/Toast';
 
 const getDaysSinceLogin = (lastLogin?: Date) => {
   if (!lastLogin) return Infinity;
@@ -36,6 +36,7 @@ export const UserManagement: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [lockedUsers, setLockedUsers] = useState<Record<string, boolean>>({});
+  const { showToast } = useToast();
 
   const verificationOptions = [
     { value: '', label: 'Tất cả' },
@@ -105,6 +106,9 @@ export const UserManagement: React.FC = () => {
   };
 
   const getActivityStatus = (lastLogin?: Date) => {
+    if (!lastLogin) {
+      return { text: 'Chưa đăng nhập', color: 'text-gray-500' };
+    }
     const daysSinceLogin = getDaysSinceLogin(lastLogin);
 
     if (daysSinceLogin <= 1) {
@@ -135,10 +139,12 @@ export const UserManagement: React.FC = () => {
   };
 
   const handleToggleLock = (userId: string) => {
-    setLockedUsers((prev) => ({
-      ...prev,
-      [userId]: !prev[userId],
-    }));
+    const next = !lockedUsers[userId];
+    setLockedUsers((prev) => ({ ...prev, [userId]: next }));
+    showToast({
+      title: next ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản',
+      variant: next ? 'error' : 'success',
+    });
   };
 
   return (
@@ -160,7 +166,7 @@ export const UserManagement: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -249,8 +255,104 @@ export const UserManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* Users Cards (mobile) */}
+      <div className="space-y-3 md:hidden">
+        {isLoading && (
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <Loader />
+          </div>
+        )}
+        {!isLoading && filteredUsers.map((user) => {
+          const verificationStatus = getVerificationStatus(user);
+          const activityStatus = getActivityStatus(user.lastLogin);
+          const VerificationIcon = verificationStatus.icon;
+          return (
+            <div key={user.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                    {user.avatar ? (
+                      <img src={user.avatar} alt={user.fullName} className="w-12 h-12 rounded-full object-cover" />
+                    ) : (
+                      <FiUser className="w-5 h-5 text-gray-600" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{user.fullName}</p>
+                    <p className="text-xs text-gray-500">ID: {user.id}</p>
+                  </div>
+                </div>
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium ${verificationStatus.color}`}>
+                  <VerificationIcon className="w-3 h-3 mr-1" />
+                  {verificationStatus.text}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <FiMail className="w-4 h-4" />
+                    <span className="truncate">{user.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <FiPhone className="w-4 h-4" />
+                    <span>{user.phone || '---'}</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-gray-600">
+                    <FiMapPin className="w-4 h-4 mt-0.5" />
+                    <span className="text-sm">
+                      {user.addresses?.length
+                        ? `${user.addresses[0].street}${user.addresses[0].ward ? ', ' + user.addresses[0].ward : ''}`
+                        : 'Chưa có địa chỉ'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end justify-between text-right">
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <FiCalendar className="w-4 h-4" />
+                    {user.createdAt?.toLocaleDateString('vi-VN')}
+                  </div>
+                  <span className={`text-sm font-medium ${activityStatus.color}`}>
+                    {activityStatus.text}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  onClick={() => handleOpenDetail(user)}
+                  aria-label="Xem chi tiết người dùng"
+                >
+                  <FiEye className="w-4 h-4" />
+                </button>
+                <button
+                  className={`p-2 rounded-lg transition-colors ${lockedUsers[user.id]
+                    ? 'text-red-600 hover:bg-red-50'
+                    : 'text-green-600 hover:bg-green-50'}`}
+                  onClick={() => handleToggleLock(user.id)}
+                  aria-label={lockedUsers[user.id] ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                >
+                  {lockedUsers[user.id] ? (
+                    <FiUnlock className="w-4 h-4" />
+                  ) : (
+                    <FiLock className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        {!isLoading && filteredUsers.length === 0 && (
+          <div className="text-center py-8 text-gray-600 bg-white border border-gray-200 rounded-xl">
+            Không tìm thấy người dùng nào.
+          </div>
+        )}
+      </div>
+
+      {/* Users Table (desktop) */}
+      <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {error && (
           <div className="px-4 py-3 bg-red-50 border-b border-red-100 text-red-700 text-sm">
             {error}
@@ -380,7 +482,9 @@ export const UserManagement: React.FC = () => {
                           <FiEye className="w-4 h-4" />
                         </button>
                         <button
-                          className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          className={`p-1.5 rounded transition-colors ${lockedUsers[user.id]
+                            ? 'text-red-600 hover:bg-red-50'
+                            : 'text-green-600 hover:bg-green-50'}`}
                           onClick={() => handleToggleLock(user.id)}
                           aria-label={lockedUsers[user.id] ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
                         >
@@ -389,9 +493,6 @@ export const UserManagement: React.FC = () => {
                           ) : (
                             <FiLock className="w-4 h-4" />
                           )}
-                        </button>
-                        <button className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors">
-                          <FiMoreHorizontal className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -418,7 +519,7 @@ export const UserManagement: React.FC = () => {
 
       {/* Pagination */}
       {filteredUsers.length > 0 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow-sm border border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-white px-4 py-3 rounded-lg shadow-sm border border-gray-200">
           <div className="text-sm text-gray-700">
             Hiển thị <span className="font-medium">1</span> đến{' '}
             <span className="font-medium">{filteredUsers.length}</span> trong tổng số{' '}
