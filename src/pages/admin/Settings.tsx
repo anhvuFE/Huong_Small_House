@@ -125,14 +125,17 @@ export const Settings: React.FC = () => {
     [],
   );
 
-  const tabs = [
-    { id: 'general', label: 'Tổng quan', icon: FiSettingsIcon },
-    { id: 'profile', label: 'Hồ sơ', icon: FiUser },
-    { id: 'email', label: 'Email', icon: FiMail },
-    { id: 'notifications', label: 'Thông báo', icon: FiBell },
-    { id: 'security', label: 'Bảo mật', icon: FiShield },
-    { id: 'system', label: 'Hệ thống', icon: FiDatabase },
-  ];
+  const tabs = useMemo(
+    () => [
+      { id: 'general', label: 'Tổng quan', icon: FiSettingsIcon },
+      { id: 'profile', label: 'Hồ sơ', icon: FiUser },
+      { id: 'email', label: 'Email', icon: FiMail },
+      { id: 'notifications', label: 'Thông báo', icon: FiBell },
+      { id: 'security', label: 'Bảo mật', icon: FiShield },
+      { id: 'system', label: 'Hệ thống', icon: FiDatabase },
+    ],
+    [],
+  );
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -140,7 +143,7 @@ export const Settings: React.FC = () => {
     if (tab && validTabs.includes(tab)) {
       setActiveTab(tab);
     }
-  }, [searchParams]);
+  }, [searchParams, tabs]);
 
   const handleSelectTab = (id: string) => {
     setActiveTab(id);

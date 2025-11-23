@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FiCheckCircle, FiInfo, FiXCircle } from 'react-icons/fi';
@@ -12,7 +13,7 @@ interface Toast {
   variant: ToastVariant;
 }
 
-interface ToastContextValue {
+export interface ToastContextValue {
   showToast: (payload: Omit<Toast, 'id'>) => void;
 }
 

@@ -70,7 +70,7 @@ export const PromotionManagement: React.FC = () => {
     }
 
     fetchPromotions();
-  }, [userRole]);
+  }, [userRole, showToast]);
 
   const filteredPromotions = useMemo(() => {
     return promotions.filter((promo) => {

@@ -73,7 +73,7 @@ export const OrderManagement: React.FC = () => {
     }
 
     fetchOrders();
-  }, [userRole]);
+  }, [userRole, showToast]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
