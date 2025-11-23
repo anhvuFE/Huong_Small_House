@@ -3,13 +3,13 @@ import {
   FiPlus,
   FiSearch,
   FiEdit,
-  FiTrash2,
   FiEye,
   FiPackage,
   FiToggleLeft,
   FiToggleRight,
   FiSave,
   FiX,
+  FiTrash2,
   FiAlertTriangle,
 } from 'react-icons/fi';
 import { productApi } from '../../services/productApi';
@@ -32,9 +32,12 @@ export const CategoryManagement: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState({ ...defaultFormState });
   const [categories, setCategories] = useState<Category[]>([]);
+  const [productCounts, setProductCounts] = useState<Record<number, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [viewCategory, setViewCategory] = useState<Category | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
   const userRole = useAuthStore((state) => state.user?.role);
   const { showToast } = useToast();
 
@@ -43,8 +46,24 @@ export const CategoryManagement: React.FC = () => {
       try {
         setIsLoading(true);
         setStatusMessage('');
-        const data = await productApi.listCategories('admin');
-        setCategories(data);
+        const [categoryList, productList] = await Promise.all([
+          productApi.listCategories('admin'),
+          productApi.listProducts(),
+        ]);
+
+        const counts: Record<number, number> = {};
+        productList.forEach((p) => {
+          if (p.categoryId !== undefined && p.categoryId !== null) {
+            counts[p.categoryId] = (counts[p.categoryId] ?? 0) + 1;
+          }
+        });
+        setProductCounts(counts);
+
+        const merged = categoryList.map((cat) => ({
+          ...cat,
+          productCount: cat.productCount ?? counts[cat.categoryId] ?? 0,
+        }));
+        setCategories(merged);
       } catch {
         setStatusMessage('Không thể tải danh mục. Vui lòng thử lại sau.');
       } finally {
@@ -112,34 +131,43 @@ export const CategoryManagement: React.FC = () => {
       return;
     }
 
-    if (editingCategory) {
-      setStatusMessage('Tính năng cập nhật danh mục sẽ được bổ sung khi có API.');
-      setShowAddModal(false);
-      setEditingCategory(null);
-      return;
-    }
-
     try {
       setIsSubmitting(true);
-      const category = await productApi.createCategory({ name: formData.name });
-      setCategories((prev) => [...prev, category]);
-      setStatusMessage('Tạo danh mục thành công.');
+      if (editingCategory) {
+        const updated = await productApi.updateCategory(editingCategory.categoryId ?? Number(editingCategory.id), {
+          name: formData.name,
+          nameEn: formData.nameEn,
+          description: formData.description,
+          icon: formData.icon,
+          isActive: formData.isActive,
+        });
+        setCategories((prev) =>
+          prev.map((cat) =>
+            cat.id === editingCategory.id
+              ? { ...updated, productCount: updated.productCount ?? productCounts[updated.categoryId] ?? cat.productCount }
+              : cat
+          )
+        );
+        showToast({ title: 'Đã cập nhật danh mục', variant: 'success' });
+      } else {
+        const category = await productApi.createCategory({ name: formData.name, slug: formData.nameEn });
+        setCategories((prev) => [...prev, { ...category, productCount: category.productCount ?? 0 }]);
+        if (category.categoryId !== undefined) {
+          setProductCounts((prev) => ({ ...prev, [category.categoryId]: 0 }));
+        }
+        showToast({ title: 'Đã tạo danh mục', variant: 'success' });
+      }
+      setStatusMessage('');
       setShowAddModal(false);
+      setEditingCategory(null);
       setFormData({ ...defaultFormState });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Không thể lưu danh mục. Vui lòng thử lại.';
       setStatusMessage(message);
+      showToast({ title: 'Lưu danh mục thất bại', message, variant: 'error' });
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
-
-  const handleDeleteCategory = (categoryId: string) => {
-    const category = categories.find((c) => c.id === categoryId);
-    if (!category) return;
-    setDeleteTarget(category);
   };
 
   const toggleCategoryStatus = (categoryId: string) => {
@@ -149,6 +177,23 @@ export const CategoryManagement: React.FC = () => {
       )
     );
     setStatusMessage('Đã cập nhật trạng thái danh mục (cục bộ).');
+  };
+
+  const handleDeleteCategory = (category: Category) => {
+    setDeleteTarget(category);
+  };
+
+  const handleViewCategory = async (category: Category) => {
+    try {
+      const detail = await productApi.getCategory(category.categoryId ?? Number(category.id));
+      setViewCategory({
+        ...detail,
+        productCount: detail.productCount ?? productCounts[detail.categoryId] ?? category.productCount,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Không thể tải chi tiết danh mục.';
+      showToast({ title: 'Xem danh mục thất bại', message, variant: 'error' });
+    }
   };
 
   if (isLoading) {
@@ -290,14 +335,9 @@ export const CategoryManagement: React.FC = () => {
               {category.description || 'Chưa có mô tả cho danh mục này.'}
             </p>
 
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center text-sm text-gray-500">
-                <FiPackage className="w-4 h-4 mr-1" />
-                <span>{category.productCount ?? 0} sản phẩm</span>
-              </div>
-              <div className="flex items-center text-sm text-gray-500">
-                <span>Thứ tự: {category.order ?? 0}</span>
-              </div>
+            <div className="flex items-center text-sm text-gray-500 mb-4">
+              <FiPackage className="w-4 h-4 mr-1" />
+              <span>{category.productCount ?? 0} sản phẩm</span>
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-gray-200">
@@ -305,7 +345,10 @@ export const CategoryManagement: React.FC = () => {
                 Cập nhật: {category.updatedAt ? category.updatedAt.toLocaleDateString('vi-VN') : '--/--/----'}
               </div>
               <div className="flex items-center space-x-2">
-                <button className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
+                <button
+                  onClick={() => handleViewCategory(category)}
+                  className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                >
                   <FiEye className="w-4 h-4" />
                 </button>
                 <button
@@ -315,7 +358,7 @@ export const CategoryManagement: React.FC = () => {
                   <FiEdit className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleDeleteCategory(category.id)}
+                  onClick={() => handleDeleteCategory(category)}
                   className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                 >
                   <FiTrash2 className="w-4 h-4" />
@@ -436,6 +479,56 @@ export const CategoryManagement: React.FC = () => {
         </div>
       )}
 
+      {viewCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="absolute inset-0" onClick={() => setViewCategory(null)} />
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
+            <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
+              <div>
+                <p className="text-xs uppercase tracking-[0.12em] text-gray-400 font-semibold">Chi tiết danh mục</p>
+                <h3 className="text-2xl font-semibold text-gray-900 mt-1">{viewCategory.name}</h3>
+                {viewCategory.nameEn && <p className="text-sm text-gray-500">{viewCategory.nameEn}</p>}
+              </div>
+              <button
+                onClick={() => setViewCategory(null)}
+                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-3 text-sm text-gray-700">
+              <div className="flex items-center justify-between">
+                <span>Trạng thái</span>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${viewCategory.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-700'}`}>
+                  {viewCategory.isActive ? 'Đang bật' : 'Đang tắt'}
+                </span>
+              </div>
+              <div>
+                <p className="text-gray-500 mb-1">Mô tả</p>
+                <p className="font-medium text-gray-900">{viewCategory.description || 'Chưa có mô tả'}</p>
+              </div>
+              <div className="text-sm text-gray-600">
+                {viewCategory.productCount ?? 0} sản phẩm
+              </div>
+              <div className="text-xs text-gray-500">
+                Cập nhật: {viewCategory.updatedAt ? viewCategory.updatedAt.toLocaleDateString('vi-VN') : '--/--/----'}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setViewCategory(null)}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="absolute inset-0" onClick={() => setDeleteTarget(null)} />
@@ -443,7 +536,7 @@ export const CategoryManagement: React.FC = () => {
             <div className="px-6 py-5 border-b border-gray-100">
               <h3 className="text-xl font-semibold text-gray-900">Xóa danh mục</h3>
               <p className="text-sm text-gray-600 mt-2">
-                Tính năng xóa sẽ gắn API khi có. Bạn muốn ẩn tạm danh mục “{deleteTarget.name}” khỏi danh sách?
+                Bạn chắc chắn xóa danh mục “{deleteTarget.name}”? Hành động này cũng sẽ xóa sản phẩm liên quan.
               </p>
             </div>
             <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
@@ -454,15 +547,27 @@ export const CategoryManagement: React.FC = () => {
                 Hủy
               </button>
               <button
-                onClick={() => {
-      setCategories((prev) => prev.filter((category) => category.id !== deleteTarget.id));
-      setDeleteTarget(null);
-      setStatusMessage('Đã ẩn danh mục khỏi danh sách (chưa gọi API).');
-      showToast({ title: 'Đã ẩn danh mục', variant: 'info' });
+                onClick={async () => {
+                  if (!deleteTarget?.categoryId) return;
+                  try {
+                    await productApi.deleteCategory(deleteTarget.categoryId);
+                    setCategories((prev) => prev.filter((cat) => cat.categoryId !== deleteTarget.categoryId));
+                    setProductCounts((prev) => {
+                      const next = { ...prev };
+                      delete next[deleteTarget.categoryId];
+                      return next;
+                    });
+                    showToast({ title: 'Đã xóa danh mục', variant: 'error' });
+                  } catch (err) {
+                    const message = err instanceof Error ? err.message : 'Không thể xóa danh mục.';
+                    showToast({ title: 'Xóa danh mục thất bại', message, variant: 'error' });
+                  } finally {
+                    setDeleteTarget(null);
+                  }
                 }}
                 className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
               >
-                Ẩn tạm
+                Xóa
               </button>
             </div>
           </div>

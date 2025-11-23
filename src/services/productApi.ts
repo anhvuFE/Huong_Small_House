@@ -182,7 +182,24 @@ export const productApi = {
     if (user?.role !== 'ADMIN') {
       throw new Error('Chỉ admin mới có thể tạo danh mục');
     }
-    const response = await apiClient.post<ApiResponse<BackendCategory>>('/admin/products/categories', payload);
+    const response = await apiClient.post<ApiResponse<BackendCategory>>('/products/categories', payload);
     return toCategory(response.data.data);
+  },
+
+  async getCategory(categoryId: number): Promise<Category> {
+    const response = await apiClient.get<ApiResponse<BackendCategory>>(`/products/categories/${categoryId}`);
+    return toCategory(response.data.data);
+  },
+
+  async updateCategory(
+    categoryId: number,
+    payload: Partial<Pick<Category, 'name' | 'nameEn' | 'description' | 'icon' | 'isActive' | 'order'>>,
+  ): Promise<Category> {
+    const response = await apiClient.put<ApiResponse<BackendCategory>>(`/products/categories/${categoryId}`, payload);
+    return toCategory(response.data.data);
+  },
+
+  async deleteCategory(categoryId: number): Promise<void> {
+    await apiClient.delete(`/products/categories/${categoryId}`);
   },
 };
