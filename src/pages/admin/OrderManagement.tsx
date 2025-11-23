@@ -13,7 +13,7 @@ import { Select } from '../../components/common/Select';
 import { orderApi } from '../../services/orderApi';
 import type { Order as AdminOrder, OrderStatus, PaymentStatus } from '../../types/admin';
 import { useAuthStore } from '../../store/useAuthStore';
-import { mockOrders } from '../../data/adminData';
+import { Loader } from '../../components/common/Loader';
 
 export const OrderManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,20 +50,14 @@ export const OrderManagement: React.FC = () => {
         const data = await orderApi.listAdminOrders();
         setOrders(data);
       } catch (err) {
-        const status = (err as { response?: { status?: number } })?.response?.status;
         const message =
           err instanceof Error
             ? err.message
             : 'Không thể tải đơn hàng từ API. Hiển thị dữ liệu mẫu.';
 
         // Nếu token hết hạn/không hợp lệ, yêu cầu đăng nhập lại và không gắn mock để tránh hiểu nhầm.
-        if (message.toLowerCase().includes('đăng nhập') || status === 401) {
-          setError(message);
-          setOrders([]);
-        } else {
-          setError(`${message} Đang hiển thị dữ liệu mẫu.`);
-          setOrders(mockOrders);
-        }
+        setError(message);
+        setOrders([]);
       } finally {
         setIsLoading(false);
       }
@@ -175,8 +169,8 @@ export const OrderManagement: React.FC = () => {
       )}
 
       {isLoading && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 text-sm text-gray-600">
-          Đang tải danh sách đơn hàng...
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <Loader />
         </div>
       )}
 

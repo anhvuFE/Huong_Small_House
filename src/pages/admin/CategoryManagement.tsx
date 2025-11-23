@@ -15,6 +15,7 @@ import {
 import { productApi } from '../../services/productApi';
 import type { Category } from '../../types';
 import { useAuthStore } from '../../store/useAuthStore';
+import { Loader } from '../../components/common/Loader';
 
 const defaultFormState = {
   name: '',
@@ -131,10 +132,12 @@ export const CategoryManagement: React.FC = () => {
     }
   };
 
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+
   const handleDeleteCategory = (categoryId: string) => {
-    if (window.confirm('Tính năng xóa danh mục sẽ được bổ sung khi có API. Bạn có muốn ẩn mục này khỏi danh sách tạm thời?')) {
-      setCategories((prev) => prev.filter((category) => category.id !== categoryId));
-    }
+    const category = categories.find((c) => c.id === categoryId);
+    if (!category) return;
+    setDeleteTarget(category);
   };
 
   const toggleCategoryStatus = (categoryId: string) => {
@@ -148,8 +151,8 @@ export const CategoryManagement: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
-        Đang tải danh mục...
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <Loader />
       </div>
     );
   }
@@ -425,6 +428,38 @@ export const CategoryManagement: React.FC = () => {
               >
                 <FiSave className="w-4 h-4 mr-2" />
                 {isSubmitting ? 'Đang lưu...' : editingCategory ? 'Cập nhật' : 'Thêm mới'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="absolute inset-0" onClick={() => setDeleteTarget(null)} />
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h3 className="text-xl font-semibold text-gray-900">Xóa danh mục</h3>
+              <p className="text-sm text-gray-600 mt-2">
+                Tính năng xóa sẽ gắn API khi có. Bạn muốn ẩn tạm danh mục “{deleteTarget.name}” khỏi danh sách?
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  setCategories((prev) => prev.filter((category) => category.id !== deleteTarget.id));
+                  setDeleteTarget(null);
+                  setStatusMessage('Đã ẩn danh mục khỏi danh sách (chưa gọi API).');
+                }}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
+              >
+                Ẩn tạm
               </button>
             </div>
           </div>

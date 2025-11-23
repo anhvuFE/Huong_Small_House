@@ -8,6 +8,7 @@ import { cn } from '../utils/cn';
 import { productApi } from '../services/productApi';
 import type { Product } from '../types';
 import { extractIdFromSlug } from '../utils/slugify';
+import { Loader } from '../components/common/Loader';
 
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -67,7 +68,7 @@ export const ProductDetailPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-gray-500">Đang tải thông tin sản phẩm...</div>
+        <Loader />
       </div>
     );
   }

@@ -18,6 +18,7 @@ import { promotionApi } from '../../services/promotionApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { mockPromotionCodes } from '../../data/adminData';
 import type { PromotionCode } from '../../types/admin';
+import { Loader } from '../../components/common/Loader';
 
 export const PromotionManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -242,9 +243,11 @@ export const PromotionManagement: React.FC = () => {
 
       {/* Promotions Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        {isLoading && (
-          <div className="p-4 text-gray-600 text-sm border-b border-gray-200">Đang tải danh sách khuyến mãi...</div>
-        )}
+      {isLoading && (
+        <div className="p-4">
+          <Loader />
+        </div>
+      )}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px]">
             <thead className="bg-gray-50 border-b border-gray-200">

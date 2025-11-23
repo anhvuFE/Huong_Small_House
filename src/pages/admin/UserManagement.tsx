@@ -19,6 +19,7 @@ import { Select } from '../../components/common/Select';
 import { userApi } from '../../services/userApi';
 import { getErrorMessage } from '../../utils/error';
 import type { User } from '../../types';
+import { Loader } from '../../components/common/Loader';
 
 const getDaysSinceLogin = (lastLogin?: Date) => {
   if (!lastLogin) return Infinity;
@@ -285,8 +286,8 @@ export const UserManagement: React.FC = () => {
             <tbody className="divide-y divide-gray-200">
               {isLoading && (
                 <tr>
-                  <td colSpan={7} className="py-6 px-4 text-center text-sm text-gray-500">
-                    Đang tải danh sách người dùng...
+                  <td colSpan={7} className="py-6 px-4">
+                    <Loader />
                   </td>
                 </tr>
               )}

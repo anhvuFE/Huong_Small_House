@@ -90,17 +90,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-full bg-white shadow-lg z-50 transition-all duration-300 ${
-        isMobile
-          ? `w-64 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`
-          : isCollapsed
-            ? 'w-16'
-            : 'w-48 lg:w-52 xl:w-64'
-      }`}
+      className={`fixed left-0 top-0 h-full bg-white shadow-lg z-50 transition-transform duration-300 ${
+        isMobile ? 'w-72 max-w-[80vw]' : isCollapsed ? 'w-16' : 'w-48 lg:w-52 xl:w-64'
+      } ${isMobile ? (isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full') : ''}`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-3 lg:p-4 border-b border-gray-200">
-{!isCollapsed ? (
+      <div className="flex items-center justify-between p-3 lg:p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+        {!isCollapsed || isMobile ? (
           <div className="flex items-center space-x-2 lg:space-x-3">
             <img
               src="/assets/logo.png"
@@ -124,7 +120,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
         <button
           onClick={onToggle}
-          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
         >
           {isCollapsed ? (
             <FiChevronRight className="w-5 h-5 text-gray-600" />
@@ -135,7 +131,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4">
+      <nav className="flex-1 px-3 py-4 overflow-y-auto">
         <ul className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -155,10 +151,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 >
                   <Icon
                     className={`flex-shrink-0 w-5 h-5 ${
-                      isCollapsed ? 'mx-auto' : 'mr-3'
+                      isCollapsed && !isMobile ? 'mx-auto' : 'mr-3'
                     }`}
                   />
-                  {!isCollapsed && (
+                  {(!isCollapsed || isMobile) && (
                     <span className="text-xs lg:text-sm font-medium truncate">{item.label}</span>
                   )}
 
@@ -180,15 +176,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <button
           onClick={handleLogout}
           className={`flex items-center w-full px-3 py-2.5 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 group ${
-            isCollapsed ? 'justify-center' : ''
+            isCollapsed && !isMobile ? 'justify-center' : ''
           }`}
         >
           <FiLogOut
             className={`flex-shrink-0 w-5 h-5 ${
-              isCollapsed ? '' : 'mr-3'
+              isCollapsed && !isMobile ? '' : 'mr-3'
             }`}
           />
-          {!isCollapsed && (
+          {(!isCollapsed || isMobile) && (
             <span className="text-xs lg:text-sm font-medium">Đăng xuất</span>
           )}
 

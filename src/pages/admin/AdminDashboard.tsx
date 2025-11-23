@@ -17,6 +17,7 @@ import { productApi } from "../../services/productApi";
 import { userApi } from "../../services/userApi";
 import { useAuthStore } from "../../store/useAuthStore";
 import type { OrderStatus } from "../../types/admin";
+import { Loader } from "../../components/common/Loader";
 
 interface DashboardCache {
   stats: typeof mockDashboardStats;
@@ -122,7 +123,7 @@ const OrderStatusCard: React.FC<{
 };
 
 export const AdminDashboard: React.FC = () => {
-  const [stats, setStats] = useState(mockDashboardStats);
+  const [stats, setStats] = useState<typeof mockDashboardStats | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [revenueChart, setRevenueChart] = useState<
@@ -190,15 +191,30 @@ export const AdminDashboard: React.FC = () => {
           (status) => statusCounts[status] !== undefined
         ).map((status) => ({ status, count: statusCounts[status] ?? 0 }));
 
-        const topSellingProducts = topProducts.map((item, index) => ({
-          product: {
-            id: String(item.productId ?? index),
-            name: item.name,
-            thumbnail: "https://placehold.co/80x80?text=Product",
-          },
-          quantity: item.totalSold,
-          revenue: item.totalSold,
-        }));
+        const productMap = new Map(
+          products.map((p) => [p.productId ?? p.id, p])
+        );
+
+        const topSellingProducts = topProducts.map((item, index) => {
+          const product =
+            productMap.get(item.productId) ||
+            productMap.get(Number(item.productId)) ||
+            productMap.get(String(item.productId));
+          const price = product?.price ?? 0;
+          const thumbnail =
+            product?.thumbnail ||
+            (Array.isArray(product?.images) ? product?.images[0] : undefined) ||
+            "https://placehold.co/80x80?text=Product";
+          return {
+            product: {
+              id: String(item.productId ?? index),
+              name: product?.name || item.name,
+              thumbnail,
+            },
+            quantity: item.totalSold,
+            revenue: price > 0 ? price * item.totalSold : item.totalSold,
+          };
+        });
 
         const chartData =
           yearly.monthlyBreakdown?.map((item) => ({
@@ -207,7 +223,7 @@ export const AdminDashboard: React.FC = () => {
             orders: item.totalOrders,
           })) ?? FALLBACK_REVENUE;
 
-        setStats({
+        const nextStats = {
           totalRevenue: yearly.totalRevenue ?? mockDashboardStats.totalRevenue,
           totalOrders:
             yearly.totalOrders ??
@@ -223,27 +239,11 @@ export const AdminDashboard: React.FC = () => {
           recentOrders: orders.slice(0, 5),
           ordersByStatus,
           revenueByMonth: chartData,
-        });
+        };
+        setStats(nextStats);
         setRevenueChart(chartData);
         dashboardCache = {
-          stats: {
-            totalRevenue:
-              yearly.totalRevenue ?? mockDashboardStats.totalRevenue,
-            totalOrders:
-              yearly.totalOrders ??
-              orders.length ??
-              mockDashboardStats.totalOrders,
-            totalProducts: products.length ?? mockDashboardStats.totalProducts,
-            totalUsers: users.length ?? mockDashboardStats.totalUsers,
-            revenueGrowth: mockDashboardStats.revenueGrowth,
-            ordersGrowth: mockDashboardStats.ordersGrowth,
-            productsGrowth: mockDashboardStats.productsGrowth,
-            usersGrowth: mockDashboardStats.usersGrowth,
-            topSellingProducts,
-            recentOrders: orders.slice(0, 5),
-            ordersByStatus,
-            revenueByMonth: chartData,
-          },
+          stats: nextStats,
           error: "",
           revenueChart: chartData.length ? chartData : FALLBACK_REVENUE,
         };
@@ -274,6 +274,21 @@ export const AdminDashboard: React.FC = () => {
     fetchDashboard();
   }, [userRole]);
 
+  if (!stats) {
+    return (
+      <div className="space-y-4">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <Loader />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {error && (
@@ -281,10 +296,8 @@ export const AdminDashboard: React.FC = () => {
           {error}
         </div>
       )}
-      {isLoading && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4 text-sm text-gray-600">
-          Đang tải dữ liệu dashboard...
-        </div>
+      {isLoading && !stats && (
+        <Loader className="bg-white rounded-lg border border-gray-200" />
       )}
 
       {/* Header */}

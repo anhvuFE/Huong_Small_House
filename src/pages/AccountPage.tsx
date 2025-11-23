@@ -4,6 +4,7 @@ import { FiClock, FiEdit2, FiLogOut, FiMail, FiMapPin, FiPhone, FiShield, FiX } 
 import { profileApi } from '../services/profileApi';
 import { useAuthStore } from '../store/useAuthStore';
 import { getErrorMessage } from '../utils/error';
+import { Loader } from '../components/common/Loader';
 
 export const AccountPage: React.FC = () => {
   const { user, updateUser, logout, isAuthenticated } = useAuthStore();
@@ -177,8 +178,8 @@ export const AccountPage: React.FC = () => {
 
           <div className="p-8">
             {isLoading && (
-              <div className="mb-4 text-sm text-gray-500 flex items-center gap-2">
-                <FiClock /> Đang tải dữ liệu tài khoản...
+              <div className="mb-4">
+                <Loader size="sm" />
               </div>
             )}
 

@@ -5,6 +5,7 @@ import { Footer } from './components/layout/Footer';
 import { ShoppingCart } from './components/cart/ShoppingCart';
 import { ScrollToTop } from './components/common/ScrollToTop';
 import { useAuthStore } from './store/useAuthStore';
+import { Loader } from './components/common/Loader';
 
 const lazyComponent = <T extends Record<string, ComponentType>>(
   factory: () => Promise<T>,
@@ -81,7 +82,7 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
-      <Suspense fallback={<div className="py-10 text-center text-gray-500">Đang tải...</div>}>
+      <Suspense fallback={<div className="py-10 flex justify-center"><Loader /></div>}>
         <Routes>
           {/* Admin Routes */}
           <Route
