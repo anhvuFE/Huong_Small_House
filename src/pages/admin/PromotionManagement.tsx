@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FiPlus,
   FiSearch,
@@ -15,11 +15,37 @@ import {
 } from 'react-icons/fi';
 import { Select } from '../../components/common/Select';
 import { promotionApi } from '../../services/promotionApi';
+import type { CreatePromotionPayload, UpdatePromotionPayload } from '../../services/promotionApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { mockPromotionCodes } from '../../data/adminData';
 import type { PromotionCode } from '../../types/admin';
 import { Loader } from '../../components/common/Loader';
 import { useToast } from '../../components/common/Toast';
+
+const formatDateInput = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getDefaultFormData = () => {
+  const today = new Date();
+  const end = new Date();
+  end.setDate(today.getDate() + 30);
+  return {
+    name: '',
+    code: '',
+    type: 'PERCENTAGE' as PromotionCode['type'],
+    value: 0,
+    minOrderValue: '',
+    maxDiscount: '',
+    usageLimit: '',
+    startDate: formatDateInput(today),
+    endDate: formatDateInput(end),
+    description: '',
+  };
+};
 
 export const PromotionManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,6 +54,15 @@ export const PromotionManagement: React.FC = () => {
   const [promotions, setPromotions] = useState<PromotionCode[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [updatingPromotionId, setUpdatingPromotionId] = useState<string | null>(null);
+  const [viewingPromotionId, setViewingPromotionId] = useState<string | null>(null);
+  const [editingPromotionId, setEditingPromotionId] = useState<string | null>(null);
+  const [savingPromotion, setSavingPromotion] = useState(false);
+  const [deletingPromotionId, setDeletingPromotionId] = useState<string | null>(null);
+  const [deleteConfirmPromotion, setDeleteConfirmPromotion] = useState<PromotionCode | null>(null);
+  const [modalMode, setModalMode] = useState<'view' | 'edit' | 'create' | null>(null);
+  const [selectedPromotion, setSelectedPromotion] = useState<PromotionCode | null>(null);
+  const [formData, setFormData] = useState(getDefaultFormData());
   const userRole = useAuthStore((state) => state.user?.role);
   const { showToast } = useToast();
 
@@ -44,14 +79,13 @@ export const PromotionManagement: React.FC = () => {
     { value: 'FIXED_AMOUNT', label: 'Giảm cố định' },
   ];
 
-  useEffect(() => {
-    const fetchPromotions = async () => {
-      try {
-        setIsLoading(true);
-        setError('');
-        const data = await promotionApi.listPromotions();
-        setPromotions(data);
-      } catch (err) {
+  const fetchPromotions = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const data = await promotionApi.listPromotions();
+      setPromotions(data);
+    } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Không thể tải khuyến mãi. Hiển thị dữ liệu mẫu.';
       setError(message);
@@ -60,8 +94,47 @@ export const PromotionManagement: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  }, [showToast]);
+
+  const hydrateForm = (promotion: PromotionCode) => {
+    setFormData({
+      name: promotion.name,
+      code: promotion.code,
+      type: promotion.type,
+      value: promotion.value,
+      minOrderValue: promotion.minOrderValue?.toString() ?? '',
+      maxDiscount: promotion.maxDiscount?.toString() ?? '',
+      usageLimit: promotion.usageLimit?.toString() ?? '',
+      startDate: formatDateInput(promotion.startDate),
+      endDate: formatDateInput(promotion.endDate),
+      description: promotion.description ?? '',
+    });
   };
 
+  const openCreateModal = () => {
+    setFormData(getDefaultFormData());
+    setSelectedPromotion(null);
+    setModalMode('create');
+  };
+
+  const autoFillMaxDiscount = useCallback(
+    (nextType: PromotionCode['type'], nextValue: string | number, nextMinOrder: string | number) => {
+      const valueNum = Number(nextValue);
+      const minOrderNum = Number(nextMinOrder);
+      if (!nextMinOrder || Number.isNaN(minOrderNum)) return;
+      if (Number.isNaN(valueNum)) return;
+
+      if (nextType === 'PERCENTAGE') {
+        const autoCap = Math.round((minOrderNum * valueNum) / 100);
+        setFormData((prev) => ({ ...prev, maxDiscount: autoCap ? autoCap.toString() : '' }));
+      } else {
+        setFormData((prev) => ({ ...prev, maxDiscount: valueNum ? valueNum.toString() : '' }));
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
     if (userRole !== 'ADMIN') {
       setError('Bạn không có quyền truy cập trang quản lý khuyến mãi.');
       setPromotions([]);
@@ -70,7 +143,7 @@ export const PromotionManagement: React.FC = () => {
     }
 
     fetchPromotions();
-  }, [userRole, showToast]);
+  }, [userRole, fetchPromotions]);
 
   const filteredPromotions = useMemo(() => {
     return promotions.filter((promo) => {
@@ -129,6 +202,132 @@ export const PromotionManagement: React.FC = () => {
     return { total, active, expired, totalUsage };
   };
 
+  const handleToggleStatus = async (promo: PromotionCode) => {
+    if (!promo.id) return;
+    setUpdatingPromotionId(promo.id);
+    try {
+      const updated = await promotionApi.updateStatus(promo.id, !promo.isActive);
+      setPromotions((prev) => prev.map((item) => (item.id === promo.id ? updated : item)));
+      showToast({
+        title: !promo.isActive ? 'Đã bật khuyến mãi' : 'Đã tạm dừng khuyến mãi',
+        variant: 'success',
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái.';
+      showToast({ title: message, variant: 'error' });
+    } finally {
+      setUpdatingPromotionId(null);
+    }
+  };
+
+  const handleViewDetail = async (promo: PromotionCode) => {
+    if (!promo.id) return;
+    setViewingPromotionId(promo.id);
+    setModalMode('view');
+    try {
+      const detail = await promotionApi.getById(promo.id);
+      setSelectedPromotion(detail);
+      hydrateForm(detail);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể tải chi tiết khuyến mãi.';
+      showToast({ title: message, variant: 'error' });
+      setSelectedPromotion(null);
+      setModalMode(null);
+    } finally {
+      setViewingPromotionId(null);
+    }
+  };
+
+  const handleEditPrepare = async (promo: PromotionCode) => {
+    if (!promo.id) return;
+    setEditingPromotionId(promo.id);
+    setModalMode('edit');
+    try {
+      const detail = await promotionApi.getById(promo.id);
+      setSelectedPromotion(detail);
+      hydrateForm(detail);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể lấy dữ liệu để chỉnh sửa.';
+      showToast({ title: message, variant: 'error' });
+      setSelectedPromotion(null);
+      setModalMode(null);
+    } finally {
+      setEditingPromotionId(null);
+    }
+  };
+
+  const closeModal = () => {
+    setSelectedPromotion(null);
+    setModalMode(null);
+    setSavingPromotion(false);
+  };
+
+  const handleSubmitPromotion = async () => {
+    if (modalMode === 'view') return;
+    setSavingPromotion(true);
+    try {
+      const validFromIso = formData.startDate ? new Date(formData.startDate).toISOString() : undefined;
+      const validUntilIso = formData.endDate ? new Date(formData.endDate).toISOString() : new Date().toISOString();
+
+      const basePayload: CreatePromotionPayload & UpdatePromotionPayload = {
+        name: formData.name.trim() || formData.code.trim(),
+        description: formData.description,
+        code: formData.code.trim(),
+        type: formData.type === 'PERCENTAGE' ? 'percent' : 'fixed',
+        value: formData.value ? Number(formData.value) : 0,
+        minOrderValue: formData.minOrderValue ? Number(formData.minOrderValue) : undefined,
+        maxDiscount: formData.maxDiscount ? Number(formData.maxDiscount) : undefined,
+        usageLimit: formData.usageLimit ? Number(formData.usageLimit) : undefined,
+        validFrom: validFromIso,
+        validUntil: validUntilIso,
+      };
+
+      if (modalMode === 'create') {
+        const created = await promotionApi.create(basePayload);
+        setPromotions((prev) => [created, ...prev]);
+        fetchPromotions();
+        setFormData(getDefaultFormData());
+        closeModal();
+        showToast({ title: 'Đã tạo khuyến mãi', variant: 'success' });
+      } else if (selectedPromotion?.id) {
+        const updated = await promotionApi.update(selectedPromotion.id, basePayload);
+        setPromotions((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        setSelectedPromotion(updated);
+        hydrateForm(updated);
+        // Refresh list from backend to ensure the latest data is reflected everywhere
+        fetchPromotions();
+        setModalMode('view');
+        showToast({ title: 'Đã cập nhật khuyến mãi', variant: 'success' });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể cập nhật khuyến mãi.';
+      showToast({ title: message, variant: 'error' });
+    } finally {
+      setSavingPromotion(false);
+    }
+  };
+
+  const handleDelete = (promo: PromotionCode) => {
+    if (!promo.id) return;
+    setDeleteConfirmPromotion(promo);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmPromotion?.id) return;
+    setDeletingPromotionId(deleteConfirmPromotion.id);
+    try {
+      await promotionApi.delete(deleteConfirmPromotion.id);
+      setPromotions((prev) => prev.filter((item) => item.id !== deleteConfirmPromotion.id));
+      showToast({ title: 'Đã xóa khuyến mãi', variant: 'success' });
+      setDeleteConfirmPromotion(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể xóa khuyến mãi.';
+      showToast({ title: message, variant: 'error' });
+    } finally {
+      setDeletingPromotionId(null);
+    }
+  };
+
   const stats = getPromotionStats();
 
   return (
@@ -141,7 +340,10 @@ export const PromotionManagement: React.FC = () => {
             Tạo và quản lý các mã giảm giá cho khách hàng
           </p>
         </div>
-        <button className="inline-flex items-center px-3 lg:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm lg:text-base">
+        <button
+          onClick={openCreateModal}
+          className="inline-flex items-center px-3 lg:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm lg:text-base"
+        >
           <FiPlus className="w-4 h-4 lg:w-5 lg:h-5 mr-1 lg:mr-2" />
           <span className="hidden sm:inline">Tạo mã khuyến mãi</span>
           <span className="sm:hidden">Tạo mã</span>
@@ -396,20 +598,48 @@ export const PromotionManagement: React.FC = () => {
                     </td>
                     <td className="py-3 lg:py-4 px-2 lg:px-4">
                       <div className="flex items-center space-x-1 lg:space-x-2">
-                        <button className="p-1 lg:p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
+                        <button
+                          className={`p-1 lg:p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors ${
+                            viewingPromotionId === promo.id ? 'opacity-60 cursor-not-allowed' : ''
+                          }`}
+                          onClick={() => handleViewDetail(promo)}
+                          disabled={viewingPromotionId === promo.id}
+                          aria-label="Xem chi tiết khuyến mãi"
+                        >
                           <FiEye className="w-3 h-3 lg:w-4 lg:h-4" />
                         </button>
-                        <button className="p-1 lg:p-1.5 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors">
+                        <button
+                          className={`p-1 lg:p-1.5 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors ${
+                            editingPromotionId === promo.id ? 'opacity-60 cursor-not-allowed' : ''
+                          }`}
+                          onClick={() => handleEditPrepare(promo)}
+                          disabled={editingPromotionId === promo.id}
+                          aria-label="Chuẩn bị chỉnh sửa khuyến mãi"
+                        >
                           <FiEdit className="w-3 h-3 lg:w-4 lg:h-4" />
                         </button>
-                        <button className="inline-flex items-center">
+                        <button
+                          className={`inline-flex items-center transition-opacity ${
+                            updatingPromotionId === promo.id ? 'opacity-60 cursor-not-allowed' : ''
+                          }`}
+                          onClick={() => handleToggleStatus(promo)}
+                          disabled={updatingPromotionId === promo.id}
+                          aria-label={promo.isActive ? 'Tạm dừng khuyến mãi' : 'Kích hoạt khuyến mãi'}
+                        >
                           {promo.isActive ? (
                             <FiToggleRight className="w-6 h-6 lg:w-8 lg:h-8 text-green-500" />
                           ) : (
                             <FiToggleLeft className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400" />
                           )}
                         </button>
-                        <button className="p-1 lg:p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                        <button
+                          className={`p-1 lg:p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors ${
+                            deletingPromotionId === promo.id ? 'opacity-60 cursor-not-allowed' : ''
+                          }`}
+                          onClick={() => handleDelete(promo)}
+                          disabled={deletingPromotionId === promo.id}
+                          aria-label="Xóa khuyến mãi"
+                        >
                           <FiTrash2 className="w-3 h-3 lg:w-4 lg:h-4" />
                         </button>
                       </div>
@@ -453,6 +683,257 @@ export const PromotionManagement: React.FC = () => {
             <button className="px-2 lg:px-3 py-1 border border-gray-300 rounded text-xs lg:text-sm text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50">
               Sau
             </button>
+          </div>
+        </div>
+      )}
+
+      {modalMode && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl border border-gray-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500">
+                  {modalMode === 'view'
+                    ? 'Chi tiết khuyến mãi'
+                    : modalMode === 'edit'
+                    ? 'Chỉnh sửa khuyến mãi'
+                    : 'Tạo khuyến mãi'}
+                </p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {selectedPromotion?.name || formData.name || 'Khuyến mãi mới'}
+                </h3>
+              </div>
+              <button
+                onClick={closeModal}
+                className="text-gray-500 hover:text-gray-700 rounded-full p-2 hover:bg-gray-100"
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+            {modalMode === 'view' && selectedPromotion && (
+              <div className="px-5 py-4 space-y-3 text-sm text-gray-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Mã</span>
+                  <span className="font-semibold font-mono text-primary">{selectedPromotion.code}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Loại & giá trị</span>
+                  <span className="font-semibold">
+                    {selectedPromotion.type === 'PERCENTAGE'
+                      ? `${selectedPromotion.value}%`
+                      : formatCurrency(selectedPromotion.value)}
+                    {selectedPromotion.maxDiscount
+                      ? ` (tối đa ${formatCurrency(selectedPromotion.maxDiscount)})`
+                      : ''}
+                  </span>
+                </div>
+                {selectedPromotion.minOrderValue && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Đơn tối thiểu</span>
+                    <span className="font-semibold">{formatCurrency(selectedPromotion.minOrderValue)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Thời gian</span>
+                  <span className="font-semibold">
+                    {selectedPromotion.startDate.toLocaleDateString('vi-VN')} -{' '}
+                    {selectedPromotion.endDate.toLocaleDateString('vi-VN')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Trạng thái</span>
+                  <span className="font-semibold">
+                    {selectedPromotion.isActive ? 'Đang hoạt động' : 'Tạm dừng'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">Mô tả</p>
+                  <p className="text-gray-800">{selectedPromotion.description || 'Chưa có mô tả.'}</p>
+                </div>
+              </div>
+            )}
+
+            {modalMode !== 'view' && (
+              <div className="px-5 py-4 space-y-4 text-sm text-gray-800">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-500">Tên</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={formData.name}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Mã</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={formData.code}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                    />
+                  </div>
+                  <div>
+                    <Select
+                      label="Loại"
+                      value={formData.type}
+                      onChange={(next) => {
+                        const nextType = next as PromotionCode['type'];
+                        setFormData((prev) => ({ ...prev, type: nextType }));
+                        autoFillMaxDiscount(nextType, formData.value, formData.minOrderValue);
+                      }}
+                      options={[
+                        { value: 'PERCENTAGE', label: 'Giảm theo %' },
+                        { value: 'FIXED_AMOUNT', label: 'Giảm cố định' },
+                      ]}
+                      className="mt-[6px]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Giá trị</label>
+                    <input
+                      type="number"
+                      min={0}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={formData.value}
+                      onChange={(e) => {
+                        const nextValue = e.target.value;
+                        setFormData((prev) => ({ ...prev, value: Number(nextValue) }));
+                        autoFillMaxDiscount(formData.type, nextValue, formData.minOrderValue);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Đơn tối thiểu</label>
+                    <input
+                      type="number"
+                      min={0}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={formData.minOrderValue}
+                      onChange={(e) => {
+                        const nextMinOrder = e.target.value;
+                        setFormData((prev) => ({ ...prev, minOrderValue: nextMinOrder }));
+                        autoFillMaxDiscount(formData.type, formData.value, nextMinOrder);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Giảm tối đa</label>
+                    <input
+                      type="number"
+                      min={0}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={formData.maxDiscount}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, maxDiscount: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Ngày bắt đầu</label>
+                    <input
+                      type="date"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={formData.startDate}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, startDate: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Ngày kết thúc</label>
+                    <input
+                      type="date"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={formData.endDate}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, endDate: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Giới hạn lượt dùng</label>
+                    <input
+                      type="number"
+                      min={0}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={formData.usageLimit}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, usageLimit: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Mô tả</label>
+                  <textarea
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                    rows={3}
+                    value={formData.description}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  />
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-gray-100">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Đóng
+              </button>
+              {modalMode === 'view' && (
+                <button
+                  onClick={() => {
+                    setModalMode('edit');
+                  }}
+                  className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark"
+                >
+                  Chỉnh sửa
+                </button>
+              )}
+              {modalMode !== 'view' && (
+                <button
+                  onClick={handleSubmitPromotion}
+                  disabled={savingPromotion}
+                  className={`px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark ${
+                    savingPromotion ? 'opacity-70 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {savingPromotion
+                    ? 'Đang lưu...'
+                    : modalMode === 'create'
+                    ? 'Tạo khuyến mãi'
+                    : 'Lưu thay đổi'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmPromotion && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md border border-gray-200">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <p className="text-xs uppercase tracking-wide text-gray-500">Xóa khuyến mãi</p>
+              <h3 className="text-lg font-semibold text-gray-900 mt-1">
+                {deleteConfirmPromotion.code}
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Bạn có chắc muốn xóa mã này? Hành động không thể hoàn tác.
+              </p>
+            </div>
+            <div className="px-5 py-4 flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteConfirmPromotion(null)}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                disabled={Boolean(deletingPromotionId)}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={Boolean(deletingPromotionId)}
+                className={`px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 ${
+                  deletingPromotionId ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
+              >
+                {deletingPromotionId ? 'Đang xóa...' : 'Xóa'}
+              </button>
+            </div>
           </div>
         </div>
       )}
