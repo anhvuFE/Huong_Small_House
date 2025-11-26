@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fi';
 import { Select } from '../../components/common/Select';
 import { promotionApi } from '../../services/promotionApi';
+import type { CreatePromotionPayload, UpdatePromotionPayload } from '../../services/promotionApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { mockPromotionCodes } from '../../data/adminData';
 import type { PromotionCode } from '../../types/admin';
@@ -265,7 +266,10 @@ export const PromotionManagement: React.FC = () => {
     if (modalMode === 'view') return;
     setSavingPromotion(true);
     try {
-      const basePayload = {
+      const validFromIso = formData.startDate ? new Date(formData.startDate).toISOString() : undefined;
+      const validUntilIso = formData.endDate ? new Date(formData.endDate).toISOString() : new Date().toISOString();
+
+      const basePayload: CreatePromotionPayload & UpdatePromotionPayload = {
         name: formData.name.trim() || formData.code.trim(),
         description: formData.description,
         code: formData.code.trim(),
@@ -274,8 +278,8 @@ export const PromotionManagement: React.FC = () => {
         minOrderValue: formData.minOrderValue ? Number(formData.minOrderValue) : undefined,
         maxDiscount: formData.maxDiscount ? Number(formData.maxDiscount) : undefined,
         usageLimit: formData.usageLimit ? Number(formData.usageLimit) : undefined,
-        validFrom: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
-        validUntil: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
+        validFrom: validFromIso,
+        validUntil: validUntilIso,
       };
 
       if (modalMode === 'create') {
