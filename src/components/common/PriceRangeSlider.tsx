@@ -16,7 +16,6 @@ export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
   onChange,
 }) => {
   const [localValue, setLocalValue] = useState(value);
-  const [isDragging, setIsDragging] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -58,11 +57,11 @@ export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
   const maxPercent = ((localValue[1] - min) / (max - min)) * 100;
 
   return (
-    <div className="w-full px-2">
-      <div className="relative pt-8 pb-2">
-        <div className="relative h-2 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full overflow-hidden shadow-inner">
+    <div className="w-full">
+      <div className="relative pt-6">
+        <div className="relative h-1.5 bg-gray-200 rounded-full overflow-hidden">
           <div
-            className="absolute h-full bg-gradient-to-r from-primary to-primary-dark rounded-full transition-all duration-150 ease-out shadow-sm"
+            className="absolute h-full bg-primary rounded-full transition-all duration-150 ease-out"
             style={{
               left: `${minPercent}%`,
               width: `${maxPercent - minPercent}%`,
@@ -77,12 +76,8 @@ export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
           step={step}
           value={localValue[0]}
           onChange={handleMinChange}
-          onMouseDown={() => setIsDragging(true)}
-          onMouseUp={() => setIsDragging(false)}
-          onTouchStart={() => setIsDragging(true)}
-          onTouchEnd={() => setIsDragging(false)}
-          className="absolute w-full h-2 bg-transparent appearance-none pointer-events-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-white [&::-webkit-slider-thumb]:to-gray-50 [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-webkit-slider-thumb]:shadow-[0_2px_10px_rgba(0,0,0,0.3)] [&::-webkit-slider-thumb]:border-3 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:active:scale-95 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-gradient-to-br [&::-moz-range-thumb]:from-white [&::-moz-range-thumb]:to-gray-50 [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:active:cursor-grabbing [&::-moz-range-thumb]:shadow-[0_2px_10px_rgba(0,0,0,0.3)] [&::-moz-range-thumb]:border-3 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:hover:scale-110 [&::-moz-range-thumb]:active:scale-95"
-          style={{ top: '-7px', zIndex: localValue[0] === max ? 5 : 3 }}
+          className="absolute w-full h-2 bg-transparent appearance-none pointer-events-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:hover:bg-secondary [&::-webkit-slider-thumb]:active:scale-95 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:active:cursor-grabbing [&::-moz-range-thumb]:shadow-lg [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:hover:scale-110 [&::-moz-range-thumb]:hover:bg-secondary [&::-moz-range-thumb]:active:scale-95"
+          style={{ top: '-8px', zIndex: localValue[0] === max ? 5 : 3 }}
         />
 
         <input
@@ -92,30 +87,18 @@ export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
           step={step}
           value={localValue[1]}
           onChange={handleMaxChange}
-          onMouseDown={() => setIsDragging(true)}
-          onMouseUp={() => setIsDragging(false)}
-          onTouchStart={() => setIsDragging(true)}
-          onTouchEnd={() => setIsDragging(false)}
-          className="absolute w-full h-2 bg-transparent appearance-none pointer-events-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-white [&::-webkit-slider-thumb]:to-gray-50 [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-webkit-slider-thumb]:shadow-[0_2px_10px_rgba(0,0,0,0.3)] [&::-webkit-slider-thumb]:border-3 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:active:scale-95 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-gradient-to-br [&::-moz-range-thumb]:from-white [&::-moz-range-thumb]:to-gray-50 [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:active:cursor-grabbing [&::-moz-range-thumb]:shadow-[0_2px_10px_rgba(0,0,0,0.3)] [&::-moz-range-thumb]:border-3 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:hover:scale-110 [&::-moz-range-thumb]:active:scale-95"
-          style={{ top: '-7px', zIndex: 4 }}
+          className="absolute w-full h-2 bg-transparent appearance-none pointer-events-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:hover:bg-secondary [&::-webkit-slider-thumb]:active:scale-95 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:active:cursor-grabbing [&::-moz-range-thumb]:shadow-lg [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:hover:scale-110 [&::-moz-range-thumb]:hover:bg-secondary [&::-moz-range-thumb]:active:scale-95"
+          style={{ top: '-8px', zIndex: 4 }}
         />
       </div>
 
-      <div className="flex justify-between items-center mt-6">
-        <div className={`flex flex-col transition-all duration-200 ${isDragging ? 'scale-105' : ''}`}>
-          <span className="text-xs text-gray-600 font-medium">Từ</span>
-          <span className="font-bold text-lg text-primary">
-            {formatPrice(localValue[0])}đ
-          </span>
+      <div className="flex justify-between items-center mt-4 text-sm">
+        <div className="text-gray-700">
+          <span className="font-medium text-primary">{formatPrice(localValue[0])}đ</span>
         </div>
-        <div className="flex-1 mx-4">
-          <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
-        </div>
-        <div className={`flex flex-col text-right transition-all duration-200 ${isDragging ? 'scale-105' : ''}`}>
-          <span className="text-xs text-gray-600 font-medium">Đến</span>
-          <span className="font-bold text-lg text-primary">
-            {formatPrice(localValue[1])}đ
-          </span>
+        <div className="text-gray-400">-</div>
+        <div className="text-gray-700">
+          <span className="font-medium text-primary">{formatPrice(localValue[1])}đ</span>
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ import { productApi } from '../services/productApi';
 import type { Product } from '../types';
 import { extractIdFromSlug } from '../utils/slugify';
 import { Loader } from '../components/common/Loader';
+import { mockProducts } from '../data/productData';
 
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -21,8 +22,7 @@ export const ProductDetailPage: React.FC = () => {
   const { addItem } = useCartStore();
 
   useEffect(() => {
-    const productId = extractIdFromSlug(slug);
-    if (!productId) {
+    if (!slug) {
       setError('Sản phẩm không tồn tại.');
       setIsLoading(false);
       return;
@@ -32,17 +32,42 @@ export const ProductDetailPage: React.FC = () => {
       try {
         setIsLoading(true);
         setError('');
-        const categories = await productApi.listCategories('customer');
-        const [detail, list] = await Promise.all([
-          productApi.getProduct(productId, categories),
-          productApi.listProducts(categories),
-        ]);
-        setProduct(detail);
-        const related = list
-          .filter((item) => item.categoryId === detail.categoryId && item.id !== detail.id)
-          .slice(0, 4);
-        setRelatedProducts(related);
-      } catch {
+
+        // Try to get product ID from slug
+        const productId = extractIdFromSlug(slug);
+
+        if (productId) {
+          // Try API first if we have a numeric ID
+          try {
+            const categories = await productApi.listCategories('customer');
+            const [detail, list] = await Promise.all([
+              productApi.getProduct(productId, categories),
+              productApi.listProducts(categories),
+            ]);
+            setProduct(detail);
+            const related = list
+              .filter((item) => item.categoryId === detail.categoryId && item.id !== detail.id)
+              .slice(0, 4);
+            setRelatedProducts(related);
+            return;
+          } catch (apiError) {
+            console.error('API failed, using mock data:', apiError);
+          }
+        }
+
+        // Use mock data as fallback or when no numeric ID
+        const mockProduct = mockProducts.find(p => p.slug === slug);
+        if (mockProduct) {
+          setProduct(mockProduct);
+          const related = mockProducts
+            .filter((item) => item.categoryId === mockProduct.categoryId && item.id !== mockProduct.id)
+            .slice(0, 4);
+          setRelatedProducts(related);
+        } else {
+          setError('Sản phẩm không tồn tại.');
+        }
+      } catch (error) {
+        console.error('Error loading product:', error);
         setError('Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.');
       } finally {
         setIsLoading(false);

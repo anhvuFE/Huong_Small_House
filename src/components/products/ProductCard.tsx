@@ -23,6 +23,16 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
     ? calculateDiscount(product.price, product.originalPrice)
     : 0;
 
+  const getInitials = (name: string) => {
+    const words = name.split(' ');
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const hasValidImage = product.thumbnail && !product.thumbnail.includes('placeholder');
+
   return (
     <Link
       to={`/products/${product.slug}`}
@@ -31,12 +41,29 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
         className
       )}
     >
-      <div className="relative">
-        <img
-          src={product.thumbnail}
-          alt={product.name}
-          className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+      <div className="relative h-48 overflow-hidden bg-gray-50 flex items-center justify-center">
+        {hasValidImage ? (
+          <img
+            src={product.thumbnail}
+            alt={product.name}
+            className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.parentElement?.querySelector('.avatar-placeholder')?.classList.remove('hidden');
+            }}
+          />
+        ) : null}
+
+        <div className={cn(
+          "avatar-placeholder flex items-center justify-center",
+          hasValidImage ? "hidden" : ""
+        )}>
+          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+            <span className="text-white text-3xl font-bold">
+              {getInitials(product.name)}
+            </span>
+          </div>
+        </div>
 
         {discountPercent > 0 && (
           <span className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-sm font-semibold rounded">
@@ -55,16 +82,6 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
             Bán chạy
           </span>
         )}
-
-        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <button
-            onClick={handleAddToCart}
-            className="bg-primary hover:bg-secondary text-white p-2 rounded-full shadow-lg transition-colors"
-            aria-label="Add to cart"
-          >
-            <FiShoppingCart className="w-5 h-5" />
-          </button>
-        </div>
       </div>
 
       <div className="p-4">
@@ -74,13 +91,13 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
 
         <p className="text-sm text-gray-600 mb-2">{product.brand}</p>
 
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-2">
           <div className="flex items-center">
             {[...Array(5)].map((_, i) => (
               <FiStar
                 key={i}
                 className={cn(
-                  'w-4 h-4',
+                  'w-3.5 h-3.5',
                   i < Math.floor(product.rating)
                     ? 'fill-yellow-400 text-yellow-400'
                     : 'text-gray-300'
@@ -88,16 +105,16 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
               />
             ))}
           </div>
-          <span className="text-sm text-gray-600">({product.reviewCount})</span>
+          <span className="text-xs text-gray-600">({product.reviewCount})</span>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-end justify-between">
           <div>
             <div className="text-lg font-bold text-primary">
               {formatCurrency(product.price)}
             </div>
             {product.originalPrice && (
-              <div className="text-sm text-gray-500 line-through">
+              <div className="text-xs text-gray-500 line-through">
                 {formatCurrency(product.originalPrice)}
               </div>
             )}
@@ -105,9 +122,10 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
 
           <button
             onClick={handleAddToCart}
-            className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="bg-primary hover:bg-secondary text-white p-2.5 rounded-full transition-all hover:shadow-md active:scale-95"
+            aria-label="Thêm vào giỏ hàng"
           >
-            Thêm vào giỏ
+            <FiShoppingCart className="w-5 h-5" />
           </button>
         </div>
       </div>

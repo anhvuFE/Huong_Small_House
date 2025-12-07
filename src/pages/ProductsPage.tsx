@@ -9,6 +9,8 @@ import { usePagination } from '../hooks/usePagination';
 import { cn } from '../utils/cn';
 import { productApi } from '../services/productApi';
 import type { Category, Product } from '../types';
+import { mockProducts } from '../data/productData';
+import { mockCategories } from '../data/categoryData';
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Mới nhất' },
@@ -68,8 +70,22 @@ export const ProductsPage: React.FC = () => {
             filters.maxPrice ? Number(filters.maxPrice) : maxPrice,
           ]);
         }
-      } catch {
-        setError('Không thể tải dữ liệu sản phẩm. Vui lòng thử lại sau.');
+      } catch (err) {
+        console.error('Failed to fetch data, using mock data:', err);
+        setCategories(mockCategories);
+        setProducts(mockProducts);
+        const brandSet = new Set(mockProducts.map((product) => product.brand));
+        setBrands([...brandSet]);
+        if (mockProducts.length > 0) {
+          const prices = mockProducts.map((product) => product.price);
+          const maxPrice = Math.max(...prices);
+          const minPrice = Math.min(...prices);
+          setPriceRange([
+            filters.minPrice ? Number(filters.minPrice) : minPrice,
+            filters.maxPrice ? Number(filters.maxPrice) : maxPrice,
+          ]);
+        }
+        setError('');
       } finally {
         setIsLoading(false);
       }
@@ -194,32 +210,18 @@ export const ProductsPage: React.FC = () => {
           <span className="w-1 h-4 bg-primary mr-2 rounded-full"></span>
           Danh mục
         </h3>
-        <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-          <label className="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
-            <input
-              type="radio"
-              name="category"
-              value=""
-              checked={filters.category === ''}
-              onChange={(e) => handleFilterChange('category', e.target.value)}
-              className="w-4 h-4 text-primary focus:ring-primary border-gray-300"
-            />
-            <span className="ml-3 text-gray-700">Tất cả</span>
-          </label>
-          {categories.map((category) => (
-            <label key={category.id} className="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
-              <input
-                type="radio"
-                name="category"
-                value={category.categoryId.toString()}
-                checked={filters.category === category.categoryId.toString()}
-                onChange={(e) => handleFilterChange('category', e.target.value)}
-                className="w-4 h-4 text-primary focus:ring-primary border-gray-300"
-              />
-              <span className="ml-3 text-gray-700">{category.name}</span>
-            </label>
-          ))}
-        </div>
+        <Select
+          value={filters.category}
+          onChange={(value) => handleFilterChange('category', value)}
+          options={[
+            { value: '', label: 'Tất cả' },
+            ...categories.map((category) => ({
+              value: category.categoryId.toString(),
+              label: category.name,
+            })),
+          ]}
+          placeholder="Chọn danh mục"
+        />
       </div>
 
       <div className="mb-6">
