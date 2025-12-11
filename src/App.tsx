@@ -3,6 +3,7 @@ import { useState, useEffect, lazy, Suspense, type ComponentType } from 'react';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { ShoppingCart } from './components/cart/ShoppingCart';
+import { FloatingCartButton } from './components/cart/FloatingCartButton';
 import { ScrollToTop } from './components/common/ScrollToTop';
 import { useAuthStore } from './store/useAuthStore';
 import { Loader } from './components/common/Loader';
@@ -31,6 +32,7 @@ const ContactPage = lazyComponent(() => import('./pages/ContactPage'), 'ContactP
 const BlogListPage = lazyComponent(() => import('./pages/BlogListPage'), 'BlogListPage');
 const BlogDetailPage = lazyComponent(() => import('./pages/BlogDetailPage'), 'BlogDetailPage');
 const AccountPage = lazyComponent(() => import('./pages/AccountPage'), 'AccountPage');
+const CheckoutPage = lazyComponent(() => import('./pages/CheckoutPage'), 'CheckoutPage');
 const AdminDashboard = lazyComponent(() => import('./pages/admin/AdminDashboard'), 'AdminDashboard');
 const ProductManagement = lazyComponent(() => import('./pages/admin/ProductManagement'), 'ProductManagement');
 const OrderManagement = lazyComponent(() => import('./pages/admin/OrderManagement'), 'OrderManagement');
@@ -126,10 +128,12 @@ function App() {
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/contact" element={<ContactPage />} />
                     <Route path="/account" element={<AccountPage />} />
+                    <Route path="/checkout" element={<CheckoutPage />} />
                   </Routes>
                 </main>
                 <Footer />
                 <ShoppingCart />
+                <FloatingCartButton />
               </div>
             }
           />

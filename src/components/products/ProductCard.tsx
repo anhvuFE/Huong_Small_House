@@ -5,6 +5,8 @@ import type { Product } from '../../types';
 import { formatCurrency, calculateDiscount } from '../../utils/format';
 import { useCartStore } from '../../store/useCartStore';
 import { cn } from '../../utils/cn';
+import { ProductImageFallback } from '../common/ProductImageFallback';
+import { useState } from 'react';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +15,7 @@ interface ProductCardProps {
 
 export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
   const { addItem } = useCartStore();
+  const [imageError, setImageError] = useState(false);
 
   const handleAddToCart = (e: MouseEvent) => {
     e.preventDefault();
@@ -23,15 +26,7 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
     ? calculateDiscount(product.price, product.originalPrice)
     : 0;
 
-  const getInitials = (name: string) => {
-    const words = name.split(' ');
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
-
-  const hasValidImage = product.thumbnail && !product.thumbnail.includes('placeholder');
+  const hasValidImage = product.thumbnail && !product.thumbnail.includes('placeholder') && !imageError;
 
   return (
     <Link
@@ -41,29 +36,17 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
         className
       )}
     >
-      <div className="relative h-48 overflow-hidden bg-gray-50 flex items-center justify-center">
+      <div className="relative h-48 overflow-hidden bg-gray-50">
         {hasValidImage ? (
           <img
             src={product.thumbnail}
             alt={product.name}
             className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-              e.currentTarget.parentElement?.querySelector('.avatar-placeholder')?.classList.remove('hidden');
-            }}
+            onError={() => setImageError(true)}
           />
-        ) : null}
-
-        <div className={cn(
-          "avatar-placeholder flex items-center justify-center",
-          hasValidImage ? "hidden" : ""
-        )}>
-          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-            <span className="text-white text-3xl font-bold">
-              {getInitials(product.name)}
-            </span>
-          </div>
-        </div>
+        ) : (
+          <ProductImageFallback name={product.name} size="md" className="h-full" />
+        )}
 
         {discountPercent > 0 && (
           <span className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-sm font-semibold rounded">

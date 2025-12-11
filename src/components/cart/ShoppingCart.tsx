@@ -1,12 +1,15 @@
 import type { FC } from 'react';
+import { useState } from 'react';
 import { FiX, FiPlus, FiMinus, FiTrash2, FiShoppingBag } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import { useCartStore } from '../../store/useCartStore';
 import { formatCurrency } from '../../utils/format';
+import { ProductImageFallback } from '../common/ProductImageFallback';
 
 export const ShoppingCart: FC = () => {
   const { items, isOpen, toggleCart, removeItem, updateQuantity, getTotalPrice, clearCart } = useCartStore();
   const totalPrice = getTotalPrice();
+  const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
 
   if (!isOpen) return null;
 
@@ -51,11 +54,20 @@ export const ShoppingCart: FC = () => {
                   key={item.product.id}
                   className="flex gap-4 mb-4 pb-4 border-b last:border-b-0"
                 >
-                  <img
-                    src={item.product.thumbnail}
-                    alt={item.product.name}
-                    className="w-20 h-20 object-cover rounded-lg"
-                  />
+                  {item.product.thumbnail && !imageLoadErrors[item.product.id] ? (
+                    <img
+                      src={item.product.thumbnail}
+                      alt={item.product.name}
+                      className="w-20 h-20 object-cover rounded-lg"
+                      onError={() => {
+                        setImageLoadErrors(prev => ({ ...prev, [item.product.id]: true }));
+                      }}
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-lg overflow-hidden">
+                      <ProductImageFallback name={item.product.name} size="sm" />
+                    </div>
+                  )}
 
                   <div className="flex-1">
                     <h3 className="font-medium text-gray-900 line-clamp-1">

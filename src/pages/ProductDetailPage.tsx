@@ -10,16 +10,18 @@ import type { Product } from '../types';
 import { extractIdFromSlug } from '../utils/slugify';
 import { Loader } from '../components/common/Loader';
 import { mockProducts } from '../data/productData';
+import { ProductImageFallback } from '../components/common/ProductImageFallback';
 
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [imageLoadErrors, setImageLoadErrors] = useState<Record<number, boolean>>({});
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const { addItem } = useCartStore();
+  const { addItem, toggleCart } = useCartStore();
 
   useEffect(() => {
     if (!slug) {
@@ -46,7 +48,7 @@ export const ProductDetailPage: React.FC = () => {
             ]);
             setProduct(detail);
             const related = list
-              .filter((item) => item.categoryId === detail.categoryId && item.id !== detail.id)
+              .filter((item) => item.brand === detail.brand && item.id !== detail.id)
               .slice(0, 4);
             setRelatedProducts(related);
             return;
@@ -60,7 +62,7 @@ export const ProductDetailPage: React.FC = () => {
         if (mockProduct) {
           setProduct(mockProduct);
           const related = mockProducts
-            .filter((item) => item.categoryId === mockProduct.categoryId && item.id !== mockProduct.id)
+            .filter((item) => item.brand === mockProduct.brand && item.id !== mockProduct.id)
             .slice(0, 4);
           setRelatedProducts(related);
         } else {
@@ -80,6 +82,12 @@ export const ProductDetailPage: React.FC = () => {
   const handleAddToCart = () => {
     if (!product) return;
     addItem(product, quantity);
+  };
+
+  const handleBuyNow = () => {
+    if (!product) return;
+    addItem(product, quantity);
+    toggleCart();
   };
 
   const handleQuantityChange = (delta: number) => {
@@ -126,15 +134,24 @@ export const ProductDetailPage: React.FC = () => {
           Quay lại
         </Link>
 
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             <div>
               <div className="mb-4">
-                <img
-                  src={product.images[selectedImage] || product.thumbnail}
-                  alt={product.name}
-                  className="w-full h-96 object-cover rounded-lg"
-                />
+                {(product.images[selectedImage] || product.thumbnail) && !imageLoadErrors[selectedImage] ? (
+                  <img
+                    src={product.images[selectedImage] || product.thumbnail}
+                    alt={product.name}
+                    className="w-full h-64 sm:h-80 md:h-96 object-cover rounded-lg"
+                    onError={() => {
+                      setImageLoadErrors(prev => ({ ...prev, [selectedImage]: true }));
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-64 sm:h-80 md:h-96 rounded-lg overflow-hidden">
+                    <ProductImageFallback name={product.name} size="xl" />
+                  </div>
+                )}
               </div>
               {product.images.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto">
@@ -147,7 +164,18 @@ export const ProductDetailPage: React.FC = () => {
                         selectedImage === index ? 'border-primary' : 'border-gray-200'
                       )}
                     >
-                      <img src={image} alt={`${product.name} ${index + 1}`} className="w-full h-full object-cover" />
+                      {image && !imageLoadErrors[1000 + index] ? (
+                        <img
+                          src={image}
+                          alt={`${product.name} ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={() => {
+                            setImageLoadErrors(prev => ({ ...prev, [1000 + index]: true }));
+                          }}
+                        />
+                      ) : (
+                        <ProductImageFallback name={product.name} size="sm" />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -155,16 +183,16 @@ export const ProductDetailPage: React.FC = () => {
             </div>
 
             <div>
-              <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
-              {product.nameEn && <p className="text-gray-600 mb-4">{product.nameEn}</p>}
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">{product.name}</h1>
+              {product.nameEn && <p className="text-sm md:text-base text-gray-600 mb-4">{product.nameEn}</p>}
 
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
                     <FiStar
                       key={i}
                       className={cn(
-                        'w-5 h-5',
+                        'w-4 h-4 md:w-5 md:h-5',
                         i < Math.floor(product.rating)
                           ? 'fill-yellow-400 text-yellow-400'
                           : 'text-gray-300'
@@ -172,23 +200,23 @@ export const ProductDetailPage: React.FC = () => {
                     />
                   ))}
                 </div>
-                <span className="text-gray-600">
+                <span className="text-sm md:text-base text-gray-600">
                   {product.rating} ({product.reviewCount} đánh giá)
                 </span>
-                <span className="text-gray-600">Đã bán: {product.soldCount}</span>
+                <span className="text-sm md:text-base text-gray-600">Đã bán: {product.soldCount}</span>
               </div>
 
               <div className="mb-6">
-                <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-bold text-primary">
+                <div className="flex flex-wrap items-baseline gap-2 md:gap-3">
+                  <span className="text-2xl md:text-3xl font-bold text-primary">
                     {formatCurrency(product.price)}
                   </span>
                   {product.originalPrice && (
                     <>
-                      <span className="text-xl text-gray-500 line-through">
+                      <span className="text-lg md:text-xl text-gray-500 line-through">
                         {formatCurrency(product.originalPrice)}
                       </span>
-                      <span className="bg-red-500 text-white px-2 py-1 rounded text-sm font-semibold">
+                      <span className="bg-red-500 text-white px-2 py-1 rounded text-xs md:text-sm font-semibold">
                         -{discountPercent}%
                       </span>
                     </>
@@ -197,65 +225,65 @@ export const ProductDetailPage: React.FC = () => {
               </div>
 
               <div className="mb-6">
-                <p className="text-gray-700">{product.description}</p>
+                <p className="text-sm md:text-base text-gray-700">{product.description}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <span className="text-gray-600">Thương hiệu:</span>
-                  <span className="ml-2 font-semibold">{product.brand}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-6">
+                <div className="flex justify-between sm:block">
+                  <span className="text-sm md:text-base text-gray-600">Thương hiệu:</span>
+                  <span className="ml-2 text-sm md:text-base font-semibold">{product.brand}</span>
                 </div>
-                <div>
-                  <span className="text-gray-600">Danh mục:</span>
-                  <span className="ml-2 font-semibold">{product.category}</span>
+                <div className="flex justify-between sm:block">
+                  <span className="text-sm md:text-base text-gray-600">Danh mục:</span>
+                  <span className="ml-2 text-sm md:text-base font-semibold">{product.category}</span>
                 </div>
-                <div>
-                  <span className="text-gray-600">Tồn kho:</span>
-                  <span className="ml-2 font-semibold">{product.stock}</span>
+                <div className="flex justify-between sm:block">
+                  <span className="text-sm md:text-base text-gray-600">Tồn kho:</span>
+                  <span className="ml-2 text-sm md:text-base font-semibold">{product.stock}</span>
                 </div>
-                <div>
-                  <span className="text-gray-600">Đơn vị:</span>
-                  <span className="ml-2 font-semibold">{product.quantity} {product.unit || 'sản phẩm'}</span>
+                <div className="flex justify-between sm:block">
+                  <span className="text-sm md:text-base text-gray-600">Đơn vị:</span>
+                  <span className="ml-2 text-sm md:text-base font-semibold">{product.quantity} {product.unit || 'sản phẩm'}</span>
                 </div>
-                <div>
-                  <span className="text-gray-600">Mã sản phẩm:</span>
-                  <span className="ml-2 font-semibold">#{product.productId}</span>
+                <div className="flex justify-between sm:block">
+                  <span className="text-sm md:text-base text-gray-600">Mã sản phẩm:</span>
+                  <span className="ml-2 text-sm md:text-base font-semibold">#{product.productId}</span>
+                </div>
+                <div className="flex justify-between items-center sm:gap-4">
+                  <span className="text-sm md:text-base text-gray-600">Số lượng:</span>
+                  <div className="flex items-center border rounded-lg">
+                    <button
+                      onClick={() => handleQuantityChange(-1)}
+                      className="p-2 hover:bg-gray-100 transition-colors"
+                      disabled={quantity <= 1}
+                    >
+                      <FiMinus className="w-4 h-4" />
+                    </button>
+                    <span className="px-4 py-2 min-w-[50px] text-center">{quantity}</span>
+                    <button
+                      onClick={() => handleQuantityChange(1)}
+                      className="p-2 hover:bg-gray-100 transition-colors"
+                      disabled={quantity >= product.stock}
+                    >
+                      <FiPlus className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 mb-6">
-                <span className="text-gray-600">Số lượng:</span>
-                <div className="flex items-center border rounded-lg">
-                  <button
-                    onClick={() => handleQuantityChange(-1)}
-                    className="p-2 hover:bg-gray-100 transition-colors"
-                    disabled={quantity <= 1}
-                  >
-                    <FiMinus className="w-4 h-4" />
-                  </button>
-                  <span className="px-4 py-2 min-w-[50px] text-center">{quantity}</span>
-                  <button
-                    onClick={() => handleQuantityChange(1)}
-                    className="p-2 hover:bg-gray-100 transition-colors"
-                    disabled={quantity >= product.stock}
-                  >
-                    <FiPlus className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <button
                   onClick={handleAddToCart}
                   disabled={product.stock === 0}
-                  className="flex-1 bg-primary hover:bg-secondary text-white py-3 px-6 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 bg-primary hover:bg-secondary text-white py-3 px-4 md:px-6 rounded-lg text-sm md:text-base font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <FiShoppingCart className="w-5 h-5" />
+                  <FiShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
                   Thêm vào giỏ hàng
                 </button>
                 <button
+                  onClick={handleBuyNow}
                   disabled={product.stock === 0}
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 px-6 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 md:px-6 rounded-lg text-sm md:text-base font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Mua ngay
                 </button>
@@ -264,23 +292,23 @@ export const ProductDetailPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-2xl font-bold mb-4">Thông tin chi tiết</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-8">
+          <h2 className="text-xl md:text-2xl font-bold mb-4">Thông tin chi tiết</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <div>
-              <h3 className="text-lg font-semibold mb-2">Thành phần</h3>
-              <ul className="space-y-2 text-gray-700">
+              <h3 className="text-base md:text-lg font-semibold mb-2">Thành phần</h3>
+              <ul className="space-y-2 text-sm md:text-base text-gray-700">
                 {(product.ingredients || ['Đang cập nhật']).map((item, index) => (
                   <li key={index} className="flex items-start gap-2">
-                    <FiCheck className="w-5 h-5 text-primary mt-1" />
+                    <FiCheck className="w-4 h-4 md:w-5 md:h-5 text-primary mt-0.5 md:mt-1 flex-shrink-0" />
                     <span>{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-semibold mb-2">Hướng dẫn sử dụng</h3>
-              <p className="text-gray-700">
+              <h3 className="text-base md:text-lg font-semibold mb-2">Hướng dẫn sử dụng</h3>
+              <p className="text-sm md:text-base text-gray-700">
                 {product.usage || 'Sử dụng 1-2 viên mỗi ngày sau bữa ăn. Tham khảo ý kiến bác sĩ nếu bạn đang mang thai, cho con bú hoặc điều trị bệnh.'}
               </p>
             </div>
@@ -288,11 +316,11 @@ export const ProductDetailPage: React.FC = () => {
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold mb-6">Sản phẩm liên quan</h2>
+          <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Sản phẩm liên quan</h2>
           {relatedProducts.length > 0 ? (
             <ProductList products={relatedProducts} />
           ) : (
-            <p className="text-gray-500">Không có sản phẩm liên quan.</p>
+            <p className="text-sm md:text-base text-gray-500">Không có sản phẩm liên quan.</p>
           )}
         </div>
       </div>
