@@ -53,10 +53,8 @@ export const ProductsPage: React.FC = () => {
       try {
         setIsLoading(true);
         setError('');
-        const [categoryData, productData] = await Promise.all([
-          productApi.listCategories('customer'),
-          productApi.listProducts(),
-        ]);
+        const categoryData = await productApi.listCategories('customer');
+        const productData = await productApi.listProducts(categoryData);
         setCategories(categoryData);
         setProducts(productData);
         const brandSet = new Set(productData.map((product) => product.brand));
@@ -115,11 +113,20 @@ export const ProductsPage: React.FC = () => {
     let list = [...products];
 
     if (filters.category) {
-      list = list.filter(
-        (product) =>
-          product.categoryId?.toString() === filters.category ||
-          product.category === filters.category
-      );
+      // Find category by slug
+      const category = categories.find(cat => cat.slug === filters.category);
+      if (category) {
+        // Filter by categoryId
+        list = list.filter(product => product.categoryId === category.categoryId);
+      } else {
+        // Fallback: try to match by category name or ID
+        list = list.filter(
+          (product) =>
+            product.categoryId?.toString() === filters.category ||
+            product.category === filters.category ||
+            product.slug === filters.category
+        );
+      }
     }
 
     if (filters.brand) {
@@ -163,7 +170,7 @@ export const ProductsPage: React.FC = () => {
     }
 
     return list;
-  }, [products, filters, searchParams]);
+  }, [products, filters, searchParams, categories]);
 
   const paginatedData = useMemo(() => getPaginatedData(filteredProducts), [filteredProducts, getPaginatedData]);
 

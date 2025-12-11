@@ -171,8 +171,11 @@ export const productApi = {
     await apiClient.delete(`/products/${productId}`);
   },
 
-  async listCategories(role: 'customer' | 'admin' = 'customer'): Promise<Category[]> {
-    const endpoint = role === 'admin' ? '/products/categories/all' : '/products/categories';
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async listCategories(_role?: 'customer' | 'admin'): Promise<Category[]> {
+    // Both customer and admin use the same public endpoint /all
+    // The role parameter is kept for backward compatibility but not used
+    const endpoint = '/products/categories/all';
     const response = await apiClient.get<ApiResponse<BackendCategory[]>>(endpoint);
     return response.data.data.map(toCategory);
   },
@@ -195,11 +198,11 @@ export const productApi = {
     categoryId: number,
     payload: Partial<Pick<Category, 'name' | 'nameEn' | 'description' | 'icon' | 'isActive' | 'order'>>,
   ): Promise<Category> {
-    const response = await apiClient.put<ApiResponse<BackendCategory>>(`/products/categories/${categoryId}`, payload);
+    const response = await apiClient.put<ApiResponse<BackendCategory>>(`/categories/${categoryId}`, payload);
     return toCategory(response.data.data);
   },
 
   async deleteCategory(categoryId: number): Promise<void> {
-    await apiClient.delete(`/products/categories/${categoryId}`);
+    await apiClient.delete(`/categories/${categoryId}`);
   },
 };
