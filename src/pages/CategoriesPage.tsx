@@ -100,14 +100,16 @@ export const CategoriesPage: React.FC = () => {
         // Count products per category
         const productCountMap = new Map<number, number>();
         productsData.forEach(product => {
-          const count = productCountMap.get(product.categoryId) || 0;
-          productCountMap.set(product.categoryId, count + 1);
+          if (product.categoryId !== undefined) {
+            const count = productCountMap.get(product.categoryId) || 0;
+            productCountMap.set(product.categoryId, count + 1);
+          }
         });
 
         // Add product count to each category
         const categoriesWithCount = categoriesData.map(category => ({
           ...category,
-          productCount: productCountMap.get(category.categoryId) || 0
+          productCount: category.categoryId !== undefined ? (productCountMap.get(category.categoryId) || 0) : 0
         }));
 
         setCategories(categoriesWithCount);
