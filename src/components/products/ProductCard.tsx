@@ -5,6 +5,8 @@ import type { Product } from '../../types';
 import { formatCurrency, calculateDiscount } from '../../utils/format';
 import { useCartStore } from '../../store/useCartStore';
 import { cn } from '../../utils/cn';
+import { ProductImageFallback } from '../common/ProductImageFallback';
+import { useState } from 'react';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +15,7 @@ interface ProductCardProps {
 
 export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
   const { addItem } = useCartStore();
+  const [imageError, setImageError] = useState(false);
 
   const handleAddToCart = (e: MouseEvent) => {
     e.preventDefault();
@@ -23,6 +26,8 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
     ? calculateDiscount(product.price, product.originalPrice)
     : 0;
 
+  const hasValidImage = product.thumbnail && !product.thumbnail.includes('placeholder') && !imageError;
+
   return (
     <Link
       to={`/products/${product.slug}`}
@@ -31,12 +36,17 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
         className
       )}
     >
-      <div className="relative">
-        <img
-          src={product.thumbnail}
-          alt={product.name}
-          className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+      <div className="relative h-48 overflow-hidden bg-gray-50">
+        {hasValidImage ? (
+          <img
+            src={product.thumbnail}
+            alt={product.name}
+            className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <ProductImageFallback name={product.name} size="md" className="h-full" />
+        )}
 
         {discountPercent > 0 && (
           <span className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-sm font-semibold rounded">
@@ -55,16 +65,6 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
             Bán chạy
           </span>
         )}
-
-        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <button
-            onClick={handleAddToCart}
-            className="bg-primary hover:bg-secondary text-white p-2 rounded-full shadow-lg transition-colors"
-            aria-label="Add to cart"
-          >
-            <FiShoppingCart className="w-5 h-5" />
-          </button>
-        </div>
       </div>
 
       <div className="p-4">
@@ -74,13 +74,13 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
 
         <p className="text-sm text-gray-600 mb-2">{product.brand}</p>
 
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-2">
           <div className="flex items-center">
             {[...Array(5)].map((_, i) => (
               <FiStar
                 key={i}
                 className={cn(
-                  'w-4 h-4',
+                  'w-3.5 h-3.5',
                   i < Math.floor(product.rating)
                     ? 'fill-yellow-400 text-yellow-400'
                     : 'text-gray-300'
@@ -88,16 +88,16 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
               />
             ))}
           </div>
-          <span className="text-sm text-gray-600">({product.reviewCount})</span>
+          <span className="text-xs text-gray-600">({product.reviewCount})</span>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-end justify-between">
           <div>
             <div className="text-lg font-bold text-primary">
               {formatCurrency(product.price)}
             </div>
             {product.originalPrice && (
-              <div className="text-sm text-gray-500 line-through">
+              <div className="text-xs text-gray-500 line-through">
                 {formatCurrency(product.originalPrice)}
               </div>
             )}
@@ -105,9 +105,10 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
 
           <button
             onClick={handleAddToCart}
-            className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="bg-primary hover:bg-secondary text-white p-2.5 rounded-full transition-all hover:shadow-md active:scale-95"
+            aria-label="Thêm vào giỏ hàng"
           >
-            Thêm vào giỏ
+            <FiShoppingCart className="w-5 h-5" />
           </button>
         </div>
       </div>

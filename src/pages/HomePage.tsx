@@ -6,6 +6,7 @@ import { Categories } from '../components/common/Categories';
 import { ProductList } from '../components/products/ProductList';
 import { productApi } from '../services/productApi';
 import type { Product } from '../types';
+import { mockProducts } from '../data/productData';
 
 const SectionWrapper: React.FC<{
   title: string;
@@ -53,8 +54,10 @@ export const HomePage: React.FC = () => {
         setError('');
         const data = await productApi.listProducts();
         setProducts(data);
-      } catch {
-        setError('Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.');
+      } catch (err) {
+        console.error('Failed to fetch products, using mock data:', err);
+        setProducts(mockProducts);
+        setError('');
       } finally {
         setIsLoading(false);
       }
