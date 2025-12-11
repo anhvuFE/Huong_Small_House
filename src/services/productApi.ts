@@ -172,7 +172,8 @@ export const productApi = {
   },
 
   async listCategories(role: 'customer' | 'admin' = 'customer'): Promise<Category[]> {
-    const endpoint = role === 'admin' ? '/products/categories/all' : '/products/categories';
+    // Both customer and admin use the same public endpoint /all
+    const endpoint = '/products/categories/all';
     const response = await apiClient.get<ApiResponse<BackendCategory[]>>(endpoint);
     return response.data.data.map(toCategory);
   },
@@ -195,11 +196,11 @@ export const productApi = {
     categoryId: number,
     payload: Partial<Pick<Category, 'name' | 'nameEn' | 'description' | 'icon' | 'isActive' | 'order'>>,
   ): Promise<Category> {
-    const response = await apiClient.put<ApiResponse<BackendCategory>>(`/products/categories/${categoryId}`, payload);
+    const response = await apiClient.put<ApiResponse<BackendCategory>>(`/categories/${categoryId}`, payload);
     return toCategory(response.data.data);
   },
 
   async deleteCategory(categoryId: number): Promise<void> {
-    await apiClient.delete(`/products/categories/${categoryId}`);
+    await apiClient.delete(`/categories/${categoryId}`);
   },
 };
