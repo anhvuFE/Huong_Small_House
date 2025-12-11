@@ -170,7 +170,7 @@ export const ProductsPage: React.FC = () => {
     }
 
     return list;
-  }, [products, filters, searchParams]);
+  }, [products, filters, searchParams, categories]);
 
   const paginatedData = useMemo(() => getPaginatedData(filteredProducts), [filteredProducts, getPaginatedData]);
 

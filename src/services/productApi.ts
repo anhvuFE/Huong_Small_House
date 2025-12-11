@@ -171,8 +171,10 @@ export const productApi = {
     await apiClient.delete(`/products/${productId}`);
   },
 
-  async listCategories(role: 'customer' | 'admin' = 'customer'): Promise<Category[]> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async listCategories(_role?: 'customer' | 'admin'): Promise<Category[]> {
     // Both customer and admin use the same public endpoint /all
+    // The role parameter is kept for backward compatibility but not used
     const endpoint = '/products/categories/all';
     const response = await apiClient.get<ApiResponse<BackendCategory[]>>(endpoint);
     return response.data.data.map(toCategory);
