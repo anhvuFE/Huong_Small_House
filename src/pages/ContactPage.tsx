@@ -116,7 +116,7 @@ export const ContactPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
       <div
-        className="relative bg-gradient-to-br from-primary to-secondary py-20"
+        className="relative bg-gradient-to-br from-primary to-secondary py-12 sm:py-16 md:py-20"
         style={{
           backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/auth-background.jpg')`,
           backgroundSize: 'cover',
@@ -125,105 +125,105 @@ export const ContactPage: React.FC = () => {
       >
         <div className="container mx-auto px-4">
           <div className="text-center text-white max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4">
               Liên hệ với chúng tôi
             </h1>
-            <p className="text-xl">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl px-4 sm:px-0">
               Đội ngũ tư vấn chuyên nghiệp của chúng tôi luôn sẵn sàng hỗ trợ bạn 24/7
             </p>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-16">
-        <div className="grid lg:grid-cols-5 gap-8">
+      <div className="container mx-auto px-4 py-8 sm:py-12 md:py-16">
+        <div className="grid lg:grid-cols-5 gap-6 sm:gap-8">
           {/* Contact Information */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-              <h2 className="text-2xl font-bold mb-6">Thông tin liên hệ</h2>
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-8 mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Thông tin liên hệ</h2>
 
-              <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-primary/10 to-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
-                    <FiMapPin className="w-6 h-6 text-primary" />
+              <div className="space-y-4 sm:space-y-6">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary/10 to-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <FiMapPin className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">Địa chỉ</h3>
-                    <p className="text-gray-600">120 Hoàng Quốc Việt, Cầu Giấy, Hà Nội</p>
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1 text-sm sm:text-base">Địa chỉ</h3>
+                    <p className="text-gray-600 text-sm sm:text-base">Chung cư nhà A 9 tầng, Ngõ 120 Hoàng Quốc Việt, Bắc Từ Liêm, Hà Nội</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center flex-shrink-0">
-                    <FiPhone className="w-6 h-6 text-blue-600" />
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center flex-shrink-0">
+                    <FiPhone className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">Điện thoại</h3>
-                    <a href="tel:0336064040" className="text-gray-600 hover:text-primary transition-colors">
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1 text-sm sm:text-base">Điện thoại</h3>
+                    <a href="tel:0336064040" className="text-gray-600 hover:text-primary transition-colors text-sm sm:text-base">
                       0336 064 040
                     </a>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center flex-shrink-0">
-                    <FiMail className="w-6 h-6 text-purple-600" />
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center flex-shrink-0">
+                    <FiMail className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">Email</h3>
-                    <a href="mailto:vuquynhhuong171298@gmail.com" className="text-gray-600 hover:text-primary transition-colors break-all">
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1 text-sm sm:text-base">Email</h3>
+                    <a href="mailto:vuquynhhuong171298@gmail.com" className="text-gray-600 hover:text-primary transition-colors break-all text-xs sm:text-sm md:text-base">
                       vuquynhhuong171298@gmail.com
                     </a>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center flex-shrink-0">
-                    <FiClock className="w-6 h-6 text-green-600" />
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center flex-shrink-0">
+                    <FiClock className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">Giờ làm việc</h3>
-                    <p className="text-gray-600">8:00 - 22:00 (Tất cả các ngày)</p>
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1 text-sm sm:text-base">Giờ làm việc</h3>
+                    <p className="text-gray-600 text-sm sm:text-base">8:00 - 22:00 (Tất cả các ngày)</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Social Media */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h3 className="text-xl font-bold mb-4">Kết nối với chúng tôi</h3>
-              <div className="flex gap-4">
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-8">
+              <h3 className="text-lg sm:text-xl font-bold mb-4 text-center">Kết nối với chúng tôi</h3>
+              <div className="flex gap-3 sm:gap-4 flex-wrap justify-center">
                 <a
                   href="https://facebook.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-12 h-12 bg-blue-100 hover:bg-blue-600 text-blue-600 hover:text-white rounded-full flex items-center justify-center transition-all"
+                  className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 hover:bg-blue-600 text-blue-600 hover:text-white rounded-full flex items-center justify-center transition-all"
                 >
-                  <FiFacebook className="w-6 h-6" />
+                  <FiFacebook className="w-5 h-5 sm:w-6 sm:h-6" />
                 </a>
                 <a
                   href="https://instagram.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-12 h-12 bg-pink-100 hover:bg-pink-600 text-pink-600 hover:text-white rounded-full flex items-center justify-center transition-all"
+                  className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 hover:bg-pink-600 text-pink-600 hover:text-white rounded-full flex items-center justify-center transition-all"
                 >
-                  <FiInstagram className="w-6 h-6" />
+                  <FiInstagram className="w-5 h-5 sm:w-6 sm:h-6" />
                 </a>
                 <a
                   href="https://youtube.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-12 h-12 bg-red-100 hover:bg-red-600 text-red-600 hover:text-white rounded-full flex items-center justify-center transition-all"
+                  className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 hover:bg-red-600 text-red-600 hover:text-white rounded-full flex items-center justify-center transition-all"
                 >
-                  <FiYoutube className="w-6 h-6" />
+                  <FiYoutube className="w-5 h-5 sm:w-6 sm:h-6" />
                 </a>
                 <a
                   href="https://zalo.me/0336064040"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-12 h-12 bg-blue-100 hover:bg-blue-500 text-blue-500 hover:text-white rounded-full flex items-center justify-center transition-all"
+                  className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 hover:bg-blue-500 text-blue-500 hover:text-white rounded-full flex items-center justify-center transition-all"
                 >
-                  <FiMessageSquare className="w-6 h-6" />
+                  <FiMessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
                 </a>
               </div>
             </div>
@@ -231,8 +231,8 @@ export const ContactPage: React.FC = () => {
 
           {/* Contact Form */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold mb-6">Gửi tin nhắn cho chúng tôi</h2>
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-8">
+              <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Gửi tin nhắn cho chúng tôi</h2>
 
               {submitSuccess && (
                 <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
@@ -240,9 +240,9 @@ export const ContactPage: React.FC = () => {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="col-span-1 md:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Họ và tên <span className="text-red-500">*</span>
                     </label>
@@ -266,7 +266,7 @@ export const ContactPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div>
+                  <div className="col-span-1 md:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Email <span className="text-red-500">*</span>
                     </label>
@@ -290,7 +290,7 @@ export const ContactPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div>
+                  <div className="col-span-1 md:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Số điện thoại <span className="text-red-500">*</span>
                     </label>
@@ -314,7 +314,7 @@ export const ContactPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div>
+                  <div className="col-span-1 md:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Chủ đề <span className="text-red-500">*</span>
                     </label>
@@ -366,7 +366,7 @@ export const ContactPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full md:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-primary to-secondary text-white text-sm sm:text-base font-semibold rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     <>
@@ -386,46 +386,46 @@ export const ContactPage: React.FC = () => {
         </div>
 
         {/* Map Section */}
-        <div className="mt-12">
-          <div className="bg-white rounded-2xl shadow-lg p-2 overflow-hidden">
+        <div className="mt-8 sm:mt-12">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-1 sm:p-2 overflow-hidden">
             <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3723.9265514062955!2d105.78073731476344!3d21.035665985994742!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135ab4cd376479b%3A0xbc2e0bb9db373ed2!2zMTIwIEhvw6BuZyBRdeG7kWMgVmnhu4d0LCBD4bqndSBHaeG6pXksIEjDoCBO4buZaSwgVmnhu4d0IE5hbQ!5e0!3m2!1svi!2s!4v1638431234567!5m2!1svi!2s"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d931.0173569775983!2d105.79179686950405!3d21.04532629870902!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135ab3ae8c77e2b%3A0x8e14d9f462a3b70f!2zTmfDtSAxMjAgSG_DoG5nIFF14buRYyBWaeG7h3Q!5e0!3m2!1svi!2s!4v1702872345678!5m2!1svi!2s"
               width="100%"
-              height="450"
+              height="300"
               style={{ border: 0 }}
               allowFullScreen
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              className="rounded-xl"
+              className="rounded-lg sm:rounded-xl md:h-[450px]"
             ></iframe>
           </div>
         </div>
 
         {/* FAQ Section */}
-        <div className="mt-16">
-          <h2 className="text-3xl font-bold text-center mb-12">Câu hỏi thường gặp</h2>
-          <div className="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h3 className="font-semibold text-lg mb-2">Thời gian giao hàng là bao lâu?</h3>
-              <p className="text-gray-600">
+        <div className="mt-12 sm:mt-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">Câu hỏi thường gặp</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-6xl mx-auto">
+            <div className="bg-white rounded-xl shadow-md p-5 sm:p-6">
+              <h3 className="font-semibold text-base sm:text-lg mb-2">Thời gian giao hàng là bao lâu?</h3>
+              <p className="text-gray-600 text-sm sm:text-base">
                 Thời gian giao hàng từ 1-3 ngày cho khu vực nội thành Hà Nội và 3-5 ngày cho các tỉnh thành khác.
               </p>
             </div>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h3 className="font-semibold text-lg mb-2">Tôi có thể đổi trả sản phẩm không?</h3>
-              <p className="text-gray-600">
+            <div className="bg-white rounded-xl shadow-md p-5 sm:p-6">
+              <h3 className="font-semibold text-base sm:text-lg mb-2">Tôi có thể đổi trả sản phẩm không?</h3>
+              <p className="text-gray-600 text-sm sm:text-base">
                 Bạn có thể đổi trả sản phẩm trong vòng 7 ngày nếu còn nguyên tem, mác và chưa qua sử dụng.
               </p>
             </div>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h3 className="font-semibold text-lg mb-2">Làm sao để được tư vấn miễn phí?</h3>
-              <p className="text-gray-600">
+            <div className="bg-white rounded-xl shadow-md p-5 sm:p-6">
+              <h3 className="font-semibold text-base sm:text-lg mb-2">Làm sao để được tư vấn miễn phí?</h3>
+              <p className="text-gray-600 text-sm sm:text-base">
                 Gọi hotline 0336 064 040 hoặc nhắn tin qua Zalo, Facebook để được tư vấn miễn phí 24/7.
               </p>
             </div>
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h3 className="font-semibold text-lg mb-2">Có chính sách giảm giá cho khách hàng thân thiết?</h3>
-              <p className="text-gray-600">
+            <div className="bg-white rounded-xl shadow-md p-5 sm:p-6">
+              <h3 className="font-semibold text-base sm:text-lg mb-2">Có chính sách giảm giá cho khách hàng thân thiết?</h3>
+              <p className="text-gray-600 text-sm sm:text-base">
                 Có, khách hàng thân thiết sẽ được giảm 5-15% tùy theo cấp độ thành viên.
               </p>
             </div>
