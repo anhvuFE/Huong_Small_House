@@ -12,6 +12,7 @@ import {
   FiStar,
   FiPackage
 } from 'react-icons/fi';
+import logo from '../assets/logo.png';
 
 const milestones = [
   { year: '2015', event: 'Thành lập Hương Small House với 10 sản phẩm đầu tiên' },
@@ -26,19 +27,19 @@ const teamMembers = [
   {
     name: 'Vũ Quỳnh Hương',
     role: 'Founder & CEO',
-    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop',
+    image: logo,
     description: 'Dược sĩ với 10 năm kinh nghiệm trong ngành dược phẩm'
   },
   {
     name: 'Phạm Thế Vượng',
     role: 'Co-Founder & CTO',
-    image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop',
+    image: logo,
     description: 'Chuyên gia công nghệ và phát triển hệ thống'
   },
   {
     name: 'Vũ Xuân Anh',
     role: 'Co-Founder & COO',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
+    image: logo,
     description: 'Chuyên gia vận hành và quản lý chuỗi cung ứng'
   }
 ];

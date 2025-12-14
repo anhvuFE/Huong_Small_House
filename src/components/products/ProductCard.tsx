@@ -7,6 +7,7 @@ import { useCartStore } from '../../store/useCartStore';
 import { cn } from '../../utils/cn';
 import { ProductImageFallback } from '../common/ProductImageFallback';
 import { useState } from 'react';
+import logo from '../../assets/logo.png';
 
 interface ProductCardProps {
   product: Product;
@@ -26,7 +27,14 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
     ? calculateDiscount(product.price, product.originalPrice)
     : 0;
 
-  const hasValidImage = product.thumbnail && !product.thumbnail.includes('placeholder') && !imageError;
+  // Check if thumbnail exists and is a valid URL (not a placeholder or mock path)
+  const hasValidImage = product.thumbnail &&
+    product.thumbnail !== null &&
+    !product.thumbnail.includes('placeholder') &&
+    !product.thumbnail.includes('placehold') &&
+    !product.thumbnail.includes('/images/products/') &&
+    product.thumbnail.startsWith('http') &&
+    !imageError;
 
   return (
     <Link
@@ -45,7 +53,11 @@ export const ProductCard: FC<ProductCardProps> = ({ product, className }) => {
             onError={() => setImageError(true)}
           />
         ) : (
-          <ProductImageFallback name={product.name} size="md" className="h-full" />
+          <img
+            src={logo}
+            alt={product.name}
+            className="absolute inset-0 w-full h-full object-contain"
+          />
         )}
 
         {discountPercent > 0 && (

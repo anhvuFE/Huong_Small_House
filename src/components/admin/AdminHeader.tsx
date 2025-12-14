@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiBell, FiSearch, FiUser, FiChevronDown, FiMenu } from 'react-icons/fi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { profileApi } from '../../services/profileApi';
+import logo from '../../assets/logo.png';
 
 interface AdminHeaderProps {
   onToggleSidebar: () => void;
@@ -134,8 +135,8 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <div className="w-7 h-7 lg:w-8 lg:h-8 bg-primary rounded-full flex items-center justify-center">
-                <FiUser className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+              <div className="w-7 h-7 lg:w-8 lg:h-8 bg-primary/15 rounded-full flex items-center justify-center p-1">
+                <img src={logo} alt="Admin Avatar" className="w-full h-full object-contain" />
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-gray-900">

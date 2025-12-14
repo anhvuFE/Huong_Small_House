@@ -5,6 +5,7 @@ import { contentApi } from '../services/contentApi';
 import type { ContentItem } from '../types';
 import { getErrorMessage } from '../utils/error';
 import { Loader } from '../components/common/Loader';
+import logo from '../assets/logo.png';
 
 const formatDateTime = (value?: Date) => {
   if (!value) return 'Không rõ';
@@ -84,7 +85,7 @@ export const BlogDetailPage: React.FC = () => {
     <div className="bg-white pb-16">
       <div className="relative h-72 md:h-96 bg-gray-900">
         <img
-          src={post.thumbnail || 'https://images.unsplash.com/photo-1494390248081-4e521a5940db?auto=format&fit=crop&w=1600&q=80'}
+          src={(post.thumbnail && post.thumbnail.startsWith('http') && !post.thumbnail.includes('placeholder') && !post.thumbnail.includes('placehold')) ? post.thumbnail : logo}
           alt={post.title}
           className="absolute inset-0 w-full h-full object-cover"
         />

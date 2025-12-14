@@ -5,6 +5,7 @@ import { useCartStore } from '../store/useCartStore';
 import { formatCurrency } from '../utils/format';
 import { ProductImageFallback } from '../components/common/ProductImageFallback';
 import { useToast } from '../components/common/Toast';
+import logo from '../assets/logo.png';
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
@@ -325,7 +326,7 @@ export const CheckoutPage: React.FC = () => {
                       />
                     ) : (
                       <div className="w-16 h-16 rounded-lg overflow-hidden">
-                        <ProductImageFallback name={item.product.name} size="sm" />
+                        <img src={logo} alt={item.product.name} className="w-full h-full object-contain" />
                       </div>
                     )}
                     <div className="flex-1">

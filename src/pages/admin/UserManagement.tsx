@@ -20,6 +20,7 @@ import { getErrorMessage } from '../../utils/error';
 import type { User } from '../../types';
 import { Loader } from '../../components/common/Loader';
 import { useToast } from '../../components/common/Toast';
+import logo from '../../assets/logo.png';
 
 const getDaysSinceLogin = (lastLogin?: Date) => {
   if (!lastLogin) return Infinity;
@@ -271,11 +272,7 @@ export const UserManagement: React.FC = () => {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                    {user.avatar ? (
-                      <img src={user.avatar} alt={user.fullName} className="w-12 h-12 rounded-full object-cover" />
-                    ) : (
-                      <FiUser className="w-5 h-5 text-gray-600" />
-                    )}
+                    <img src={user.avatar || logo} alt={user.fullName} className="w-12 h-12 rounded-full object-cover p-1" />
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{user.fullName}</p>
@@ -403,15 +400,11 @@ export const UserManagement: React.FC = () => {
                     <td className="py-4 px-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                          {user.avatar ? (
                             <img
-                              src={user.avatar}
+                              src={user.avatar || logo}
                               alt={user.fullName}
-                              className="w-10 h-10 rounded-full object-cover"
+                              className="w-10 h-10 rounded-full object-cover p-1"
                             />
-                          ) : (
-                            <FiUser className="w-5 h-5 text-gray-600" />
-                          )}
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-900">

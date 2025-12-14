@@ -89,7 +89,7 @@ const toProduct = (payload: BackendProduct, categories?: Map<number, BackendCate
   const categoryName = categoryMeta?.name ?? 'Sản phẩm';
   const categorySlug = categoryMeta?.slug ?? 'products';
   const images = payload.images?.map((image) => image.url) ?? [];
-  const thumbnail = images[0] ?? 'https://placehold.co/600x400?text=Small+House';
+  const thumbnail = images[0] ?? null;
 
   return {
     id: payload._id ?? payload.productId.toString(),
