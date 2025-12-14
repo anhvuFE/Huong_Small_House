@@ -10,7 +10,6 @@ import type { Product } from '../types';
 import { extractIdFromSlug } from '../utils/slugify';
 import { Loader } from '../components/common/Loader';
 import { mockProducts } from '../data/productData';
-import { ProductImageFallback } from '../components/common/ProductImageFallback';
 import logo from '../assets/logo.png';
 
 export const ProductDetailPage: React.FC = () => {

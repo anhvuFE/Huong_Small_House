@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   FiSearch,
@@ -45,24 +45,6 @@ export const Header: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuthStore();
   const cartItemsCount = getTotalItems();
 
-  const initials = useMemo(() => {
-    if (!user) return 'KH';
-    // Try fullName first, then email
-    const displayName = user.fullName || user.email || 'KH';
-
-    // If it's an email, just use first letter
-    if (displayName.includes('@')) {
-      return displayName.charAt(0).toUpperCase();
-    }
-
-    // Otherwise use initials from name
-    return displayName
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join('');
-  }, [user?.fullName, user?.email]);
 
   const isActiveNav = (href: string): boolean => {
     if (href === '/') {

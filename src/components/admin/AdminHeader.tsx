@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBell, FiSearch, FiUser, FiChevronDown, FiMenu } from 'react-icons/fi';
+import { FiBell, FiSearch, FiChevronDown, FiMenu } from 'react-icons/fi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { profileApi } from '../../services/profileApi';
 import logo from '../../assets/logo.png';

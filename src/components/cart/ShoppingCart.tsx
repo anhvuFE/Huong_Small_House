@@ -4,7 +4,6 @@ import { FiX, FiPlus, FiMinus, FiTrash2, FiShoppingBag } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import { useCartStore } from '../../store/useCartStore';
 import { formatCurrency } from '../../utils/format';
-import { ProductImageFallback } from '../common/ProductImageFallback';
 import logo from '../../assets/logo.png';
 
 export const ShoppingCart: FC = () => {

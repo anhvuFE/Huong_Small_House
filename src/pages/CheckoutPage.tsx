@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiCreditCard, FiTruck, FiUser, FiMail, FiPhone, FiMapPin, FiEdit3, FiDollarSign, FiPackage } from 'react-icons/fi';
 import { useCartStore } from '../store/useCartStore';
 import { formatCurrency } from '../utils/format';
-import { ProductImageFallback } from '../components/common/ProductImageFallback';
 import { useToast } from '../components/common/Toast';
 import logo from '../assets/logo.png';
 

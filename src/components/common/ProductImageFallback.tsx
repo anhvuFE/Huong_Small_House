@@ -10,8 +10,7 @@ interface ProductImageFallbackProps {
 
 export const ProductImageFallback: React.FC<ProductImageFallbackProps> = ({
   name,
-  className = '',
-  size = 'lg'
+  className = ''
 }) => {
   return (
     <div

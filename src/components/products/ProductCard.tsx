@@ -5,7 +5,6 @@ import type { Product } from '../../types';
 import { formatCurrency, calculateDiscount } from '../../utils/format';
 import { useCartStore } from '../../store/useCartStore';
 import { cn } from '../../utils/cn';
-import { ProductImageFallback } from '../common/ProductImageFallback';
 import { useState } from 'react';
 import logo from '../../assets/logo.png';
 
