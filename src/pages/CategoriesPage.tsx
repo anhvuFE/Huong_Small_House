@@ -23,6 +23,7 @@ import { productApi } from '../services/productApi';
 import type { Category } from '../types';
 import { Pagination } from '../components/common/Pagination';
 import { usePagination } from '../hooks/usePagination';
+import logo from '../assets/logo.png';
 
 const ICON_MAP: Record<string, React.JSX.Element> = {
   heart: <FiHeart className="w-8 h-8" />,
@@ -62,7 +63,7 @@ const COLORS = [
   'bg-emerald-500',
 ];
 
-const FALLBACK_IMAGE = 'https://placehold.co/400x300?text=Small+House';
+const FALLBACK_IMAGE = logo;
 
 const getIconBySlug = (slug?: string) => {
   if (!slug) return ICON_MAP.package;
@@ -150,7 +151,7 @@ export const CategoriesPage: React.FC = () => {
       <div
         className="relative bg-gradient-to-br from-primary to-secondary py-12 sm:py-16 md:py-20"
         style={{
-          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=1920&h=400&fit=crop')`,
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${logo})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}

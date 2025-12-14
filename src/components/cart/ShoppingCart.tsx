@@ -4,7 +4,7 @@ import { FiX, FiPlus, FiMinus, FiTrash2, FiShoppingBag } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import { useCartStore } from '../../store/useCartStore';
 import { formatCurrency } from '../../utils/format';
-import { ProductImageFallback } from '../common/ProductImageFallback';
+import logo from '../../assets/logo.png';
 
 export const ShoppingCart: FC = () => {
   const { items, isOpen, toggleCart, removeItem, updateQuantity, getTotalPrice, clearCart } = useCartStore();
@@ -65,7 +65,7 @@ export const ShoppingCart: FC = () => {
                     />
                   ) : (
                     <div className="w-20 h-20 rounded-lg overflow-hidden">
-                      <ProductImageFallback name={item.product.name} size="sm" />
+                      <img src={logo} alt={item.product.name} className="w-full h-full object-contain" />
                     </div>
                   )}
 

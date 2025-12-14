@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   FiSearch,
@@ -45,15 +45,6 @@ export const Header: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuthStore();
   const cartItemsCount = getTotalItems();
 
-  const initials = useMemo(() => {
-    if (!user?.fullName) return 'KH';
-    return user.fullName
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join('');
-  }, [user?.fullName]);
 
   const isActiveNav = (href: string): boolean => {
     if (href === '/') {
@@ -136,7 +127,7 @@ export const Header: React.FC = () => {
           <div className="flex items-center justify-between gap-6 h-20">
             <div className="flex items-center gap-6">
               <button
-                className="lg:hidden rounded-full border border-gray-200 p-2 text-gray-600 hover:text-primary"
+                className="xl:hidden rounded-full border border-gray-200 p-2 text-gray-600 hover:text-primary"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 aria-label="Toggle menu"
               >
@@ -153,13 +144,13 @@ export const Header: React.FC = () => {
                 </div>
               </Link>
 
-              <nav className="hidden lg:flex items-center gap-1 rounded-full bg-gray-50 p-1 border border-gray-100">
+              <nav className="hidden xl:flex items-center gap-1 rounded-full bg-gray-50 p-1 border border-gray-100">
                 {navItems.map((item) => (
                   <Link
                     key={item.href}
                     to={item.href}
                     className={cn(
-                      'px-4 py-2 text-sm font-medium rounded-full transition-colors',
+                      'px-3 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap',
                       isActiveNav(item.href)
                         ? 'bg-white text-primary shadow'
                         : 'text-gray-600 hover:text-primary'
@@ -204,12 +195,21 @@ export const Header: React.FC = () => {
                     onClick={() => setIsAccountMenuOpen((prev) => !prev)}
                     className="flex items-center gap-3 rounded-full border border-gray-200 py-2 pr-4 pl-2 hover:border-primary/40 transition"
                   >
-                    <div className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center font-semibold">
-                      {initials}
+                    <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center p-2">
+                      <img src={logo} alt="User Avatar" className="w-full h-full object-contain" />
                     </div>
                     <div className="text-left">
                       <p className="text-xs text-gray-500">Xin chào</p>
-                      <p className="text-sm font-semibold text-gray-800 max-w-[120px] truncate">{user?.fullName}</p>
+                      <p className="text-sm font-semibold text-gray-800 max-w-[120px] truncate">
+                        {(() => {
+                          const name = user?.fullName || user?.email || 'User';
+                          // If it looks like an email, only show the part before @
+                          if (name.includes('@')) {
+                            return name.split('@')[0];
+                          }
+                          return name;
+                        })()}
+                      </p>
                     </div>
                     <FiChevronDown
                       className={cn('w-4 h-4 text-gray-500 transition-transform', isAccountMenuOpen && 'rotate-180')}
@@ -260,7 +260,7 @@ export const Header: React.FC = () => {
         </div>
 
         {isSearchOpen && (
-          <div className="border-t border-gray-100 bg-white lg:hidden">
+          <div className="border-t border-gray-100 bg-white xl:hidden">
             <form onSubmit={handleSearch} className="container mx-auto px-4 py-3 flex items-center gap-3">
               <FiSearch className="w-5 h-5 text-gray-500" />
               <input
@@ -279,7 +279,7 @@ export const Header: React.FC = () => {
       </header>
 
       {isMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-30 bg-black/50">
+        <div className="xl:hidden fixed inset-0 z-30 bg-black/50">
           <nav className="absolute top-0 left-0 bottom-0 w-80 max-w-full bg-white shadow-2xl flex flex-col">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <div>

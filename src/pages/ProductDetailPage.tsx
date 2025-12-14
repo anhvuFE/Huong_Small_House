@@ -10,7 +10,7 @@ import type { Product } from '../types';
 import { extractIdFromSlug } from '../utils/slugify';
 import { Loader } from '../components/common/Loader';
 import { mockProducts } from '../data/productData';
-import { ProductImageFallback } from '../components/common/ProductImageFallback';
+import logo from '../assets/logo.png';
 
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -149,7 +149,7 @@ export const ProductDetailPage: React.FC = () => {
                   />
                 ) : (
                   <div className="w-full h-64 sm:h-80 md:h-96 rounded-lg overflow-hidden">
-                    <ProductImageFallback name={product.name} size="xl" />
+                    <img src={logo} alt={product.name} className="w-full h-full object-contain" />
                   </div>
                 )}
               </div>
@@ -174,7 +174,7 @@ export const ProductDetailPage: React.FC = () => {
                           }}
                         />
                       ) : (
-                        <ProductImageFallback name={product.name} size="sm" />
+                        <img src={logo} alt={product.name} className="w-full h-full object-contain" />
                       )}
                     </button>
                   ))}
