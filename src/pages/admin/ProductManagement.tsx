@@ -49,8 +49,6 @@ export const ProductManagement: React.FC = () => {
   const [formState, setFormState] = useState<ProductFormState>(defaultFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [categoryName, setCategoryName] = useState('');
-  const [categoryStatus, setCategoryStatus] = useState('');
   const { showToast } = useToast();
 
   const {
@@ -164,19 +162,6 @@ export const ProductManagement: React.FC = () => {
   const handleDeleteProduct = async (product: Product) => {
     if (!product.productId) return;
     setDeleteProductTarget(product);
-  };
-
-  const handleCreateCategory = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!categoryName.trim()) return;
-    try {
-      const category = await productApi.createCategory({ name: categoryName });
-      setCategories((prev) => [...prev, category]);
-      setCategoryStatus('Tạo danh mục thành công');
-      setCategoryName('');
-    } catch {
-      setCategoryStatus('Không thể tạo danh mục. Vui lòng thử lại.');
-    }
   };
 
   const getStockStatus = (stock: number) => {
@@ -400,26 +385,6 @@ export const ProductManagement: React.FC = () => {
         showPageSizeSelect={true}
         onPageSizeChange={handlePageSizeChange}
       />
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold mb-4">Thêm danh mục</h3>
-        <form onSubmit={handleCreateCategory} className="flex flex-col sm:flex-row gap-4">
-          <input
-            type="text"
-            value={categoryName}
-            onChange={(e) => setCategoryName(e.target.value)}
-            placeholder="Tên danh mục"
-            className="flex-1 border border-gray-300 rounded-lg px-4 py-2"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-primary"
-          >
-            Tạo danh mục
-          </button>
-        </form>
-        {categoryStatus && <p className="text-sm text-gray-600 mt-2">{categoryStatus}</p>}
-      </div>
 
       {isFormOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">

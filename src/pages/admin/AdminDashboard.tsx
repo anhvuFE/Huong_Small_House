@@ -61,32 +61,32 @@ const StatCard: React.FC<{
   const isPositive = growth >= 0;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-          <div className="flex items-center mt-2">
+        <div className="flex-1">
+          <p className="text-xs sm:text-sm font-medium text-gray-600">{title}</p>
+          <p className="text-lg sm:text-2xl font-bold text-gray-900 mt-0.5 sm:mt-1">{value}</p>
+          <div className="flex items-center mt-1 sm:mt-2">
             {isPositive ? (
-              <FiTrendingUp className="w-4 h-4 text-green-500 mr-1" />
+              <FiTrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-0.5 sm:mr-1" />
             ) : (
-              <FiTrendingDown className="w-4 h-4 text-red-500 mr-1" />
+              <FiTrendingDown className="w-3 h-3 sm:w-4 sm:h-4 text-red-500 mr-0.5 sm:mr-1" />
             )}
             <span
-              className={`text-sm font-medium ${
+              className={`text-xs sm:text-sm font-medium ${
                 isPositive ? "text-green-600" : "text-red-600"
               }`}
             >
               {isPositive ? "+" : ""}
               {growth}%
             </span>
-            <span className="text-sm text-gray-500 ml-1">
+            <span className="text-xs sm:text-sm text-gray-500 ml-0.5 sm:ml-1 hidden sm:inline">
               so với tháng trước
             </span>
           </div>
         </div>
-        <div className={`p-3 rounded-xl ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
+        <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${color}`}>
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
       </div>
     </div>
@@ -96,28 +96,25 @@ const StatCard: React.FC<{
 const OrderStatusCard: React.FC<{
   status: string;
   count: number;
-  color: string;
-}> = ({ status, count, color }) => {
-  const statusNames = {
-    PENDING: "Chờ xác nhận",
-    CONFIRMED: "Đã xác nhận",
-    PROCESSING: "Đang xử lý",
-    SHIPPING: "Đang giao",
-    DELIVERED: "Đã giao",
-    CANCELLED: "Đã hủy",
-    RETURNED: "Đã trả",
+}> = ({ status, count }) => {
+  const statusConfig = {
+    PENDING: { name: "Chờ xác nhận", bg: "bg-yellow-500", text: "text-white" },
+    CONFIRMED: { name: "Đã xác nhận", bg: "bg-blue-500", text: "text-white" },
+    PROCESSING: { name: "Đang xử lý", bg: "bg-indigo-500", text: "text-white" },
+    SHIPPING: { name: "Đang giao", bg: "bg-purple-500", text: "text-white" },
+    DELIVERED: { name: "Đã giao", bg: "bg-green-500", text: "text-white" },
+    CANCELLED: { name: "Đã hủy", bg: "bg-red-500", text: "text-white" },
+    RETURNED: { name: "Đã trả", bg: "bg-gray-500", text: "text-white" },
   };
 
+  const config = statusConfig[status as keyof typeof statusConfig];
+
   return (
-    <div className={`p-4 rounded-lg ${color}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">
-            {statusNames[status as keyof typeof statusNames]}
-          </p>
-          <p className="text-xl font-bold text-gray-900 mt-1">{count}</p>
-        </div>
-      </div>
+    <div className={`${config.bg} ${config.text} p-3 sm:p-4 rounded-lg text-center flex-1 min-w-0`}>
+      <p className="text-xl sm:text-2xl font-bold">{count}</p>
+      <p className="text-xs sm:text-sm font-medium mt-1 truncate">
+        {config.name}
+      </p>
     </div>
   );
 };
@@ -302,8 +299,8 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Tổng quan về hoạt động kinh doanh</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-600">Tổng quan về hoạt động kinh doanh</p>
       </div>
 
       {/* Stats Cards */}
@@ -338,103 +335,189 @@ export const AdminDashboard: React.FC = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Order Status */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Trạng thái đơn hàng
-            </h2>
-            <Link
-              to="/admin/orders"
-              className="text-sm text-primary hover:text-primary-dark font-medium"
-            >
-              Xem tất cả
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {stats.ordersByStatus.map((order) => (
-              <OrderStatusCard
-                key={order.status}
-                status={order.status}
-                count={order.count}
-                color={
-                  order.status === "PENDING"
-                    ? "bg-yellow-50 border border-yellow-200"
-                    : order.status === "CONFIRMED" ||
-                      order.status === "PROCESSING"
-                    ? "bg-blue-50 border border-blue-200"
-                    : order.status === "SHIPPING"
-                    ? "bg-purple-50 border border-purple-200"
-                    : order.status === "DELIVERED"
-                    ? "bg-green-50 border border-green-200"
-                    : "bg-red-50 border border-red-200"
-                }
-              />
-            ))}
-          </div>
+      {/* Order Status - Full width horizontal */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+            Trạng thái đơn hàng
+          </h2>
+          <Link
+            to="/admin/orders"
+            className="text-xs sm:text-sm text-primary hover:text-primary-dark font-medium"
+          >
+            Xem tất cả
+          </Link>
         </div>
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {stats.ordersByStatus.map((order) => (
+            <OrderStatusCard
+              key={order.status}
+              status={order.status}
+              count={order.count}
+            />
+          ))}
+        </div>
+      </div>
 
-        {/* Top Selling Products */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Selling Products - More compact */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
               Sản phẩm bán chạy
             </h2>
             <Link
               to="/admin/products"
-              className="text-sm text-primary hover:text-primary-dark font-medium"
+              className="text-xs sm:text-sm text-primary hover:text-primary-dark font-medium"
             >
               Xem tất cả
             </Link>
           </div>
-          <div className="space-y-4">
-            {stats.topSellingProducts.map((item, index) => (
+          <div className="space-y-2">
+            {stats.topSellingProducts.slice(0, 5).map((item, index) => (
               <div
                 key={item.product.id}
-                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors"
               >
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0">
-                    <span className="inline-flex items-center justify-center w-8 h-8 bg-primary text-white text-sm font-medium rounded-full">
-                      {index + 1}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <span className="inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 bg-primary/10 text-primary text-xs sm:text-sm font-semibold rounded-full flex-shrink-0">
+                    {index + 1}
+                  </span>
                   <img
                     src={item.product.thumbnail}
                     alt={item.product.name}
-                    className="w-12 h-12 object-cover rounded-lg"
+                    className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-lg flex-shrink-0"
                   />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                       {item.product.name}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      Đã bán: {formatNumber(item.quantity)} sản phẩm
+                    <p className="text-[10px] sm:text-xs text-gray-500">
+                      Đã bán: {formatNumber(item.quantity)}
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs sm:text-sm font-semibold text-gray-900">
                     {formatCurrency(item.revenue)}
                   </p>
-                  <p className="text-xs text-gray-500">Doanh thu</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Category Distribution Chart */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+              Phân bố sản phẩm theo danh mục
+            </h2>
+            <FiEye className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+          </div>
+          <div className="relative">
+            {/* Pie Chart */}
+            <div className="flex items-center justify-center">
+              <svg viewBox="0 0 200 200" className="w-48 h-48 sm:w-56 sm:h-56 transform -rotate-90">
+                {(() => {
+                  const categories = [
+                    { name: "Vitamin", value: 35, color: "text-blue-500" },
+                    { name: "Collagen", value: 25, color: "text-green-500" },
+                    { name: "Probiotics", value: 20, color: "text-purple-500" },
+                    { name: "Giảm cân", value: 15, color: "text-orange-500" },
+                    { name: "Khác", value: 5, color: "text-gray-500" }
+                  ];
+                  let cumulativeValue = 0;
+
+                  return categories.map((category, index) => {
+                    const startAngle = (cumulativeValue / 100) * 360;
+                    const endAngle = ((cumulativeValue + category.value) / 100) * 360;
+                    const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+
+                    const startX = 100 + 80 * Math.cos((startAngle * Math.PI) / 180);
+                    const startY = 100 + 80 * Math.sin((startAngle * Math.PI) / 180);
+                    const endX = 100 + 80 * Math.cos((endAngle * Math.PI) / 180);
+                    const endY = 100 + 80 * Math.sin((endAngle * Math.PI) / 180);
+
+                    const pathData = `M 100 100 L ${startX} ${startY} A 80 80 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
+
+                    cumulativeValue += category.value;
+
+                    const colors = ["#3b82f6", "#10b981", "#8b5cf6", "#f97316", "#6b7280"];
+
+                    return (
+                      <path
+                        key={index}
+                        d={pathData}
+                        fill={colors[index]}
+                        stroke="white"
+                        strokeWidth="2"
+                        className="hover:opacity-80 transition-opacity cursor-pointer"
+                      />
+                    );
+                  });
+                })()}
+                {/* Center circle for donut effect */}
+                <circle cx="100" cy="100" r="40" fill="white" />
+                <text
+                  x="100"
+                  y="100"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  className="fill-gray-700 text-2xl font-bold"
+                  transform="rotate(90 100 100)"
+                >
+                  {stats.totalProducts}
+                </text>
+                <text
+                  x="100"
+                  y="115"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  className="fill-gray-500 text-xs"
+                  transform="rotate(90 100 100)"
+                >
+                  Sản phẩm
+                </text>
+              </svg>
+            </div>
+
+            {/* Legend */}
+            <div className="mt-4 grid grid-cols-2 gap-2 text-xs sm:text-sm">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                <span className="text-gray-700">Vitamin (35%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                <span className="text-gray-700">Collagen (25%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-purple-500 rounded-full"></span>
+                <span className="text-gray-700">Probiotics (20%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
+                <span className="text-gray-700">Giảm cân (15%)</span>
+              </div>
+              <div className="flex items-center gap-2 col-span-2">
+                <span className="w-3 h-3 bg-gray-500 rounded-full"></span>
+                <span className="text-gray-700">Khác (5%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Revenue Chart */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900">
             Doanh thu theo tháng
           </h2>
-          <FiBarChart className="w-5 h-5 text-gray-500" />
+          <FiBarChart className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
         </div>
-        <div className="grid grid-cols-12 gap-3 items-end h-56">
+        <div className="grid grid-cols-12 gap-1 sm:gap-2 md:gap-3 items-end h-40 sm:h-48 md:h-56">
           {revenueChart.map((item, index) => {
             const maxRevenue = Math.max(
               ...revenueChart.map((d) => d.revenue || 0),
