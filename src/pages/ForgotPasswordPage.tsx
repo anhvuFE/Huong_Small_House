@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { FiMail, FiArrowLeft } from 'react-icons/fi';
 import { authApi } from '../services/authApi';
 import { getErrorMessage } from '../utils/error';
-import logo from '../assets/logo.png';
 
 export const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
