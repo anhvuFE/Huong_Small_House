@@ -151,7 +151,7 @@ export const CategoriesPage: React.FC = () => {
       <div
         className="relative bg-gradient-to-br from-primary to-secondary py-12 sm:py-16 md:py-20"
         style={{
-          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${logo})`,
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5))`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
