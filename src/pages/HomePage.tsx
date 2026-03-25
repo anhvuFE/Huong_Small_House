@@ -14,7 +14,6 @@ import TrustSection from '../components/home/TrustSection';
 const CategorySection = lazy(() => import('../components/home/CategorySection'));
 const ProductHighlight = lazy(() => import('../components/home/ProductHighlight'));
 const PromoBanner = lazy(() => import('../components/home/PromoBanner'));
-const StatsSection = lazy(() => import('../components/home/StatsSection'));
 const TestimonialSection = lazy(() => import('../components/home/TestimonialSection'));
 const CTASection = lazy(() => import('../components/home/CTASection'));
 
@@ -107,10 +106,6 @@ export const HomePage: React.FC = () => {
           error={error}
           bgColor="#FAFBFC"
         />
-      </Suspense>
-
-      <Suspense fallback={<SectionFallback />}>
-        <StatsSection />
       </Suspense>
 
       <Suspense fallback={<SectionFallback />}>
