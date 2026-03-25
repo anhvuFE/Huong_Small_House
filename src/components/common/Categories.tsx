@@ -1,6 +1,8 @@
 import type { FC } from 'react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Box, Typography, Container } from '@mui/material';
+import { Card } from 'antd';
 import {
   FiActivity,
   FiFeather,
@@ -11,10 +13,7 @@ import {
   FiStar,
   FiTrendingDown,
   FiBox,
-  FiChevronLeft,
-  FiChevronRight,
 } from 'react-icons/fi';
-import { cn } from '../../utils/cn';
 import { productApi } from '../../services/productApi';
 import type { Category } from '../../types';
 import { mockCategories } from '../../data/categoryData';
@@ -34,19 +33,47 @@ const iconComponents = {
   collagen: FiFeather,
 } as const;
 
+const iconColors = {
+  vitamin: '#E65100',
+  digestive: '#2E7D32',
+  immunity: '#1565C0',
+  heart: '#C62828',
+  beauty: '#AD1457',
+  energy: '#F9A825',
+  sleep: '#4527A0',
+  collagen: '#00838F',
+} as const;
+
+const iconBgColors = {
+  vitamin: '#FFF3E0',
+  digestive: '#E8F5E9',
+  immunity: '#E3F2FD',
+  heart: '#FFEBEE',
+  beauty: '#FCE4EC',
+  energy: '#FFFDE7',
+  sleep: '#EDE7F6',
+  collagen: '#E0F7FA',
+} as const;
+
 const getIcon = (slug: string) => {
   const normalized = slug.replace(/-.*$/, '');
   return iconComponents[normalized as keyof typeof iconComponents] ?? FiBox;
 };
 
-export const Categories: FC<CategoriesProps> = ({ className }) => {
+const getIconColor = (slug: string) => {
+  const normalized = slug.replace(/-.*$/, '');
+  return iconColors[normalized as keyof typeof iconColors] ?? '#7daf18';
+};
+
+const getIconBgColor = (slug: string) => {
+  const normalized = slug.replace(/-.*$/, '');
+  return iconBgColors[normalized as keyof typeof iconBgColors] ?? '#EDF7D5';
+};
+
+export const Categories: FC<CategoriesProps> = () => {
   const [items, setItems] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(true);
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -67,210 +94,136 @@ export const Categories: FC<CategoriesProps> = ({ className }) => {
     fetchCategories();
   }, []);
 
-  const extendedItems = [...items, ...items.slice(0, 5)];
-
-  useEffect(() => {
-    if (items.length > 0) {
-      intervalRef.current = setInterval(() => {
-        setCurrentIndex((prev) => {
-          if (prev >= items.length - 1) {
-            setTimeout(() => {
-              setIsTransitioning(false);
-              setCurrentIndex(0);
-              setTimeout(() => setIsTransitioning(true), 50);
-            }, 500);
-            return prev + 1;
-          }
-          return prev + 1;
-        });
-      }, 3000);
-
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-        }
-      };
-    }
-  }, [items.length]);
-
-  const handlePrevious = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    setCurrentIndex((prev) => {
-      if (prev === 0) {
-        setIsTransitioning(false);
-        const newIndex = items.length - 1;
-        setTimeout(() => {
-          setCurrentIndex(newIndex);
-          setIsTransitioning(true);
-        }, 50);
-        return newIndex;
-      }
-      return prev - 1;
-    });
-
-    intervalRef.current = setInterval(() => {
-      setCurrentIndex((prev) => {
-        if (prev >= items.length - 1) {
-          setTimeout(() => {
-            setIsTransitioning(false);
-            setCurrentIndex(0);
-            setTimeout(() => setIsTransitioning(true), 50);
-          }, 500);
-          return prev + 1;
-        }
-        return prev + 1;
-      });
-    }, 3000);
-  };
-
-  const handleNext = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    setCurrentIndex((prev) => {
-      if (prev >= items.length - 1) {
-        setTimeout(() => {
-          setIsTransitioning(false);
-          setCurrentIndex(0);
-          setTimeout(() => setIsTransitioning(true), 50);
-        }, 500);
-        return prev + 1;
-      }
-      return prev + 1;
-    });
-
-    intervalRef.current = setInterval(() => {
-      setCurrentIndex((prev) => {
-        if (prev >= items.length - 1) {
-          setTimeout(() => {
-            setIsTransitioning(false);
-            setCurrentIndex(0);
-            setTimeout(() => setIsTransitioning(true), 50);
-          }, 500);
-          return prev + 1;
-        }
-        return prev + 1;
-      });
-    }, 3000);
-  };
-
-  const handleDotClick = (index: number) => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    setCurrentIndex(index);
-
-    intervalRef.current = setInterval(() => {
-      setCurrentIndex((prev) => {
-        if (prev >= items.length - 1) {
-          setTimeout(() => {
-            setIsTransitioning(false);
-            setCurrentIndex(0);
-            setTimeout(() => setIsTransitioning(true), 50);
-          }, 500);
-          return prev + 1;
-        }
-        return prev + 1;
-      });
-    }, 3000);
-  };
-
   return (
-    <section className={cn('py-12 bg-gradient-to-b from-white to-gray-50', className)}>
-      <div className="container mx-auto px-4">
-        <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
-          Danh mục sản phẩm
-        </h2>
-        {error && <p className="text-center text-red-600 mb-6">{error}</p>}
+    <Box sx={{ py: { xs: 5, md: 7 }, bgcolor: '#fff' }}>
+      <Container maxWidth="lg">
+        <Box sx={{ textAlign: 'center', mb: { xs: 4, md: 5 } }}>
+          <Typography
+            sx={{
+              fontSize: { xs: '0.85rem', md: '0.9rem' },
+              fontWeight: 600,
+              color: '#7daf18',
+              textTransform: 'uppercase',
+              letterSpacing: 1.5,
+              mb: 1,
+              fontFamily: 'Inter, system-ui, sans-serif',
+            }}
+          >
+            Danh mục
+          </Typography>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              color: '#1a1a1a',
+              fontSize: { xs: '1.5rem', md: '2rem' },
+              fontFamily: 'Inter, system-ui, sans-serif',
+            }}
+          >
+            Khám phá sản phẩm theo nhu cầu
+          </Typography>
+        </Box>
 
-        <div className="relative">
-          {/* Navigation Buttons */}
-          {items.length > 5 && !isLoading && (
-            <>
-              <button
-                onClick={handlePrevious}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-4 z-10 bg-white shadow-lg rounded-full p-2 md:p-3 hover:bg-gray-50 transition-all hover:scale-110"
-                aria-label="Previous"
-              >
-                <FiChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
-              </button>
-              <button
-                onClick={handleNext}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-4 z-10 bg-white shadow-lg rounded-full p-2 md:p-3 hover:bg-gray-50 transition-all hover:scale-110"
-                aria-label="Next"
-              >
-                <FiChevronRight className="w-5 h-5 md:w-6 md:h-6" />
-              </button>
-            </>
-          )}
+        {error && (
+          <Typography sx={{ textAlign: 'center', color: '#d32f2f', mb: 3 }}>{error}</Typography>
+        )}
 
-          {/* Slider Container */}
-          <div className="overflow-hidden rounded-xl" ref={sliderRef}>
-            <div
-              className={`flex ${isTransitioning ? 'transition-transform duration-500 ease-out' : ''}`}
-              style={{
-                transform: `translateX(-${currentIndex * (100 / 5)}%)`,
-              }}
-            >
-              {isLoading
-                ? Array.from({ length: 8 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="w-full md:w-1/3 lg:w-1/5 flex-shrink-0 px-2"
-                    >
-                      <div className="h-32 bg-gray-100 rounded-lg animate-pulse" />
-                    </div>
-                  ))
-                : extendedItems.map((category, index) => {
-                    const Icon = getIcon(category.slug);
-                    return (
-                      <div
-                        key={`${category.id}-${index}`}
-                        className="w-full md:w-1/3 lg:w-1/5 flex-shrink-0 px-2"
-                      >
-                        <Link
-                          to={`/products?category=${category.slug}`}
-                          className="group block"
-                        >
-                          <div className="bg-white rounded-lg p-6 text-center hover:shadow-xl transition-all duration-300 group-hover:-translate-y-2 h-full">
-                            <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300 text-primary">
-                              <Icon className="w-10 h-10 mx-auto" />
-                            </div>
-                            <h3 className="font-medium text-gray-900 group-hover:text-primary transition-colors">
-                              {category.name}
-                            </h3>
-                          </div>
-                        </Link>
-                      </div>
-                    );
-                  })}
-            </div>
-          </div>
-
-          {/* Dots Indicator */}
-          {items.length > 5 && !isLoading && (
-            <div className="flex justify-center gap-2 mt-6">
-              {items.map((_, index) => (
-                <button
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: 'repeat(2, 1fr)',
+              sm: 'repeat(3, 1fr)',
+              md: 'repeat(4, 1fr)',
+            },
+            gap: { xs: 2, md: 2.5 },
+          }}
+        >
+          {isLoading
+            ? Array.from({ length: 8 }).map((_, index) => (
+                <Box
                   key={index}
-                  onClick={() => handleDotClick(index)}
-                  className={cn(
-                    'w-2 h-2 rounded-full transition-all duration-300',
-                    index === (currentIndex % items.length)
-                      ? 'bg-primary w-6'
-                      : 'bg-gray-300 hover:bg-gray-400'
-                  )}
-                  aria-label={`Go to slide ${index + 1}`}
+                  sx={{
+                    height: 140,
+                    bgcolor: '#F5F5F5',
+                    borderRadius: 3,
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                    '@keyframes pulse': {
+                      '0%, 100%': { opacity: 0.6 },
+                      '50%': { opacity: 1 },
+                    },
+                  }}
                 />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
+              ))
+            : items.map((category) => {
+                const Icon = getIcon(category.slug);
+                const iconColor = getIconColor(category.slug);
+                const iconBg = getIconBgColor(category.slug);
+
+                return (
+                  <Link
+                    key={category.id}
+                    to={`/products?category=${category.slug}`}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <Card
+                      hoverable
+                      style={{
+                        borderRadius: 12,
+                        border: '1px solid #EEEEEE',
+                        textAlign: 'center',
+                        height: '100%',
+                      }}
+                      styles={{
+                        body: {
+                          padding: '24px 16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 12,
+                        },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: '50%',
+                          bgcolor: iconBg,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Icon style={{ width: 26, height: 26, color: iconColor }} />
+                      </Box>
+                      <Typography
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: '0.9rem',
+                          color: '#1a1a1a',
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                        }}
+                      >
+                        {category.name}
+                      </Typography>
+                      {(category.productCount ?? 0) > 0 && (
+                        <Typography
+                          sx={{
+                            fontSize: '0.75rem',
+                            color: '#9E9E9E',
+                            fontFamily: 'Inter, system-ui, sans-serif',
+                          }}
+                        >
+                          {category.productCount} sản phẩm
+                        </Typography>
+                      )}
+                    </Card>
+                  </Link>
+                );
+              })}
+        </Box>
+      </Container>
+    </Box>
   );
 };

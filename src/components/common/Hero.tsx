@@ -1,29 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { FiChevronLeft, FiChevronRight, FiShield, FiTruck, FiAward, FiHeart } from 'react-icons/fi';
-import { cn } from '../../utils/cn';
-
+import { Box, Typography, Container, IconButton, Stack, Chip } from '@mui/material';
+import { Button } from 'antd';
+import { ArrowForward, ArrowBack, VerifiedUser, LocalShipping, Favorite, CardGiftcard } from '@mui/icons-material';
+import { Link } from 'react-router-dom';
 const slides = [
   {
     id: 1,
-    background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.3), transparent 45%), radial-gradient(circle at 80% 0%, rgba(14,165,233,0.4), transparent 55%), linear-gradient(135deg, #0ea5e9 0%, #2563eb 45%, #7c3aed 100%)',
-    title: 'Thực phẩm chức năng chính hãng',
-    subtitle: 'Cam kết 100% hàng chính hãng từ Mỹ, Úc, Canada',
+    bgColor: '#1B5E20',
+    chipLabel: 'Chính hãng 100%',
+    title: 'Thực phẩm chức năng',
+    titleHighlight: 'chính hãng',
+    subtitle: 'Cam kết 100% hàng chính hãng nhập khẩu trực tiếp từ Mỹ, Úc, Canada. Nâng cao sức khỏe mỗi ngày cùng Hương Small House.',
     cta: 'Khám phá ngay',
+    link: '/products',
   },
   {
     id: 2,
-    background: 'radial-gradient(circle at 15% 30%, rgba(255,255,255,0.35), transparent 50%), radial-gradient(circle at 85% 20%, rgba(248,113,113,0.35), transparent 50%), linear-gradient(135deg, #f97316 0%, #facc15 45%, #ec4899 100%)',
-    title: 'Giảm giá lên đến 30%',
-    subtitle: 'Ưu đãi đặc biệt cho khách hàng mới',
+    bgColor: '#E65100',
+    chipLabel: 'Ưu đãi đặc biệt',
+    title: 'Giảm giá lên đến',
+    titleHighlight: '30%',
+    subtitle: 'Chương trình khuyến mãi dành riêng cho khách hàng mới. Đừng bỏ lỡ cơ hội sở hữu sản phẩm chất lượng với giá tốt nhất.',
     cta: 'Mua sắm ngay',
+    link: '/products?featured=true',
   },
   {
     id: 3,
-    background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.25), transparent 45%), radial-gradient(circle at 80% 20%, rgba(16,185,129,0.35), transparent 55%), linear-gradient(135deg, #10b981 0%, #34d399 45%, #22d3ee 100%)',
-    title: 'Chăm sóc sức khỏe toàn diện',
-    subtitle: 'Đa dạng sản phẩm cho mọi nhu cầu',
+    bgColor: '#0D47A1',
+    chipLabel: 'Sức khỏe toàn diện',
+    title: 'Chăm sóc sức khỏe',
+    titleHighlight: 'toàn diện',
+    subtitle: 'Đa dạng sản phẩm từ vitamin, khoáng chất đến collagen, omega-3. Giải pháp dinh dưỡng cho mọi nhu cầu của bạn.',
     cta: 'Xem thêm',
+    link: '/categories',
   },
+];
+
+const benefits = [
+  { icon: <VerifiedUser />, title: 'Hàng chính hãng', desc: 'Cam kết 100% chính hãng' },
+  { icon: <LocalShipping />, title: 'Giao hàng nhanh', desc: 'Giao hàng trong 24h' },
+  { icon: <Favorite />, title: 'Tư vấn miễn phí', desc: 'Hỗ trợ 24/7' },
+  { icon: <CardGiftcard />, title: 'Ưu đãi hấp dẫn', desc: 'Giảm giá lên đến 30%' },
 ];
 
 export const Hero: React.FC = () => {
@@ -33,13 +50,8 @@ export const Hero: React.FC = () => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 5000);
-
     return () => clearInterval(timer);
   }, []);
-
-  const goToSlide = (index: number) => {
-    setCurrentSlide(index);
-  };
 
   const goToPrevious = () => {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
@@ -49,121 +61,241 @@ export const Hero: React.FC = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
   };
 
+  const slide = slides[currentSlide];
+
   return (
     <div>
-      <div className="relative h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
-        {slides.map((slide, index) => (
-          <div
-            key={slide.id}
-            className={cn(
-              'absolute inset-0 transition-transform duration-500 ease-in-out',
-              index === currentSlide ? 'translate-x-0' : index < currentSlide ? '-translate-x-full' : 'translate-x-full'
-            )}
+      {/* Hero Banner */}
+      <Box
+        sx={{
+          bgcolor: slide.bgColor,
+          transition: 'background-color 0.6s ease-in-out',
+          position: 'relative',
+          overflow: 'hidden',
+          minHeight: { xs: 360, sm: 420, md: 480 },
+        }}
+      >
+        {/* Decorative circles */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: -80,
+            right: -80,
+            width: 300,
+            height: 300,
+            borderRadius: '50%',
+            bgcolor: 'rgba(255,255,255,0.06)',
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: -60,
+            left: -60,
+            width: 200,
+            height: 200,
+            borderRadius: '50%',
+            bgcolor: 'rgba(255,255,255,0.04)',
+          }}
+        />
+
+        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              minHeight: { xs: 360, sm: 420, md: 480 },
+              py: { xs: 5, md: 6 },
+            }}
           >
-            <div className="absolute inset-0" aria-hidden="true">
-              <div
-                className="w-full h-full"
-                style={{
-                  backgroundImage: slide.background,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
+            <Box sx={{ maxWidth: 600 }}>
+              <Chip
+                label={slide.chipLabel}
+                sx={{
+                  bgcolor: 'rgba(255,255,255,0.15)',
+                  color: '#fff',
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  mb: 2.5,
+                  px: 1,
+                  height: 32,
+                  '& .MuiChip-label': { px: 1.5 },
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/10" />
-            </div>
-            <div className="relative z-10 container mx-auto px-4 h-full flex items-center">
-              <div className="text-white max-w-2xl">
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-                  {slide.title}
-                </h1>
-                <p className="text-lg md:text-xl mb-6">
-                  {slide.subtitle}
-                </p>
-                <button className="bg-primary hover:bg-secondary text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+              <Typography
+                variant="h2"
+                sx={{
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: { xs: '1.8rem', sm: '2.4rem', md: '3rem' },
+                  lineHeight: 1.2,
+                  mb: 2,
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                }}
+              >
+                {slide.title}{' '}
+                <Box
+                  component="span"
+                  sx={{
+                    color: '#FFD54F',
+                  }}
+                >
+                  {slide.titleHighlight}
+                </Box>
+              </Typography>
+              <Typography
+                sx={{
+                  color: 'rgba(255,255,255,0.85)',
+                  fontSize: { xs: '0.95rem', md: '1.1rem' },
+                  lineHeight: 1.7,
+                  mb: 4,
+                  maxWidth: 500,
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                }}
+              >
+                {slide.subtitle}
+              </Typography>
+              <Link to={slide.link}>
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<ArrowForward style={{ fontSize: 18 }} />}
+                  style={{
+                    backgroundColor: '#7daf18',
+                    borderColor: '#7daf18',
+                    height: 48,
+                    paddingInline: 32,
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                    borderRadius: 8,
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                  }}
+                >
                   {slide.cta}
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
+                </Button>
+              </Link>
+            </Box>
+          </Box>
+        </Container>
 
-        <button
+        {/* Navigation arrows */}
+        <IconButton
           onClick={goToPrevious}
-          className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-colors"
-          aria-label="Previous slide"
+          sx={{
+            position: 'absolute',
+            left: { xs: 8, md: 24 },
+            top: '50%',
+            transform: 'translateY(-50%)',
+            bgcolor: 'rgba(255,255,255,0.12)',
+            color: '#fff',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+          }}
         >
-          <FiChevronLeft className="w-6 h-6" />
-        </button>
-
-        <button
+          <ArrowBack />
+        </IconButton>
+        <IconButton
           onClick={goToNext}
-          className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-colors"
-          aria-label="Next slide"
+          sx={{
+            position: 'absolute',
+            right: { xs: 8, md: 24 },
+            top: '50%',
+            transform: 'translateY(-50%)',
+            bgcolor: 'rgba(255,255,255,0.12)',
+            color: '#fff',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+          }}
         >
-          <FiChevronRight className="w-6 h-6" />
-        </button>
+          <ArrowForward />
+        </IconButton>
 
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+        {/* Dots */}
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            position: 'absolute',
+            bottom: 20,
+            left: '50%',
+            transform: 'translateX(-50%)',
+          }}
+        >
           {slides.map((_, index) => (
-            <button
+            <Box
               key={index}
-              onClick={() => goToSlide(index)}
-              className={cn(
-                'w-3 h-3 rounded-full transition-colors',
-                index === currentSlide ? 'bg-white' : 'bg-white/50'
-              )}
-              aria-label={`Go to slide ${index + 1}`}
+              onClick={() => setCurrentSlide(index)}
+              sx={{
+                width: index === currentSlide ? 28 : 10,
+                height: 10,
+                borderRadius: 5,
+                bgcolor: index === currentSlide ? '#fff' : 'rgba(255,255,255,0.4)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+              }}
             />
           ))}
-        </div>
-      </div>
+        </Stack>
+      </Box>
 
-      <div className="bg-gray-50 py-6 sm:py-8">
-        <div className="container mx-auto px-4">
-          <h2 className="sr-only">Lợi ích khi mua tại Hương Small House</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 text-center sm:text-left">
-              <div className="bg-primary/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <FiShield className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Hàng chính hãng</h3>
-                <p className="text-xs sm:text-sm text-gray-600">Cam kết 100% chính hãng</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 text-center sm:text-left">
-              <div className="bg-primary/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <FiTruck className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Giao hàng nhanh</h3>
-                <p className="text-xs sm:text-sm text-gray-600">Giao hàng trong 24h</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 text-center sm:text-left">
-              <div className="bg-primary/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <FiHeart className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Tư vấn miễn phí</h3>
-                <p className="text-xs sm:text-sm text-gray-600">Hỗ trợ 24/7</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-4 text-center sm:text-left">
-              <div className="bg-primary/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <FiAward className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Ưu đãi hấp dẫn</h3>
-                <p className="text-xs sm:text-sm text-gray-600">Giảm giá lên đến 30%</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Benefits Bar */}
+      <Box sx={{ bgcolor: '#FAFAFA', borderBottom: '1px solid #E0E0E0' }}>
+        <Container maxWidth="lg">
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+              gap: { xs: 2, md: 3 },
+              py: { xs: 3, md: 4 },
+            }}
+          >
+            {benefits.map((item, index) => (
+              <Box
+                key={index}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                }}
+              >
+                <Box
+                  sx={{
+                    bgcolor: '#EDF7D5',
+                    color: '#7daf18',
+                    p: 1.2,
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {item.icon}
+                </Box>
+                <Box>
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                      color: '#1a1a1a',
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                    }}
+                  >
+                    {item.title}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: { xs: '0.7rem', sm: '0.8rem' },
+                      color: '#757575',
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                    }}
+                  >
+                    {item.desc}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </Container>
+      </Box>
     </div>
   );
 };
