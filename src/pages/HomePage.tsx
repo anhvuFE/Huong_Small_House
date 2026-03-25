@@ -1,45 +1,26 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FiArrowRight } from 'react-icons/fi';
-import { Hero } from '../components/common/Hero';
-import { Categories } from '../components/common/Categories';
-import { ProductList } from '../components/products/ProductList';
+import React, { useEffect, useMemo, useState, lazy, Suspense } from 'react';
+import { ThemeProvider } from '@mui/material/styles';
+import { Box } from '@mui/material';
+import { theme } from '../theme';
 import { productApi } from '../services/productApi';
 import type { Product } from '../types';
 import { mockProducts } from '../data/productData';
 
-const SectionWrapper: React.FC<{
-  title: string;
-  link: string;
-  cta?: string;
-  isLoading: boolean;
-  error: string;
-  products: Product[];
-}> = ({ title, link, cta = 'Xem tất cả', isLoading, error, products }) => (
-  <section className="py-12 bg-gray-50">
-    <div className="container mx-auto px-4">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl md:text-3xl font-bold">{title}</h2>
-        <Link
-          to={link}
-          className="flex items-center gap-2 text-primary hover:text-secondary font-medium transition-colors"
-        >
-          {cta} <FiArrowRight className="w-4 h-4" />
-        </Link>
-      </div>
+// Eagerly loaded — above the fold
+import HeroSection from '../components/home/HeroSection';
+import TrustSection from '../components/home/TrustSection';
 
-      {error && <p className="text-red-600 text-center py-6">{error}</p>}
-      {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-64 bg-gray-100 animate-pulse rounded-lg" />
-          ))}
-        </div>
-      ) : (
-        <ProductList products={products} />
-      )}
-    </div>
-  </section>
+// Lazy loaded — below the fold for performance
+const CategorySection = lazy(() => import('../components/home/CategorySection'));
+const ProductHighlight = lazy(() => import('../components/home/ProductHighlight'));
+const PromoBanner = lazy(() => import('../components/home/PromoBanner'));
+const StatsSection = lazy(() => import('../components/home/StatsSection'));
+const TestimonialSection = lazy(() => import('../components/home/TestimonialSection'));
+const CTASection = lazy(() => import('../components/home/CTASection'));
+
+// Minimal fallback — prevents layout shift
+const SectionFallback: React.FC = () => (
+  <Box sx={{ py: 6, minHeight: 200 }} />
 );
 
 export const HomePage: React.FC = () => {
@@ -48,104 +29,109 @@ export const HomePage: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
         setError('');
         const data = await productApi.listProducts();
-        setProducts(data);
+        if (!cancelled) setProducts(data);
       } catch (err) {
         console.error('Failed to fetch products, using mock data:', err);
-        setProducts(mockProducts);
-        setError('');
+        if (!cancelled) {
+          setProducts(mockProducts);
+          setError('');
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     fetchProducts();
+    return () => { cancelled = true; };
   }, []);
 
-  const featuredProducts = useMemo(() => products.slice(0, 4), [products]);
+  const featuredProducts = useMemo(
+    () => products.filter((p) => p.isFeatured).slice(0, 4),
+    [products]
+  );
+
   const bestSellers = useMemo(
     () => [...products].sort((a, b) => b.soldCount - a.soldCount).slice(0, 4),
     [products]
   );
+
   const newProducts = useMemo(
     () => [...products].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 4),
     [products]
   );
 
+  // Fallback: if no featured products flagged, take first 4
+  const featured = featuredProducts.length > 0 ? featuredProducts : products.slice(0, 4);
+
   return (
-    <>
-      <Hero />
-      <Categories />
+    <ThemeProvider theme={theme}>
+      {/* === Above the fold — no lazy loading === */}
+      <HeroSection />
+      <TrustSection />
 
-      <SectionWrapper
-        title="Sản phẩm nổi bật"
-        link="/products?featured=true"
-        isLoading={isLoading}
-        error={error}
-        products={featuredProducts}
-      />
+      {/* === Below the fold — lazy loaded sections === */}
+      <Suspense fallback={<SectionFallback />}>
+        <CategorySection />
+      </Suspense>
 
-      <section className="py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold">Sản phẩm bán chạy</h2>
-            <Link
-              to="/products?bestseller=true"
-              className="flex items-center gap-2 text-primary hover:text-secondary font-medium transition-colors"
-            >
-              Xem tất cả <FiArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          {error && <p className="text-red-600 text-center py-6">{error}</p>}
-          {isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="h-64 bg-gray-100 animate-pulse rounded-lg" />
-              ))}
-            </div>
-          ) : (
-            <ProductList products={bestSellers} />
-          )}
-        </div>
-      </section>
+      <Suspense fallback={<SectionFallback />}>
+        <ProductHighlight
+          tag="Nổi bật"
+          title="Sản phẩm nổi bật"
+          link="/products?featured=true"
+          products={featured}
+          isLoading={isLoading}
+          error={error}
+          bgColor="#fff"
+        />
+      </Suspense>
 
-      <SectionWrapper
-        title="Sản phẩm mới"
-        link="/products?new=true"
-        isLoading={isLoading}
-        error={error}
-        products={newProducts}
-      />
+      <Suspense fallback={<SectionFallback />}>
+        <PromoBanner />
+      </Suspense>
 
-      <section className="py-12 bg-primary">
-        <div className="container mx-auto px-4">
-          <div className="text-center text-white">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Đăng ký nhận thông tin khuyến mãi
-            </h2>
-            <p className="text-lg mb-8 text-gray-100">
-              Nhận ngay voucher giảm giá 10% cho đơn hàng đầu tiên
-            </p>
-            <form className="max-w-lg mx-auto flex flex-col sm:flex-row gap-4">
-              <input
-                type="email"
-                placeholder="Nhập email của bạn"
-                className="flex-1 px-4 py-3 rounded-lg text-gray-900 outline-none"
-              />
-              <button
-                type="submit"
-                className="bg-white text-primary hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors"
-              >
-                Đăng ký ngay
-              </button>
-            </form>
-          </div>
-        </div>
-      </section>
-    </>
+      <Suspense fallback={<SectionFallback />}>
+        <ProductHighlight
+          tag="Bán chạy"
+          title="Sản phẩm bán chạy nhất"
+          link="/products?bestseller=true"
+          products={bestSellers}
+          isLoading={isLoading}
+          error={error}
+          bgColor="#FAFBFC"
+        />
+      </Suspense>
+
+      <Suspense fallback={<SectionFallback />}>
+        <StatsSection />
+      </Suspense>
+
+      <Suspense fallback={<SectionFallback />}>
+        <ProductHighlight
+          tag="Mới nhất"
+          title="Sản phẩm mới về"
+          link="/products?new=true"
+          products={newProducts}
+          isLoading={isLoading}
+          error={error}
+          bgColor="#fff"
+        />
+      </Suspense>
+
+      <Suspense fallback={<SectionFallback />}>
+        <TestimonialSection />
+      </Suspense>
+
+      <Suspense fallback={<SectionFallback />}>
+        <CTASection />
+      </Suspense>
+    </ThemeProvider>
   );
 };
