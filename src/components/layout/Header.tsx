@@ -1,43 +1,82 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  FiSearch,
-  FiShoppingCart,
-  FiUser,
-  FiMenu,
-  FiX,
-  FiPhone,
-  FiMapPin,
-  FiMail,
-  FiLogIn,
-  FiLogOut,
-  FiChevronDown,
-  FiHome,
-  FiPackage,
-  FiGrid,
-  FiInfo,
-  FiMessageCircle,
-  FiFileText,
-} from 'react-icons/fi';
+  Box,
+  Typography,
+  IconButton,
+  Badge,
+  Avatar,
+  InputBase,
+  Divider,
+} from '@mui/material';
+import {
+  Search,
+  ShoppingCartOutlined,
+  MenuRounded,
+  Close,
+  Phone,
+  Email,
+  LocationOn,
+  Person,
+  Logout,
+  Login,
+  KeyboardArrowDown,
+  Home,
+  Inventory2Outlined,
+  CategoryOutlined,
+  InfoOutlined,
+  ContactMailOutlined,
+  ArticleOutlined,
+} from '@mui/icons-material';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '../../store/useCartStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { cn } from '../../utils/cn';
 import logo from '../../assets/logo.png';
 
+const palette = {
+  primary: '#2E7D32',
+  accent: '#7daf18',
+  textPrimary: '#1A2332',
+  textSecondary: '#5A6B7F',
+  textMuted: '#8D99A8',
+  border: '#E8ECF0',
+  background: '#FAFBFC',
+};
+
 const navItems = [
-  { label: 'Trang chủ', href: '/', icon: FiHome },
-  { label: 'Sản phẩm', href: '/products', icon: FiPackage },
-  { label: 'Danh mục', href: '/categories', icon: FiGrid },
-  { label: 'Giới thiệu', href: '/about', icon: FiInfo },
-  { label: 'Liên hệ', href: '/contact', icon: FiMessageCircle },
-  { label: 'Blog', href: '/blog', icon: FiFileText },
+  { label: 'Trang chủ', href: '/', icon: Home },
+  { label: 'Sản phẩm', href: '/products', icon: Inventory2Outlined },
+  { label: 'Danh mục', href: '/categories', icon: CategoryOutlined },
+  { label: 'Giới thiệu', href: '/about', icon: InfoOutlined },
+  { label: 'Liên hệ', href: '/contact', icon: ContactMailOutlined },
+  { label: 'Blog', href: '/blog', icon: ArticleOutlined },
 ];
+
+// Framer motion variants
+const mobileMenuOverlay = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0 },
+};
+
+const mobileMenuPanel = {
+  hidden: { x: '-100%' },
+  visible: { x: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 30 } },
+  exit: { x: '-100%', transition: { duration: 0.25 } },
+};
+
+const mobileNavItem = {
+  hidden: { opacity: 0, x: -16 },
+  visible: { opacity: 1, x: 0 },
+};
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isScrolled, setIsScrolled] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
@@ -45,11 +84,8 @@ export const Header: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuthStore();
   const cartItemsCount = getTotalItems();
 
-
   const isActiveNav = (href: string): boolean => {
-    if (href === '/') {
-      return location.pathname === '/';
-    }
+    if (href === '/') return location.pathname === '/';
     return location.pathname.startsWith(href);
   };
 
@@ -60,11 +96,19 @@ export const Header: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     setIsAccountMenuOpen(false);
-  };
+  }, [logout]);
 
+  // Track scroll for shadow effect
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Header height calculation for App.tsx
   useEffect(() => {
     const updateHeaderHeight = () => {
       const topBar = document.getElementById('top-bar');
@@ -74,277 +118,758 @@ export const Header: React.FC = () => {
         document.documentElement.style.setProperty('--header-height', `${totalHeight}px`);
       }
     };
-
     updateHeaderHeight();
     window.addEventListener('resize', updateHeaderHeight);
     return () => window.removeEventListener('resize', updateHeaderHeight);
   }, []);
 
+  // Close account menu on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
         setIsAccountMenuOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Close menus on route change
   useEffect(() => {
     setIsMenuOpen(false);
     setIsAccountMenuOpen(false);
   }, [location.pathname]);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    document.body.style.overflow = isMenuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isMenuOpen]);
+
+  const displayName = (() => {
+    const name = user?.fullName || user?.email || 'User';
+    return name.includes('@') ? name.split('@')[0] : name;
+  })();
+
   return (
-    <div className="fixed top-0 left-0 right-0 z-40">
-      <div className="bg-gradient-to-r from-primary to-secondary text-white" id="top-bar">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-wrap items-center justify-between gap-4 py-2 text-sm">
-            <div className="flex items-center gap-5">
-              <a href="tel:0336064040" className="flex items-center gap-2 hover:text-gray-100">
-                <FiPhone className="w-4 h-4" />
-                <span>0336 064 040</span>
-              </a>
-              <a
-                href="mailto:vuquynhhuong171298@gmail.com"
-                className="hidden md:flex items-center gap-2 hover:text-gray-100"
+    <Box
+      component="div"
+      sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40 }}
+    >
+      {/* ===== Top Bar ===== */}
+      <Box
+        id="top-bar"
+        sx={{
+          bgcolor: palette.primary,
+          color: '#fff',
+          py: 0.8,
+          fontSize: '0.8rem',
+        }}
+      >
+        <Box
+          sx={{
+            maxWidth: 1200,
+            mx: 'auto',
+            px: { xs: 2, sm: 3, lg: 5 },
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 1,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, md: 3 } }}>
+            <Box
+              component="a"
+              href="tel:0336064040"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.7,
+                color: '#fff',
+                textDecoration: 'none',
+                '&:hover': { color: 'rgba(255,255,255,0.85)' },
+                transition: 'color 0.2s',
+              }}
+            >
+              <Phone sx={{ fontSize: 15 }} />
+              <span>0336 064 040</span>
+            </Box>
+            <Box
+              component="a"
+              href="mailto:vuquynhhuong171298@gmail.com"
+              sx={{
+                display: { xs: 'none', md: 'flex' },
+                alignItems: 'center',
+                gap: 0.7,
+                color: '#fff',
+                textDecoration: 'none',
+                '&:hover': { color: 'rgba(255,255,255,0.85)' },
+                transition: 'color 0.2s',
+              }}
+            >
+              <Email sx={{ fontSize: 15 }} />
+              <span>vuquynhhuong171298@gmail.com</span>
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.7,
+              color: 'rgba(255,255,255,0.8)',
+            }}
+          >
+            <LocationOn sx={{ fontSize: 15 }} />
+            <Typography sx={{ fontSize: '0.8rem' }}>120 Hoàng Quốc Việt, Hà Nội</Typography>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* ===== Main Header ===== */}
+      <Box
+        component="header"
+        id="main-header"
+        sx={{
+          bgcolor: 'rgba(255,255,255,0.97)',
+          backdropFilter: 'blur(12px)',
+          borderBottom: `1px solid ${isScrolled ? palette.border : 'transparent'}`,
+          boxShadow: isScrolled ? '0 2px 16px rgba(0,0,0,0.06)' : 'none',
+          transition: 'box-shadow 0.3s ease, border-color 0.3s ease',
+        }}
+      >
+        <Box
+          sx={{
+            maxWidth: 1200,
+            mx: 'auto',
+            px: { xs: 2, sm: 3, lg: 5 },
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: { xs: 1.5, md: 3 },
+            height: { xs: 64, md: 72 },
+          }}
+        >
+          {/* Left: Hamburger + Logo + Nav */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2.5 } }}>
+            {/* Mobile menu toggle */}
+            <IconButton
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              sx={{
+                display: { xs: 'flex', xl: 'none' },
+                border: `1px solid ${palette.border}`,
+                borderRadius: 2.5,
+                p: 0.8,
+                color: palette.textSecondary,
+                '&:hover': { color: palette.accent, borderColor: palette.accent },
+                transition: 'all 0.2s',
+              }}
+              aria-label="Toggle menu"
+            >
+              {isMenuOpen ? <Close sx={{ fontSize: 22 }} /> : <MenuRounded sx={{ fontSize: 22 }} />}
+            </IconButton>
+
+            {/* Logo */}
+            <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 3,
+                  bgcolor: '#EDF7D5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
               >
-                <FiMail className="w-4 h-4" />
-                <span>vuquynhhuong171298@gmail.com</span>
-              </a>
-            </div>
-            <div className="flex items-center gap-2 text-white/80">
-              <FiMapPin className="w-4 h-4" />
-              <span>120 Hoàng Quốc Việt, Hà Nội</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <header className="bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-lg border-b border-primary/10" id="main-header">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between gap-6 h-20">
-            <div className="flex items-center gap-6">
-              <button
-                className="xl:hidden rounded-full border border-gray-200 p-2 text-gray-600 hover:text-primary"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                aria-label="Toggle menu"
-              >
-                {isMenuOpen ? <FiX className="w-5 h-5" /> : <FiMenu className="w-5 h-5" />}
-              </button>
-
-              <Link to="/" className="flex items-center gap-2" aria-label="Trang chủ Hương Small House">
-                <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-primary/10">
-                  <img src={logo} alt="Hương Small House" width={48} height={48} className="object-contain" />
-                </div>
-                <div className="hidden sm:flex flex-col leading-tight">
-                  <span className="text-xs uppercase tracking-[0.3em] text-primary">Hương</span>
-                  <span className="text-base font-semibold text-gray-900">Small House</span>
-                </div>
-              </Link>
-
-              <nav className="hidden xl:flex items-center gap-1 rounded-full bg-gray-50 p-1 border border-gray-100">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    className={cn(
-                      'px-3 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap',
-                      isActiveNav(item.href)
-                        ? 'bg-white text-primary shadow'
-                        : 'text-gray-600 hover:text-primary'
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
-
-            <div className="flex items-center gap-3 flex-1 justify-end">
-              <form
-                onSubmit={handleSearch}
-                className="hidden md:flex items-center gap-2 flex-1 max-w-md bg-gray-50 rounded-full border border-gray-200 px-4 py-2"
-              >
-                <FiSearch className="w-5 h-5 text-gray-500" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Tìm kiếm sản phẩm..."
-                  className="flex-1 bg-transparent outline-none text-sm text-gray-700"
-                />
-                <button type="submit" className="text-sm font-medium text-primary">
-                  Tìm kiếm
-                </button>
-              </form>
-
-              <button
-                className="md:hidden rounded-full border border-gray-200 p-2 text-gray-600 hover:text-primary"
-                onClick={() => setIsSearchOpen((prev) => !prev)}
-                aria-label="Toggle search"
-              >
-                <FiSearch className="w-5 h-5" />
-              </button>
-
-              {isAuthenticated ? (
-                <div className="relative" ref={accountMenuRef}>
-                  <button
-                    type="button"
-                    onClick={() => setIsAccountMenuOpen((prev) => !prev)}
-                    className="flex items-center gap-3 rounded-full border border-gray-200 py-2 pr-4 pl-2 hover:border-primary/40 transition"
-                  >
-                    <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center p-2">
-                      <img src={logo} alt="User Avatar" className="w-full h-full object-contain" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-xs text-gray-500">Xin chào</p>
-                      <p className="text-sm font-semibold text-gray-800 max-w-[120px] truncate">
-                        {(() => {
-                          const name = user?.fullName || user?.email || 'User';
-                          // If it looks like an email, only show the part before @
-                          if (name.includes('@')) {
-                            return name.split('@')[0];
-                          }
-                          return name;
-                        })()}
-                      </p>
-                    </div>
-                    <FiChevronDown
-                      className={cn('w-4 h-4 text-gray-500 transition-transform', isAccountMenuOpen && 'rotate-180')}
-                    />
-                  </button>
-                  {isAccountMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-gray-100 bg-white shadow-xl p-2">
-                      <Link
-                        to="/account"
-                        className="block px-4 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-primary/10"
-                        onClick={() => setIsAccountMenuOpen(false)}
-                      >
-                        Quản lý tài khoản
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="w-full px-4 py-2 rounded-xl text-sm font-medium text-left text-red-600 hover:bg-red-50"
-                      >
-                        Đăng xuất
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Link
-                  to="/login"
-                  className="inline-flex items-center gap-2 rounded-full border border-primary text-primary px-4 py-2 text-sm font-semibold hover:bg-primary/10"
+                <img src={logo} alt="Hương Small House" width={40} height={40} style={{ objectFit: 'contain' }} />
+              </Box>
+              <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', lineHeight: 1.1 }}>
+                <Typography
+                  sx={{
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: 3,
+                    color: palette.accent,
+                  }}
                 >
-                  <FiLogIn /> Đăng nhập
-                </Link>
-              )}
+                  Hương
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: '1rem',
+                    fontWeight: 700,
+                    color: palette.textPrimary,
+                  }}
+                >
+                  Small House
+                </Typography>
+              </Box>
+            </Link>
 
-              <button
-                onClick={toggleCart}
-                className="relative h-12 w-12 rounded-full border border-gray-200 text-gray-700 hover:border-primary/40 hover:text-primary transition"
-                aria-label="Shopping cart"
-              >
-                <FiShoppingCart className="w-5 h-5 mx-auto mt-3" />
-                {cartItemsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 text-xs font-semibold bg-primary text-white rounded-full h-5 w-5 flex items-center justify-center">
-                    {cartItemsCount}
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {isSearchOpen && (
-          <div className="border-t border-gray-100 bg-white xl:hidden">
-            <form onSubmit={handleSearch} className="container mx-auto px-4 py-3 flex items-center gap-3">
-              <FiSearch className="w-5 h-5 text-gray-500" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm kiếm sản phẩm..."
-                className="flex-1 bg-transparent outline-none text-sm text-gray-700"
-              />
-              <button type="submit" className="text-sm font-medium text-primary">
-                Tìm kiếm
-              </button>
-            </form>
-          </div>
-        )}
-      </header>
-
-      {isMenuOpen && (
-        <div className="xl:hidden fixed inset-0 z-30 bg-black/50">
-          <nav className="absolute top-0 left-0 bottom-0 w-80 max-w-full bg-white shadow-2xl flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500">Menu chính</p>
-                <p className="text-lg font-semibold text-gray-900">Hương Small House</p>
-              </div>
-              <button
-                onClick={() => setIsMenuOpen(false)}
-                className="rounded-full border border-gray-200 p-2 text-gray-600 hover:text-primary"
-                aria-label="Đóng menu"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {/* Desktop Navigation */}
+            <Box
+              component="nav"
+              sx={{
+                display: { xs: 'none', xl: 'flex' },
+                alignItems: 'center',
+                gap: 0.3,
+                ml: 1,
+                bgcolor: palette.background,
+                borderRadius: 3,
+                p: 0.5,
+                border: `1px solid ${palette.border}`,
+              }}
+            >
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   to={item.href}
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-3 py-3 px-3 rounded-2xl border border-transparent hover:border-primary/20 hover:bg-primary/5 text-gray-700 font-medium"
+                  className={cn(
+                    'px-3.5 py-2 text-[0.84rem] font-medium rounded-[10px] transition-all duration-200 whitespace-nowrap',
+                    isActiveNav(item.href)
+                      ? 'bg-white text-[#7daf18] shadow-sm'
+                      : 'text-[#5A6B7F] hover:text-[#2E7D32] hover:bg-white/60'
+                  )}
                 >
-                  <item.icon className="w-5 h-5 text-primary" />
-                  <span>{item.label}</span>
+                  {item.label}
                 </Link>
               ))}
-            </div>
+            </Box>
+          </Box>
 
-            <div className="p-4 border-t border-gray-100 space-y-3">
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    to="/account"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-3 py-3 px-3 rounded-2xl border border-gray-200 text-gray-700 font-medium"
-                  >
-                    <FiUser className="w-5 h-5" />
-                    <span>{user?.fullName || 'Tài khoản'}</span>
-                  </Link>
-                  <button
-                    onClick={() => {
-                      logout();
-                      setIsMenuOpen(false);
-                    }}
-                    className="flex items-center gap-3 py-3 px-3 rounded-2xl border border-red-100 text-red-600 font-medium"
-                  >
-                    <FiLogOut className="w-5 h-5" />
-                    <span>Đăng xuất</span>
-                  </button>
-                </>
-              ) : (
-                <Link
-                  to="/login"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center justify-center gap-3 py-3 px-3 rounded-2xl bg-primary text-white font-medium"
-                >
-                  <FiLogIn className="w-5 h-5" />
-                  <span>Đăng nhập</span>
-                </Link>
+          {/* Right: Search + Auth + Cart */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 1.5 }, flex: { md: 1 }, justifyContent: 'flex-end' }}>
+            {/* Desktop Search */}
+            <Box
+              component="form"
+              onSubmit={handleSearch}
+              sx={{
+                display: { xs: 'none', md: 'flex' },
+                alignItems: 'center',
+                flex: 1,
+                maxWidth: 360,
+                bgcolor: palette.background,
+                borderRadius: 3,
+                border: `1px solid ${palette.border}`,
+                px: 1.5,
+                py: 0.6,
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+                '&:focus-within': {
+                  borderColor: palette.accent,
+                  boxShadow: `0 0 0 3px rgba(125,175,24,0.1)`,
+                },
+              }}
+            >
+              <Search sx={{ fontSize: 20, color: palette.textMuted, mr: 1 }} />
+              <InputBase
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm kiếm sản phẩm..."
+                sx={{
+                  flex: 1,
+                  fontSize: '0.88rem',
+                  color: palette.textPrimary,
+                  '& input::placeholder': { color: palette.textMuted, opacity: 1 },
+                }}
+              />
+              {searchQuery && (
+                <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ p: 0.3 }}>
+                  <Close sx={{ fontSize: 16, color: palette.textMuted }} />
+                </IconButton>
               )}
-            </div>
-          </nav>
-        </div>
-      )}
-    </div>
+            </Box>
+
+            {/* Mobile search toggle */}
+            <IconButton
+              onClick={() => setIsSearchOpen((prev) => !prev)}
+              sx={{
+                display: { xs: 'flex', md: 'none' },
+                border: `1px solid ${palette.border}`,
+                borderRadius: 2.5,
+                p: 0.8,
+                color: palette.textSecondary,
+                '&:hover': { color: palette.accent },
+              }}
+              aria-label="Toggle search"
+            >
+              <Search sx={{ fontSize: 22 }} />
+            </IconButton>
+
+            {/* Auth Section */}
+            {isAuthenticated ? (
+              <Box ref={accountMenuRef} sx={{ position: 'relative' }}>
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => setIsAccountMenuOpen((prev) => !prev)}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    border: `1px solid ${palette.border}`,
+                    borderRadius: 3,
+                    py: 0.6,
+                    pr: 1.5,
+                    pl: 0.6,
+                    bgcolor: 'transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    '&:hover': { borderColor: palette.accent },
+                  }}
+                >
+                  <Avatar
+                    src={logo}
+                    sx={{
+                      width: 34,
+                      height: 34,
+                      bgcolor: '#EDF7D5',
+                      '& img': { objectFit: 'contain', p: 0.3 },
+                    }}
+                  />
+                  <Box sx={{ textAlign: 'left', display: { xs: 'none', lg: 'block' } }}>
+                    <Typography sx={{ fontSize: '0.68rem', color: palette.textMuted, lineHeight: 1.2 }}>
+                      Xin chào
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        color: palette.textPrimary,
+                        maxWidth: 110,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {displayName}
+                    </Typography>
+                  </Box>
+                  <KeyboardArrowDown
+                    sx={{
+                      fontSize: 18,
+                      color: palette.textMuted,
+                      transition: 'transform 0.2s',
+                      transform: isAccountMenuOpen ? 'rotate(180deg)' : 'none',
+                      display: { xs: 'none', lg: 'block' },
+                    }}
+                  />
+                </Box>
+
+                {/* Account dropdown */}
+                <AnimatePresence>
+                  {isAccountMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      transition={{ duration: 0.15 }}
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 'calc(100% + 8px)',
+                        width: 220,
+                        zIndex: 50,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          bgcolor: '#fff',
+                          borderRadius: 3,
+                          border: `1px solid ${palette.border}`,
+                          boxShadow: '0 8px 30px rgba(0,0,0,0.1)',
+                          overflow: 'hidden',
+                          p: 0.8,
+                        }}
+                      >
+                        <Link
+                          to="/account"
+                          onClick={() => setIsAccountMenuOpen(false)}
+                          style={{ textDecoration: 'none' }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1.2,
+                              px: 1.5,
+                              py: 1.2,
+                              borderRadius: 2,
+                              transition: 'background 0.15s',
+                              '&:hover': { bgcolor: '#EDF7D5' },
+                            }}
+                          >
+                            <Person sx={{ fontSize: 19, color: palette.textSecondary }} />
+                            <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: palette.textPrimary }}>
+                              Quản lý tài khoản
+                            </Typography>
+                          </Box>
+                        </Link>
+                        <Divider sx={{ my: 0.5 }} />
+                        <Box
+                          component="button"
+                          type="button"
+                          onClick={handleLogout}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.2,
+                            px: 1.5,
+                            py: 1.2,
+                            borderRadius: 2,
+                            width: '100%',
+                            border: 'none',
+                            bgcolor: 'transparent',
+                            cursor: 'pointer',
+                            transition: 'background 0.15s',
+                            '&:hover': { bgcolor: '#FFEBEE' },
+                          }}
+                        >
+                          <Logout sx={{ fontSize: 19, color: '#C62828' }} />
+                          <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: '#C62828' }}>
+                            Đăng xuất
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Box>
+            ) : (
+              <Link to="/login" style={{ textDecoration: 'none' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.8,
+                    border: `1.5px solid ${palette.accent}`,
+                    borderRadius: 3,
+                    px: { xs: 1.5, md: 2 },
+                    py: 0.8,
+                    color: palette.accent,
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap',
+                    '&:hover': {
+                      bgcolor: '#EDF7D5',
+                    },
+                  }}
+                >
+                  <Login sx={{ fontSize: 18 }} />
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    Đăng nhập
+                  </Box>
+                </Box>
+              </Link>
+            )}
+
+            {/* Cart Button */}
+            <IconButton
+              onClick={toggleCart}
+              sx={{
+                border: `1px solid ${palette.border}`,
+                borderRadius: 2.5,
+                p: 1,
+                color: palette.textSecondary,
+                transition: 'all 0.2s',
+                '&:hover': {
+                  color: palette.accent,
+                  borderColor: palette.accent,
+                },
+              }}
+              aria-label="Shopping cart"
+            >
+              <Badge
+                badgeContent={cartItemsCount}
+                sx={{
+                  '& .MuiBadge-badge': {
+                    bgcolor: palette.accent,
+                    color: '#fff',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    minWidth: 18,
+                    height: 18,
+                  },
+                }}
+              >
+                <ShoppingCartOutlined sx={{ fontSize: 22 }} />
+              </Badge>
+            </IconButton>
+          </Box>
+        </Box>
+
+        {/* Mobile Search Expanded */}
+        <AnimatePresence>
+          {isSearchOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ overflow: 'hidden' }}
+            >
+              <Box sx={{ borderTop: `1px solid ${palette.border}`, bgcolor: '#fff' }}>
+                <Box
+                  component="form"
+                  onSubmit={handleSearch}
+                  sx={{
+                    maxWidth: 1200,
+                    mx: 'auto',
+                    px: 2,
+                    py: 1.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                  }}
+                >
+                  <Search sx={{ fontSize: 20, color: palette.textMuted }} />
+                  <InputBase
+                    autoFocus
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Tìm kiếm sản phẩm..."
+                    sx={{
+                      flex: 1,
+                      fontSize: '0.9rem',
+                      color: palette.textPrimary,
+                    }}
+                  />
+                  <Box
+                    component="button"
+                    type="submit"
+                    sx={{
+                      bgcolor: 'transparent',
+                      border: 'none',
+                      color: palette.accent,
+                      fontWeight: 600,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Tìm kiếm
+                  </Box>
+                </Box>
+              </Box>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Box>
+
+      {/* ===== Mobile Side Menu ===== */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              variants={mobileMenuOverlay}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={{ duration: 0.25 }}
+              onClick={() => setIsMenuOpen(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 45,
+                backgroundColor: 'rgba(0,0,0,0.4)',
+                backdropFilter: 'blur(2px)',
+              }}
+            />
+
+            {/* Panel */}
+            <motion.nav
+              variants={mobileMenuPanel}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: 300,
+                maxWidth: '85vw',
+                zIndex: 50,
+                backgroundColor: '#fff',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '4px 0 30px rgba(0,0,0,0.1)',
+              }}
+            >
+              {/* Menu Header */}
+              <Box
+                sx={{
+                  px: 3,
+                  py: 2.5,
+                  borderBottom: `1px solid ${palette.border}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Box>
+                  <Typography sx={{ fontSize: '0.72rem', color: palette.textMuted, mb: 0.2 }}>
+                    Menu
+                  </Typography>
+                  <Typography sx={{ fontSize: '1.05rem', fontWeight: 700, color: palette.textPrimary }}>
+                    Hương Small House
+                  </Typography>
+                </Box>
+                <IconButton
+                  onClick={() => setIsMenuOpen(false)}
+                  sx={{
+                    border: `1px solid ${palette.border}`,
+                    borderRadius: 2,
+                    p: 0.6,
+                    color: palette.textSecondary,
+                  }}
+                  aria-label="Đóng menu"
+                >
+                  <Close sx={{ fontSize: 20 }} />
+                </IconButton>
+              </Box>
+
+              {/* Nav items */}
+              <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 2 }}>
+                <motion.div
+                  initial="hidden"
+                  animate="visible"
+                  transition={{ staggerChildren: 0.04, delayChildren: 0.1 }}
+                >
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActiveNav(item.href);
+                    return (
+                      <motion.div key={item.href} variants={mobileNavItem} transition={{ duration: 0.25 }}>
+                        <Link
+                          to={item.href}
+                          onClick={() => setIsMenuOpen(false)}
+                          style={{ textDecoration: 'none' }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1.5,
+                              py: 1.4,
+                              px: 1.5,
+                              mb: 0.5,
+                              borderRadius: 2.5,
+                              bgcolor: active ? '#EDF7D5' : 'transparent',
+                              border: `1px solid ${active ? 'rgba(125,175,24,0.2)' : 'transparent'}`,
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                bgcolor: active ? '#EDF7D5' : palette.background,
+                              },
+                            }}
+                          >
+                            <Icon
+                              sx={{
+                                fontSize: 20,
+                                color: active ? palette.accent : palette.textMuted,
+                              }}
+                            />
+                            <Typography
+                              sx={{
+                                fontSize: '0.92rem',
+                                fontWeight: active ? 600 : 500,
+                                color: active ? palette.accent : palette.textPrimary,
+                              }}
+                            >
+                              {item.label}
+                            </Typography>
+                          </Box>
+                        </Link>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              </Box>
+
+              {/* Footer actions */}
+              <Box sx={{ px: 2, py: 2, borderTop: `1px solid ${palette.border}` }}>
+                {isAuthenticated ? (
+                  <>
+                    <Link to="/account" onClick={() => setIsMenuOpen(false)} style={{ textDecoration: 'none' }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          py: 1.3,
+                          px: 1.5,
+                          mb: 1,
+                          borderRadius: 2.5,
+                          border: `1px solid ${palette.border}`,
+                          transition: 'all 0.2s',
+                          '&:hover': { borderColor: palette.accent },
+                        }}
+                      >
+                        <Person sx={{ fontSize: 20, color: palette.textSecondary }} />
+                        <Typography sx={{ fontSize: '0.9rem', fontWeight: 500, color: palette.textPrimary }}>
+                          {user?.fullName || 'Tài khoản'}
+                        </Typography>
+                      </Box>
+                    </Link>
+                    <Box
+                      component="button"
+                      type="button"
+                      onClick={() => { logout(); setIsMenuOpen(false); }}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        py: 1.3,
+                        px: 1.5,
+                        width: '100%',
+                        borderRadius: 2.5,
+                        border: '1px solid #FFCDD2',
+                        bgcolor: 'transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        '&:hover': { bgcolor: '#FFEBEE' },
+                      }}
+                    >
+                      <Logout sx={{ fontSize: 20, color: '#C62828' }} />
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 500, color: '#C62828' }}>
+                        Đăng xuất
+                      </Typography>
+                    </Box>
+                  </>
+                ) : (
+                  <Link to="/login" onClick={() => setIsMenuOpen(false)} style={{ textDecoration: 'none' }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1,
+                        py: 1.4,
+                        borderRadius: 2.5,
+                        bgcolor: palette.accent,
+                        color: '#fff',
+                        fontWeight: 600,
+                        fontSize: '0.92rem',
+                        transition: 'all 0.2s',
+                        '&:hover': { bgcolor: '#6B9E12' },
+                      }}
+                    >
+                      <Login sx={{ fontSize: 20 }} />
+                      <span>Đăng nhập</span>
+                    </Box>
+                  </Link>
+                )}
+              </Box>
+            </motion.nav>
+          </>
+        )}
+      </AnimatePresence>
+    </Box>
   );
 };
