@@ -1,24 +1,63 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { FiFilter, FiX } from 'react-icons/fi';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import {
+  Box,
+  Typography,
+  Container,
+  Paper,
+  IconButton,
+  Chip,
+  Breadcrumbs,
+  Slider,
+} from '@mui/material';
+import {
+  FilterList,
+  Close,
+  Sort,
+  Home,
+  NavigateNext,
+  DeleteOutline,
+} from '@mui/icons-material';
+import { Select as AntSelect } from 'antd';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ProductList } from '../components/products/ProductList';
-import { PriceRangeSlider } from '../components/common/PriceRangeSlider';
-import { Select } from '../components/common/Select';
 import { Pagination } from '../components/common/Pagination';
 import { usePagination } from '../hooks/usePagination';
-import { cn } from '../utils/cn';
 import { productApi } from '../services/productApi';
 import type { Category, Product } from '../types';
 import { mockProducts } from '../data/productData';
 import { mockCategories } from '../data/categoryData';
+import { formatCurrency } from '../utils/format';
+
+const palette = {
+  accent: '#7daf18',
+  accentLight: '#EDF7D5',
+  textPrimary: '#1A2332',
+  textSecondary: '#5A6B7F',
+  textMuted: '#8D99A8',
+  border: '#E8ECF0',
+  background: '#FAFBFC',
+};
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Mới nhất' },
   { value: 'best-selling', label: 'Bán chạy' },
   { value: 'rating', label: 'Đánh giá cao' },
-  { value: 'price-asc', label: 'Giá thấp đến cao' },
-  { value: 'price-desc', label: 'Giá cao đến thấp' },
+  { value: 'price-asc', label: 'Giá thấp → cao' },
+  { value: 'price-desc', label: 'Giá cao → thấp' },
 ];
+
+const mobileOverlay = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0 },
+};
+
+const mobilePanel = {
+  hidden: { x: '-100%' },
+  visible: { x: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 30 } },
+  exit: { x: '-100%', transition: { duration: 0.25 } },
+};
 
 export const ProductsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -29,14 +68,10 @@ export const ProductsPage: React.FC = () => {
   const [brands, setBrands] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [maxPriceLimit, setMaxPriceLimit] = useState(2000000);
 
-  const {
-    currentPage,
-    pageSize,
-    handlePageChange,
-    handlePageSizeChange,
-    getPaginatedData,
-  } = usePagination(1, 12);
+  const { currentPage, pageSize, handlePageChange, handlePageSizeChange, getPaginatedData } =
+    usePagination(1, 12);
 
   const [filters, setFilters] = useState({
     category: searchParams.get('category') || '',
@@ -49,314 +84,466 @@ export const ProductsPage: React.FC = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000000]);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchInitialData = async () => {
       try {
         setIsLoading(true);
         setError('');
         const categoryData = await productApi.listCategories('customer');
         const productData = await productApi.listProducts(categoryData);
+        if (cancelled) return;
         setCategories(categoryData);
         setProducts(productData);
-        const brandSet = new Set(productData.map((product) => product.brand));
+        const brandSet = new Set(productData.map((p) => p.brand));
         setBrands([...brandSet]);
         if (productData.length > 0) {
-          const prices = productData.map((product) => product.price);
-          const maxPrice = Math.max(...prices);
-          const minPrice = Math.min(...prices);
+          const prices = productData.map((p) => p.price);
+          const maxP = Math.max(...prices);
+          setMaxPriceLimit(maxP);
           setPriceRange([
-            filters.minPrice ? Number(filters.minPrice) : minPrice,
-            filters.maxPrice ? Number(filters.maxPrice) : maxPrice,
+            filters.minPrice ? Number(filters.minPrice) : 0,
+            filters.maxPrice ? Number(filters.maxPrice) : maxP,
           ]);
         }
-      } catch (err) {
-        console.error('Failed to fetch data, using mock data:', err);
+      } catch {
+        if (cancelled) return;
         setCategories(mockCategories);
         setProducts(mockProducts);
-        const brandSet = new Set(mockProducts.map((product) => product.brand));
+        const brandSet = new Set(mockProducts.map((p) => p.brand));
         setBrands([...brandSet]);
         if (mockProducts.length > 0) {
-          const prices = mockProducts.map((product) => product.price);
-          const maxPrice = Math.max(...prices);
-          const minPrice = Math.min(...prices);
+          const prices = mockProducts.map((p) => p.price);
+          const maxP = Math.max(...prices);
+          setMaxPriceLimit(maxP);
           setPriceRange([
-            filters.minPrice ? Number(filters.minPrice) : minPrice,
-            filters.maxPrice ? Number(filters.maxPrice) : maxPrice,
+            filters.minPrice ? Number(filters.minPrice) : 0,
+            filters.maxPrice ? Number(filters.maxPrice) : maxP,
           ]);
         }
         setError('');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
-
     fetchInitialData();
+    return () => { cancelled = true; };
   }, [filters.maxPrice, filters.minPrice]);
 
   useEffect(() => {
-    const calculateHeaderHeight = () => {
-      const mainHeader = document.getElementById('main-header');
-      const topBar = document.getElementById('top-bar');
-      if (!mainHeader || !topBar) {
-        setHeaderHeight(96);
-        return;
-      }
-      const totalHeight = mainHeader.offsetHeight + topBar.offsetHeight;
-      setHeaderHeight(totalHeight);
+    const calc = () => {
+      const main = document.getElementById('main-header');
+      const top = document.getElementById('top-bar');
+      setHeaderHeight((main?.offsetHeight ?? 0) + (top?.offsetHeight ?? 0) || 96);
     };
-    calculateHeaderHeight();
-    setTimeout(calculateHeaderHeight, 100);
-    window.addEventListener('resize', calculateHeaderHeight);
-    return () => window.removeEventListener('resize', calculateHeaderHeight);
+    calc();
+    window.addEventListener('resize', calc);
+    return () => window.removeEventListener('resize', calc);
   }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = showFilters ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [showFilters]);
 
   const filteredProducts = useMemo(() => {
     let list = [...products];
-
     if (filters.category) {
-      // Find category by slug
-      const category = categories.find(cat => cat.slug === filters.category);
-      if (category) {
-        // Filter by categoryId
-        list = list.filter(product => product.categoryId === category.categoryId);
+      const cat = categories.find((c) => c.slug === filters.category);
+      if (cat) {
+        list = list.filter((p) => p.categoryId === cat.categoryId);
       } else {
-        // Fallback: try to match by category name or ID
         list = list.filter(
-          (product) =>
-            product.categoryId?.toString() === filters.category ||
-            product.category === filters.category ||
-            product.slug === filters.category
+          (p) =>
+            p.categoryId?.toString() === filters.category ||
+            p.category === filters.category ||
+            p.slug === filters.category
         );
       }
     }
-
-    if (filters.brand) {
-      list = list.filter((product) => product.brand === filters.brand);
-    }
-
-    if (filters.minPrice) {
-      list = list.filter((product) => product.price >= Number(filters.minPrice));
-    }
-
-    if (filters.maxPrice) {
-      list = list.filter((product) => product.price <= Number(filters.maxPrice));
-    }
-
+    if (filters.brand) list = list.filter((p) => p.brand === filters.brand);
+    if (filters.minPrice) list = list.filter((p) => p.price >= Number(filters.minPrice));
+    if (filters.maxPrice) list = list.filter((p) => p.price <= Number(filters.maxPrice));
     const search = searchParams.get('search');
     if (search) {
-      const searchLower = search.toLowerCase();
+      const q = search.toLowerCase();
       list = list.filter(
-        (product) =>
-          product.name.toLowerCase().includes(searchLower) ||
-          product.brand.toLowerCase().includes(searchLower) ||
-          product.description.toLowerCase().includes(searchLower)
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.brand.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q)
       );
     }
-
     switch (filters.sortBy) {
-      case 'price-asc':
-        list.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-desc':
-        list.sort((a, b) => b.price - a.price);
-        break;
-      case 'rating':
-        list.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'best-selling':
-        list.sort((a, b) => b.soldCount - a.soldCount);
-        break;
-      default:
-        list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      case 'price-asc': list.sort((a, b) => a.price - b.price); break;
+      case 'price-desc': list.sort((a, b) => b.price - a.price); break;
+      case 'rating': list.sort((a, b) => b.rating - a.rating); break;
+      case 'best-selling': list.sort((a, b) => b.soldCount - a.soldCount); break;
+      default: list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     }
-
     return list;
   }, [products, filters, searchParams, categories]);
 
   const paginatedData = useMemo(() => getPaginatedData(filteredProducts), [filteredProducts, getPaginatedData]);
 
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-    if (value) {
-      searchParams.set(key, value);
-    } else {
-      searchParams.delete(key);
-    }
-    setSearchParams(searchParams);
-  };
+  const handleFilterChange = useCallback(
+    (key: string, value: string) => {
+      setFilters((prev) => ({ ...prev, [key]: value }));
+      const params = new URLSearchParams(searchParams);
+      if (value) params.set(key, value);
+      else params.delete(key);
+      setSearchParams(params);
+    },
+    [searchParams, setSearchParams]
+  );
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setFilters({ category: '', brand: '', minPrice: '', maxPrice: '', sortBy: 'newest' });
-    setPriceRange([0, priceRange[1]]);
+    setPriceRange([0, maxPriceLimit]);
     setSearchParams({});
-  };
+  }, [maxPriceLimit, setSearchParams]);
 
-  const renderFilterBody = ({ showHeader = true }: { showHeader?: boolean } = {}) => (
-    <>
-      {showHeader && (
-        <div className="flex justify-between items-center mb-6 pb-4 border-b">
-          <h2 className="text-xl font-bold text-gray-800">Bộ lọc</h2>
-          <button
-            onClick={() => setShowFilters(false)}
-            className="lg:hidden p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <FiX className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-      )}
+  const activeFilterCount = [filters.category, filters.brand, filters.minPrice, filters.maxPrice].filter(Boolean).length;
 
-      <div className="mb-6">
-        <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
-          <span className="w-1 h-4 bg-primary mr-2 rounded-full"></span>
+  const searchQuery = searchParams.get('search');
+
+  // Shared filter sidebar content
+  const filterContent = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Sort */}
+      <Box>
+        <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: palette.textPrimary, mb: 1, display: 'flex', alignItems: 'center', gap: 0.8 }}>
+          <Sort sx={{ fontSize: 16, color: palette.accent }} />
           Sắp xếp
-        </h3>
-        <Select value={filters.sortBy} onChange={(value) => handleFilterChange('sortBy', value)} options={SORT_OPTIONS} />
-      </div>
+        </Typography>
+        <AntSelect
+          value={filters.sortBy}
+          onChange={(v) => handleFilterChange('sortBy', v)}
+          options={SORT_OPTIONS}
+          style={{ width: '100%', fontFamily: 'Inter, system-ui, sans-serif' }}
+          size="middle"
+        />
+      </Box>
 
-      <div className="mb-6">
-        <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
-          <span className="w-1 h-4 bg-primary mr-2 rounded-full"></span>
+      {/* Category */}
+      <Box>
+        <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: palette.textPrimary, mb: 1 }}>
           Danh mục
-        </h3>
-        <Select
-          value={filters.category}
-          onChange={(value) => handleFilterChange('category', value)}
-          options={[
-            { value: '', label: 'Tất cả' },
-            ...categories.map((category) => ({
-              value: category.categoryId.toString(),
-              label: category.name,
-            })),
-          ]}
-          placeholder="Chọn danh mục"
+        </Typography>
+        <AntSelect
+          value={filters.category || undefined}
+          onChange={(v) => handleFilterChange('category', v || '')}
+          allowClear
+          placeholder="Tất cả danh mục"
+          options={categories.map((c) => ({ value: c.slug, label: c.name }))}
+          style={{ width: '100%', fontFamily: 'Inter, system-ui, sans-serif' }}
+          size="middle"
         />
-      </div>
+      </Box>
 
-      <div className="mb-6">
-        <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
-          <span className="w-1 h-4 bg-primary mr-2 rounded-full"></span>
+      {/* Brand */}
+      <Box>
+        <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: palette.textPrimary, mb: 1 }}>
           Thương hiệu
-        </h3>
-        <Select
-          value={filters.brand}
-          onChange={(value) => handleFilterChange('brand', value)}
-          options={[
-            { value: '', label: 'Tất cả' },
-            ...brands.map((brand) => ({ value: brand, label: brand })),
-          ]}
-          placeholder="Chọn thương hiệu"
+        </Typography>
+        <AntSelect
+          value={filters.brand || undefined}
+          onChange={(v) => handleFilterChange('brand', v || '')}
+          allowClear
+          placeholder="Tất cả thương hiệu"
+          options={brands.map((b) => ({ value: b, label: b }))}
+          style={{ width: '100%', fontFamily: 'Inter, system-ui, sans-serif' }}
+          size="middle"
         />
-      </div>
+      </Box>
 
-      <div className="mb-6">
-        <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
-          <span className="w-1 h-4 bg-primary mr-2 rounded-full"></span>
+      {/* Price Range */}
+      <Box>
+        <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: palette.textPrimary, mb: 1.5 }}>
           Khoảng giá
-        </h3>
-        <PriceRangeSlider
-          min={0}
-          max={Math.max(priceRange[1], 2000000)}
-          step={50000}
+        </Typography>
+        <Slider
           value={priceRange}
-          onChange={(value) => {
-            setPriceRange(value);
-            handleFilterChange('minPrice', value[0].toString());
-            handleFilterChange('maxPrice', value[1].toString());
+          onChange={(_, val) => setPriceRange(val as [number, number])}
+          onChangeCommitted={(_, val) => {
+            const v = val as [number, number];
+            handleFilterChange('minPrice', v[0].toString());
+            handleFilterChange('maxPrice', v[1].toString());
+          }}
+          min={0}
+          max={maxPriceLimit}
+          step={50000}
+          valueLabelDisplay="auto"
+          valueLabelFormat={(v) => formatCurrency(v)}
+          sx={{
+            color: palette.accent,
+            '& .MuiSlider-thumb': {
+              width: 18,
+              height: 18,
+              bgcolor: '#fff',
+              border: `2px solid ${palette.accent}`,
+              '&:hover': { boxShadow: `0 0 0 6px rgba(125,175,24,0.15)` },
+            },
+            '& .MuiSlider-track': { height: 4 },
+            '& .MuiSlider-rail': { height: 4, bgcolor: '#E0E0E0' },
           }}
         />
-      </div>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+          <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: palette.accent }}>
+            {formatCurrency(priceRange[0])}
+          </Typography>
+          <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: palette.accent }}>
+            {formatCurrency(priceRange[1])}
+          </Typography>
+        </Box>
+      </Box>
 
-      <button
+      {/* Clear */}
+      <Box
+        component="button"
+        type="button"
         onClick={clearFilters}
-        className="w-full bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-medium py-3 rounded-lg transition-all shadow-sm hover:shadow"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 0.8,
+          py: 1.2,
+          borderRadius: 2.5,
+          border: `1px solid ${palette.border}`,
+          bgcolor: 'transparent',
+          color: palette.textSecondary,
+          fontSize: '0.85rem',
+          fontWeight: 500,
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          '&:hover': { borderColor: '#C62828', color: '#C62828', bgcolor: '#FFF5F5' },
+        }}
       >
+        <DeleteOutline sx={{ fontSize: 17 }} />
         Xóa bộ lọc
-      </button>
-    </>
+      </Box>
+    </Box>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold">
-            Tất cả sản phẩm ({paginatedData.totalItems})
-          </h1>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="lg:hidden flex items-center gap-2 bg-white px-4 py-2 rounded-lg border"
+    <Box sx={{ bgcolor: palette.background, minHeight: '100vh' }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
+        {/* Breadcrumb */}
+        <Breadcrumbs separator={<NavigateNext sx={{ fontSize: 16 }} />} sx={{ mb: 3 }}>
+          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Home sx={{ fontSize: 16, color: palette.textMuted }} />
+            <Typography sx={{ fontSize: '0.82rem', color: palette.textMuted, '&:hover': { color: palette.accent } }}>
+              Trang chủ
+            </Typography>
+          </Link>
+          <Typography sx={{ fontSize: '0.82rem', color: palette.textPrimary, fontWeight: 600 }}>
+            Sản phẩm
+          </Typography>
+        </Breadcrumbs>
+
+        {/* Page Header */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: palette.textPrimary, fontSize: { xs: '1.3rem', md: '1.6rem' } }}>
+              {searchQuery ? `Kết quả tìm kiếm "${searchQuery}"` : 'Tất cả sản phẩm'}
+            </Typography>
+            <Typography sx={{ fontSize: '0.85rem', color: palette.textMuted, mt: 0.5 }}>
+              {paginatedData.totalItems} sản phẩm
+            </Typography>
+          </Box>
+
+          {/* Mobile filter toggle */}
+          <Box
+            component="button"
+            type="button"
+            onClick={() => setShowFilters(true)}
+            sx={{
+              display: { xs: 'flex', lg: 'none' },
+              alignItems: 'center',
+              gap: 0.8,
+              border: `1px solid ${palette.border}`,
+              borderRadius: 2.5,
+              px: 2,
+              py: 1,
+              bgcolor: '#fff',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 500,
+              color: palette.textSecondary,
+              transition: 'all 0.2s',
+              position: 'relative',
+              '&:hover': { borderColor: palette.accent, color: palette.accent },
+            }}
           >
-            <FiFilter className="w-4 h-4" />
+            <FilterList sx={{ fontSize: 18 }} />
             Bộ lọc
-          </button>
-        </div>
+            {activeFilterCount > 0 && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -6,
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  bgcolor: palette.accent,
+                  color: '#fff',
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {activeFilterCount}
+              </Box>
+            )}
+          </Box>
+        </Box>
 
-        {error && <p className="text-red-600 text-center mb-4">{error}</p>}
-
-        {showFilters && (
-          <div
-            className="fixed z-20 bg-black/40 lg:hidden"
-            style={{ top: `${headerHeight}px`, left: 0, right: 0, bottom: 0 }}
-            onClick={() => setShowFilters(false)}
-          />
+        {/* Active filter chips */}
+        {activeFilterCount > 0 && (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2.5 }}>
+            {filters.category && (
+              <Chip
+                label={`Danh mục: ${categories.find((c) => c.slug === filters.category)?.name || filters.category}`}
+                size="small"
+                onDelete={() => handleFilterChange('category', '')}
+                sx={{ bgcolor: palette.accentLight, color: palette.accent, fontWeight: 500, fontSize: '0.78rem' }}
+              />
+            )}
+            {filters.brand && (
+              <Chip
+                label={`Thương hiệu: ${filters.brand}`}
+                size="small"
+                onDelete={() => handleFilterChange('brand', '')}
+                sx={{ bgcolor: palette.accentLight, color: palette.accent, fontWeight: 500, fontSize: '0.78rem' }}
+              />
+            )}
+            {(filters.minPrice || filters.maxPrice) && (
+              <Chip
+                label={`Giá: ${formatCurrency(Number(filters.minPrice) || 0)} - ${formatCurrency(Number(filters.maxPrice) || maxPriceLimit)}`}
+                size="small"
+                onDelete={() => {
+                  handleFilterChange('minPrice', '');
+                  handleFilterChange('maxPrice', '');
+                  setPriceRange([0, maxPriceLimit]);
+                }}
+                sx={{ bgcolor: palette.accentLight, color: palette.accent, fontWeight: 500, fontSize: '0.78rem' }}
+              />
+            )}
+          </Box>
         )}
 
-        <aside
-          className={cn(
-            'lg:hidden fixed left-0 w-64 max-w-[80vw] bg-white shadow-lg transition-transform duration-300 ease-in-out z-30 flex flex-col',
-            showFilters ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
-          )}
-          style={{ top: `${headerHeight}px`, height: `calc(100vh - ${headerHeight}px)` }}
-          aria-hidden={!showFilters}
-        >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
-            <div className="flex items-center gap-2 text-base font-semibold text-primary">
-              <FiFilter className="w-5 h-5" />
-              <span>Bộ lọc</span>
-            </div>
-            <button
-              onClick={() => setShowFilters(false)}
-              className="p-1 rounded-lg text-gray-600 hover:text-primary hover:bg-gray-100 transition-colors"
-              aria-label="Đóng bộ lọc"
-            >
-              <FiX className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-6 py-5">{renderFilterBody({ showHeader: false })}</div>
-        </aside>
+        {error && (
+          <Typography sx={{ textAlign: 'center', color: '#C62828', py: 2, fontSize: '0.9rem' }}>{error}</Typography>
+        )}
 
-        <div className="flex gap-6">
-          <aside
-            className="hidden lg:block w-64 flex-shrink-0 lg:sticky"
-            style={{ top: `${headerHeight}px`, maxHeight: `calc(100vh - ${headerHeight}px)` }}
+        {/* Main layout */}
+        <Box sx={{ display: 'flex', gap: 3 }}>
+          {/* Desktop sidebar */}
+          <Box
+            component="aside"
+            sx={{
+              display: { xs: 'none', lg: 'block' },
+              width: 260,
+              flexShrink: 0,
+              position: 'sticky',
+              top: `${headerHeight + 16}px`,
+              maxHeight: `calc(100vh - ${headerHeight + 32}px)`,
+              overflowY: 'auto',
+            }}
           >
-            <div className="bg-white p-6 rounded-xl shadow-lg h-full overflow-y-auto border border-gray-100">
-              {renderFilterBody()}
-            </div>
-          </aside>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2.5,
+                border: `1px solid ${palette.border}`,
+                borderRadius: 3,
+              }}
+            >
+              <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: palette.textPrimary, mb: 2.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FilterList sx={{ fontSize: 18, color: palette.accent }} />
+                Bộ lọc
+              </Typography>
+              {filterContent}
+            </Paper>
+          </Box>
 
-          <div className="flex-1 space-y-6">
-            {isLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {Array.from({ length: 8 }).map((_, index) => (
-                  <div key={index} className="h-72 bg-white rounded-xl shadow animate-pulse" />
-                ))}
-              </div>
-            ) : (
-              <ProductList products={paginatedData.items} />
-            )}
-            <Pagination
-              currentPage={currentPage}
-              totalPages={paginatedData.totalPages}
-              totalItems={paginatedData.totalItems}
-              itemsPerPage={pageSize}
-              onPageChange={handlePageChange}
-              showPageSizeSelect={true}
-              onPageSizeChange={handlePageSizeChange}
-              pageSizeOptions={[12, 24, 36, 48]}
+          {/* Product grid */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <ProductList products={paginatedData.items} loading={isLoading} />
+
+            <Box sx={{ mt: 3 }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={paginatedData.totalPages}
+                totalItems={paginatedData.totalItems}
+                itemsPerPage={pageSize}
+                onPageChange={handlePageChange}
+                showPageSizeSelect
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={[12, 24, 36, 48]}
+              />
+            </Box>
+          </Box>
+        </Box>
+      </Container>
+
+      {/* Mobile filter panel */}
+      <AnimatePresence>
+        {showFilters && (
+          <>
+            <motion.div
+              variants={mobileOverlay}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={{ duration: 0.25 }}
+              onClick={() => setShowFilters(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 45,
+                backgroundColor: 'rgba(0,0,0,0.4)',
+                backdropFilter: 'blur(2px)',
+              }}
             />
-          </div>
-        </div>
-      </div>
-    </div>
+            <motion.aside
+              variants={mobilePanel}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: 300,
+                maxWidth: '85vw',
+                zIndex: 50,
+                backgroundColor: '#fff',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '4px 0 30px rgba(0,0,0,0.1)',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2.5, py: 2, borderBottom: `1px solid ${palette.border}` }}>
+                <Typography sx={{ fontWeight: 600, fontSize: '1rem', color: palette.textPrimary, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <FilterList sx={{ fontSize: 20, color: palette.accent }} />
+                  Bộ lọc
+                </Typography>
+                <IconButton onClick={() => setShowFilters(false)} size="small" sx={{ border: `1px solid ${palette.border}`, borderRadius: 2 }}>
+                  <Close sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Box>
+              <Box sx={{ flex: 1, overflowY: 'auto', px: 2.5, py: 2.5 }}>
+                {filterContent}
+              </Box>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </Box>
   );
 };
