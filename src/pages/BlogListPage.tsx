@@ -1,17 +1,56 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiClock, FiEye, FiFilter, FiSearch, FiTag, FiUser } from 'react-icons/fi';
+import {
+  Box,
+  Typography,
+  Container,
+  Paper,
+  Breadcrumbs,
+  InputBase,
+  Chip,
+} from '@mui/material';
+import { Button } from 'antd';
+import {
+  Home,
+  NavigateNext,
+  Search,
+  AccessTime,
+  Visibility,
+  ArrowForward,
+  LocalOffer,
+  ArticleOutlined,
+} from '@mui/icons-material';
+import { motion } from 'framer-motion';
 import { contentApi } from '../services/contentApi';
 import type { ContentItem } from '../types';
 import { getErrorMessage } from '../utils/error';
 import { Loader } from '../components/common/Loader';
 import { Pagination } from '../components/common/Pagination';
 import { usePagination } from '../hooks/usePagination';
+import { fadeInUp, staggerContainer } from '../hooks/useScrollAnimation';
 import logo from '../assets/logo.png';
+
+const palette = {
+  accent: '#7daf18',
+  accentLight: '#EDF7D5',
+  primary: '#2E7D32',
+  textPrimary: '#1A2332',
+  textSecondary: '#5A6B7F',
+  textMuted: '#8D99A8',
+  border: '#E8ECF0',
+  background: '#FAFBFC',
+};
 
 const formatDate = (value?: Date) => {
   if (!value) return 'Không rõ';
   return value.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+const getValidImage = (thumbnail?: string) => {
+  if (thumbnail && thumbnail.startsWith('http') && !thumbnail.includes('placeholder') && !thumbnail.includes('placehold')) {
+    return thumbnail;
+  }
+  return null;
 };
 
 export const BlogListPage: React.FC = () => {
@@ -21,277 +60,367 @@ export const BlogListPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Pagination hook - 9 items per page
-  const {
-    currentPage,
-    pageSize,
-    handlePageChange,
-    handlePageSizeChange,
-    getPaginatedData,
-    resetPagination,
-  } = usePagination(1, 9);
+  const { currentPage, pageSize, handlePageChange, handlePageSizeChange, getPaginatedData, resetPagination } =
+    usePagination(1, 9);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchBlogs = async () => {
       setIsLoading(true);
       setError('');
       try {
         const data = await contentApi.listBlogs();
-        const published = data.filter((item) => item.status === 'PUBLISHED' && item.isActive);
-        setBlogs(published);
+        if (!cancelled) setBlogs(data.filter((item) => item.status === 'PUBLISHED' && item.isActive));
       } catch (err) {
-        setError(getErrorMessage(err, 'Không thể tải bài viết.'));
+        if (!cancelled) setError(getErrorMessage(err, 'Không thể tải bài viết.'));
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
-
     fetchBlogs();
+    return () => { cancelled = true; };
   }, []);
 
   const tags = useMemo(() => {
-    const tagSet = new Set<string>();
-    blogs.forEach((b) => b.tags?.forEach((t) => tagSet.add(t)));
-    return Array.from(tagSet);
+    const s = new Set<string>();
+    blogs.forEach((b) => b.tags?.forEach((t) => s.add(t)));
+    return Array.from(s);
   }, [blogs]);
 
   const filteredBlogs = useMemo(() => {
-    return blogs.filter((blog) => {
-      const matchesSearch =
-        blog.title.toLowerCase().includes(search.toLowerCase()) ||
-        blog.excerpt?.toLowerCase().includes(search.toLowerCase() || '');
-      const matchesTag = !tagFilter || blog.tags?.includes(tagFilter);
-      return matchesSearch && matchesTag;
+    return blogs.filter((b) => {
+      const q = search.toLowerCase();
+      const matchSearch = b.title.toLowerCase().includes(q) || b.excerpt?.toLowerCase().includes(q);
+      const matchTag = !tagFilter || b.tags?.includes(tagFilter);
+      return matchSearch && matchTag;
     });
   }, [blogs, search, tagFilter]);
 
-  // Reset to page 1 when filter changes
-  useEffect(() => {
-    resetPagination();
-  }, [search, tagFilter, resetPagination]);
+  useEffect(() => { resetPagination(); }, [search, tagFilter, resetPagination]);
 
-  // Get paginated data
-  const paginatedData = useMemo(() => {
-    return getPaginatedData(filteredBlogs);
-  }, [filteredBlogs, getPaginatedData]);
+  const paginatedData = useMemo(() => getPaginatedData(filteredBlogs), [filteredBlogs, getPaginatedData]);
 
   const featured = currentPage === 1 && paginatedData.items.length > 0 ? paginatedData.items[0] : null;
   const others = currentPage === 1 && featured ? paginatedData.items.slice(1) : paginatedData.items;
 
   return (
-    <div className="bg-gradient-to-b from-primary/5 via-white to-white pb-8 sm:pb-12 md:pb-16">
-      <section className="container mx-auto px-4 pt-8 sm:pt-12 md:pt-16 lg:pt-20">
-        <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-primary via-secondary to-primary text-white p-6 sm:p-8 md:p-12 shadow-2xl">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
-            <div className="space-y-2 sm:space-y-3 max-w-2xl">
-              <p className="text-xs sm:text-sm uppercase tracking-[0.2em] sm:tracking-[0.25em] text-white/80 font-semibold">Blog</p>
-              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">Kiến thức sức khỏe & sản phẩm cập nhật</h1>
-              <p className="text-white/80 text-sm sm:text-base md:text-lg">
-                Bài viết, hướng dẫn và tin tức mới nhất từ Hương Small House.
-              </p>
-              <div className="flex flex-wrap gap-2 sm:gap-3">
-                <span className="px-2.5 sm:px-3 py-1 rounded-full bg-white/20 text-white text-xs sm:text-sm">Chăm sóc sức khỏe</span>
-                <span className="px-2.5 sm:px-3 py-1 rounded-full bg-white/20 text-white text-xs sm:text-sm">Thực phẩm chức năng</span>
-                <span className="px-2.5 sm:px-3 py-1 rounded-full bg-white/20 text-white text-xs sm:text-sm hidden sm:inline-block">Mẹo sống khỏe</span>
-              </div>
-            </div>
-            <div className="w-full lg:w-96 bg-white text-gray-900 rounded-xl sm:rounded-2xl shadow-lg p-3 sm:p-4">
-              <div className="flex items-center gap-2 sm:gap-3 border-b border-gray-100 pb-3 sm:pb-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center p-2">
-                  <img src={logo} alt="Hương Small House" className="w-full h-full object-contain" />
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-gray-400 font-semibold">Số bài viết</p>
-                  <p className="text-xl sm:text-2xl font-bold">{blogs.length}</p>
-                </div>
-              </div>
-              <div className="pt-3 sm:pt-4 space-y-2 sm:space-y-3">
-                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600">
-                  <FiClock className="text-primary w-4 h-4 sm:w-auto sm:h-auto" />
-                  <span className="truncate">Cập nhật liên tục mỗi tuần</span>
-                </div>
-                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600">
-                  <FiUser className="text-primary w-4 h-4 sm:w-auto sm:h-auto" />
-                  <span className="truncate">Đội ngũ chuyên gia</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+    <Box sx={{ bgcolor: palette.background, minHeight: '100vh' }}>
+      {/* Hero */}
+      <Box sx={{ bgcolor: palette.primary, py: { xs: 5, md: 6 }, position: 'relative', overflow: 'hidden' }}>
+        <Box sx={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+          <Breadcrumbs separator={<NavigateNext sx={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }} />} sx={{ mb: 3 }}>
+            <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Home sx={{ fontSize: 16, color: 'rgba(255,255,255,0.6)' }} />
+              <Typography sx={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Trang chủ</Typography>
+            </Link>
+            <Typography sx={{ fontSize: '0.82rem', color: '#fff', fontWeight: 600 }}>Blog</Typography>
+          </Breadcrumbs>
 
-      <section className="container mx-auto px-4 mt-6 sm:mt-8 md:mt-10 space-y-4 sm:space-y-6">
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-md border border-gray-100 p-3 sm:p-4 md:p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Tìm kiếm bài viết..."
-                  className="w-full pl-10 pr-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-2 text-gray-500 text-xs sm:text-sm font-medium">
-                <FiFilter className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Lọc theo tag:</span>
-                <span className="sm:hidden">Tag:</span>
-              </div>
-              <div className="flex gap-1.5 sm:gap-2 flex-wrap">
-                <button
-                  onClick={() => setTagFilter('')}
-                  className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm border ${
-                    tagFilter === '' ? 'bg-primary text-white border-primary' : 'border-gray-200 text-gray-600 hover:border-primary hover:text-primary'
-                  }`}
-                >
-                  Tất cả
-                </button>
-                {tags.map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => setTagFilter(tag)}
-                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm border ${
-                      tagFilter === tag ? 'bg-primary text-white border-primary' : 'border-gray-200 text-gray-700 hover:border-primary hover:text-primary'
-                    }`}
-                  >
-                    #{tag}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
-        </div>
+          <Typography variant="h3" sx={{ color: '#fff', fontSize: { xs: '1.6rem', md: '2.2rem' }, mb: 1 }}>
+            Kiến thức sức khỏe
+          </Typography>
+          <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', mb: 3.5, maxWidth: 480 }}>
+            Bài viết, hướng dẫn và tin tức mới nhất về thực phẩm chức năng và chăm sóc sức khỏe
+          </Typography>
+
+          {/* Search */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              maxWidth: 460,
+              bgcolor: 'rgba(255,255,255,0.12)',
+              backdropFilter: 'blur(8px)',
+              borderRadius: 3,
+              px: 2,
+              py: 0.8,
+              border: '1px solid rgba(255,255,255,0.15)',
+              transition: 'all 0.2s',
+              '&:focus-within': { bgcolor: 'rgba(255,255,255,0.18)', borderColor: 'rgba(255,255,255,0.3)' },
+            }}
+          >
+            <Search sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 20, mr: 1 }} />
+            <InputBase
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Tìm kiếm bài viết..."
+              sx={{ flex: 1, color: '#fff', fontSize: '0.9rem', '& input::placeholder': { color: 'rgba(255,255,255,0.5)', opacity: 1 } }}
+            />
+          </Box>
+        </Container>
+      </Box>
+
+      {/* Tags filter bar */}
+      <Box sx={{ bgcolor: '#fff', borderBottom: `1px solid ${palette.border}`, py: 1.5 }}>
+        <Container maxWidth="lg">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <LocalOffer sx={{ fontSize: 16, color: palette.textMuted, mr: 0.5 }} />
+            <Chip
+              label="Tất cả"
+              size="small"
+              onClick={() => setTagFilter('')}
+              sx={{
+                bgcolor: !tagFilter ? palette.accent : 'transparent',
+                color: !tagFilter ? '#fff' : palette.textSecondary,
+                border: `1px solid ${!tagFilter ? palette.accent : palette.border}`,
+                fontWeight: 600,
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                '&:hover': { borderColor: palette.accent },
+              }}
+            />
+            {tags.map((tag) => (
+              <Chip
+                key={tag}
+                label={`#${tag}`}
+                size="small"
+                onClick={() => setTagFilter(tag)}
+                sx={{
+                  bgcolor: tagFilter === tag ? palette.accent : 'transparent',
+                  color: tagFilter === tag ? '#fff' : palette.textSecondary,
+                  border: `1px solid ${tagFilter === tag ? palette.accent : palette.border}`,
+                  fontWeight: 500,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  '&:hover': { borderColor: palette.accent },
+                }}
+              />
+            ))}
+            {blogs.length > 0 && (
+              <Typography sx={{ fontSize: '0.78rem', color: palette.textMuted, ml: 'auto' }}>
+                {filteredBlogs.length} bài viết
+              </Typography>
+            )}
+          </Box>
+        </Container>
+      </Box>
+
+      <Container maxWidth="lg" sx={{ py: { xs: 4, md: 5 } }}>
+        {error && <Typography sx={{ textAlign: 'center', color: '#C62828', py: 2, mb: 2 }}>{error}</Typography>}
 
         {isLoading && (
-          <div className="py-10">
-            <Loader />
-          </div>
+          <Box sx={{ py: 8, display: 'flex', justifyContent: 'center' }}><Loader /></Box>
         )}
 
+        {/* Featured post */}
         {!isLoading && featured && (
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-            <div className="grid lg:grid-cols-2 gap-0">
-              <div className="relative h-48 sm:h-56 md:h-64 lg:h-full">
-                <img
-                  src={(featured.thumbnail && featured.thumbnail.startsWith('http') && !featured.thumbnail.includes('placeholder') && !featured.thumbnail.includes('placehold')) ? featured.thumbnail : logo}
-                  alt={featured.title}
-                  className="absolute inset-0 w-full h-full object-cover"
+          <Paper
+            elevation={0}
+            sx={{
+              border: `1px solid ${palette.border}`,
+              borderRadius: 3,
+              overflow: 'hidden',
+              mb: 4,
+              transition: 'all 0.3s ease',
+              '&:hover': { boxShadow: '0 8px 25px rgba(0,0,0,0.06)' },
+            }}
+          >
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' } }}>
+              {/* Image */}
+              <Box sx={{ position: 'relative', minHeight: { xs: 200, lg: 300 }, bgcolor: palette.background }}>
+                {getValidImage(featured.thumbnail) ? (
+                  <Box
+                    component="img"
+                    src={getValidImage(featured.thumbnail)!}
+                    alt={featured.title}
+                    sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Box component="img" src={logo} alt="Logo" sx={{ width: 80, height: 80, objectFit: 'contain', opacity: 0.5 }} />
+                  </Box>
+                )}
+                <Chip
+                  label="Nổi bật"
+                  size="small"
+                  sx={{ position: 'absolute', top: 12, left: 12, bgcolor: palette.accent, color: '#fff', fontWeight: 600, fontSize: '0.72rem' }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 flex gap-1.5 sm:gap-2 flex-wrap">
-                  {featured.tags?.slice(0, 2).map((tag) => (
-                    <span key={tag} className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-white/90 text-primary text-[10px] sm:text-xs font-semibold">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="p-4 sm:p-6 md:p-8 flex flex-col gap-3 sm:gap-4 justify-center">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-500">
-                  <span className="inline-flex items-center gap-1 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-primary/10 text-primary font-semibold text-[10px] sm:text-xs">
-                    Nổi bật
-                  </span>
-                  <span className="flex items-center gap-1 sm:gap-2">
-                    <FiClock className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="truncate">{formatDate(featured.publishedAt ?? featured.createdAt)}</span>
-                  </span>
-                </div>
-                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight line-clamp-2">{featured.title}</h2>
-                <p className="text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed line-clamp-2 sm:line-clamp-3">{featured.excerpt || 'Khám phá thêm nội dung chi tiết trong bài viết.'}</p>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                  <Link
-                    to={`/blog/${featured.slug}`}
-                    className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary text-white rounded-lg sm:rounded-xl hover:bg-primary-dark transition text-sm sm:text-base"
+              </Box>
+
+              {/* Content */}
+              <Box sx={{ p: { xs: 3, md: 4 }, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: palette.textMuted }}>
+                    <AccessTime sx={{ fontSize: 15 }} />
+                    <Typography sx={{ fontSize: '0.78rem' }}>{formatDate(featured.publishedAt ?? featured.createdAt)}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: palette.textMuted }}>
+                    <Visibility sx={{ fontSize: 15 }} />
+                    <Typography sx={{ fontSize: '0.78rem' }}>{featured.views.toLocaleString()} lượt xem</Typography>
+                  </Box>
+                </Box>
+
+                <Typography sx={{ fontWeight: 700, fontSize: { xs: '1.15rem', md: '1.4rem' }, color: palette.textPrimary, lineHeight: 1.35 }}>
+                  {featured.title}
+                </Typography>
+
+                <Typography sx={{ fontSize: '0.9rem', color: palette.textSecondary, lineHeight: 1.7, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {featured.excerpt || 'Khám phá thêm nội dung chi tiết trong bài viết.'}
+                </Typography>
+
+                {featured.tags && featured.tags.length > 0 && (
+                  <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap' }}>
+                    {featured.tags.slice(0, 3).map((tag) => (
+                      <Chip key={tag} label={`#${tag}`} size="small" sx={{ bgcolor: palette.accentLight, color: palette.accent, fontWeight: 500, fontSize: '0.72rem', height: 22 }} />
+                    ))}
+                  </Box>
+                )}
+
+                <Link to={`/blog/${featured.slug}`} style={{ textDecoration: 'none', alignSelf: 'flex-start' }}>
+                  <Button
+                    type="primary"
+                    icon={<ArrowForward style={{ fontSize: 15 }} />}
+                    iconPosition="end"
+                    style={{
+                      backgroundColor: palette.accent,
+                      borderColor: palette.accent,
+                      height: 40,
+                      paddingInline: 20,
+                      fontWeight: 600,
+                      borderRadius: 10,
+                      fontSize: '0.85rem',
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                    }}
                   >
                     Đọc ngay
-                    <FiEye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </Link>
-                  <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-500">
-                    <FiEye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    {featured.views.toLocaleString()} lượt xem
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                  </Button>
+                </Link>
+              </Box>
+            </Box>
+          </Paper>
         )}
 
+        {/* Blog grid */}
         {!isLoading && others.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-            {others.map((blog) => (
-              <article key={blog.id} className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:-translate-y-1 hover:shadow-xl transition">
-                <div className="h-36 sm:h-40 md:h-44 relative">
-                  <img
-                    src={(blog.thumbnail && blog.thumbnail.startsWith('http') && !blog.thumbnail.includes('placeholder') && !blog.thumbnail.includes('placehold')) ? blog.thumbnail : logo}
-                    alt={blog.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex gap-1.5 sm:gap-2 flex-wrap">
-                    {blog.tags?.slice(0, 1).map((tag) => (
-                      <span key={tag} className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-white/90 text-primary text-[10px] sm:text-xs font-semibold flex items-center gap-1">
-                        <FiTag className="w-3 h-3 hidden sm:inline-block" />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
-                  <div className="flex items-center text-[10px] sm:text-xs text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <FiClock className="w-3 h-3" />
-                      <span>{formatDate(blog.publishedAt ?? blog.createdAt)}</span>
-                    </span>
-                  </div>
-                  <Link to={`/blog/${blog.slug}`} className="block text-sm sm:text-base md:text-lg font-semibold text-gray-900 leading-snug hover:text-primary line-clamp-2">
-                    {blog.title}
-                  </Link>
-                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 sm:line-clamp-3">{blog.excerpt || 'Khám phá thêm nội dung trong bài viết.'}</p>
-                  <div className="flex items-center justify-between pt-1 sm:pt-2">
-                    <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-gray-500">
-                      <FiEye className="w-3 h-3 sm:w-4 sm:h-4" />
-                      {blog.views.toLocaleString()} lượt xem
-                    </div>
-                    <Link
-                      to={`/blog/${blog.slug}`}
-                      className="text-xs sm:text-sm font-semibold text-primary hover:text-primary-dark"
+          <motion.div variants={staggerContainer(0.05)} initial="hidden" animate="visible">
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 2.5 }}>
+              {others.map((blog) => (
+                <motion.div key={blog.id} variants={fadeInUp} transition={{ duration: 0.35 }}>
+                  <Link to={`/blog/${blog.slug}`} style={{ textDecoration: 'none' }}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        border: `1px solid ${palette.border}`,
+                        borderRadius: 3,
+                        overflow: 'hidden',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          boxShadow: '0 8px 25px rgba(0,0,0,0.06)',
+                          borderColor: 'rgba(125,175,24,0.3)',
+                        },
+                        '&:hover .blog-img': { transform: 'scale(1.05)' },
+                      }}
                     >
-                      Đọc tiếp →
-                    </Link>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                      {/* Image */}
+                      <Box sx={{ height: 180, overflow: 'hidden', bgcolor: palette.background, position: 'relative' }}>
+                        {getValidImage(blog.thumbnail) ? (
+                          <Box
+                            component="img"
+                            className="blog-img"
+                            src={getValidImage(blog.thumbnail)!}
+                            alt={blog.title}
+                            sx={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.35s ease' }}
+                          />
+                        ) : (
+                          <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ArticleOutlined sx={{ fontSize: 48, color: palette.border }} />
+                          </Box>
+                        )}
+                        {blog.tags?.[0] && (
+                          <Chip
+                            label={`#${blog.tags[0]}`}
+                            size="small"
+                            sx={{ position: 'absolute', top: 10, left: 10, bgcolor: 'rgba(255,255,255,0.92)', color: palette.accent, fontWeight: 600, fontSize: '0.7rem', height: 22 }}
+                          />
+                        )}
+                      </Box>
+
+                      {/* Content */}
+                      <Box sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: palette.textMuted }}>
+                            <AccessTime sx={{ fontSize: 13 }} />
+                            <Typography sx={{ fontSize: '0.72rem' }}>{formatDate(blog.publishedAt ?? blog.createdAt)}</Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: palette.textMuted }}>
+                            <Visibility sx={{ fontSize: 13 }} />
+                            <Typography sx={{ fontSize: '0.72rem' }}>{blog.views.toLocaleString()}</Typography>
+                          </Box>
+                        </Box>
+
+                        <Typography
+                          sx={{
+                            fontWeight: 600,
+                            fontSize: '0.95rem',
+                            color: palette.textPrimary,
+                            lineHeight: 1.4,
+                            mb: 1,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            transition: 'color 0.2s',
+                            '&:hover': { color: palette.accent },
+                          }}
+                        >
+                          {blog.title}
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            fontSize: '0.82rem',
+                            color: palette.textMuted,
+                            lineHeight: 1.6,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            flex: 1,
+                            mb: 1.5,
+                          }}
+                        >
+                          {blog.excerpt || 'Khám phá thêm nội dung trong bài viết.'}
+                        </Typography>
+
+                        <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: palette.accent, mt: 'auto' }}>
+                          Đọc tiếp →
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Link>
+                </motion.div>
+              ))}
+            </Box>
+          </motion.div>
         )}
 
         {!isLoading && filteredBlogs.length === 0 && (
-          <div className="text-center py-8 sm:py-12 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
-            <p className="text-base sm:text-lg font-semibold text-gray-800 mb-1 sm:mb-2">Chưa có bài viết phù hợp</p>
-            <p className="text-sm sm:text-base text-gray-500">Thử tìm kiếm khác hoặc xem lại sau.</p>
-          </div>
+          <Paper elevation={0} sx={{ textAlign: 'center', py: 6, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+            <ArticleOutlined sx={{ fontSize: 48, color: palette.border, mb: 2 }} />
+            <Typography sx={{ fontWeight: 600, color: palette.textPrimary, mb: 0.5 }}>Chưa có bài viết phù hợp</Typography>
+            <Typography sx={{ fontSize: '0.88rem', color: palette.textMuted }}>Thử tìm kiếm khác hoặc xem lại sau.</Typography>
+          </Paper>
         )}
 
-        {/* Pagination */}
         {!isLoading && filteredBlogs.length > 0 && (
-          <div className="mt-8">
+          <Box sx={{ mt: 4 }}>
             <Pagination
               currentPage={currentPage}
               totalPages={paginatedData.totalPages}
               totalItems={paginatedData.totalItems}
               itemsPerPage={pageSize}
               onPageChange={handlePageChange}
-              showPageSizeSelect={true}
+              showPageSizeSelect
               onPageSizeChange={handlePageSizeChange}
               pageSizeOptions={[6, 9, 12, 18]}
             />
-          </div>
+          </Box>
         )}
-      </section>
-    </div>
+      </Container>
+    </Box>
   );
 };
