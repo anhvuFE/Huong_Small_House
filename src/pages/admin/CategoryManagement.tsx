@@ -1,581 +1,326 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  FiPlus,
-  FiSearch,
-  FiEdit,
-  FiEye,
-  FiPackage,
-  FiToggleLeft,
-  FiToggleRight,
-  FiSave,
-  FiX,
-  FiTrash2,
-  FiAlertTriangle,
-} from 'react-icons/fi';
+  Box,
+  Typography,
+  Paper,
+  IconButton,
+  Chip,
+  InputBase,
+  Switch,
+} from '@mui/material';
+import {
+  Add,
+  Search,
+  Edit,
+  Delete,
+  Visibility,
+  Category,
+  Inventory2,
+  CheckCircle,
+  BarChart,
+} from '@mui/icons-material';
+import { Button, Input, Modal } from 'antd';
 import { productApi } from '../../services/productApi';
-import type { Category } from '../../types';
+import type { Category as CategoryType } from '../../types';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Loader } from '../../components/common/Loader';
 import { useToast } from '../../components/common/Toast';
-import { Portal } from '../../components/common/Portal';
 
-const defaultFormState = {
-  name: '',
-  nameEn: '',
-  description: '',
-  icon: '',
-  isActive: true,
+const { TextArea } = Input;
+
+const palette = {
+  accent: '#7daf18',
+  accentLight: '#EDF7D5',
+  textPrimary: '#1A2332',
+  textSecondary: '#5A6B7F',
+  textMuted: '#8D99A8',
+  border: '#E8ECF0',
+  background: '#FAFBFC',
 };
+
+const defaultFormState = { name: '', nameEn: '', description: '', icon: '', isActive: true };
+
+const statCards = [
+  { key: 'total', label: 'Tổng danh mục', icon: <Category sx={{ fontSize: 22 }} />, color: '#1565C0', bg: '#E3F2FD' },
+  { key: 'active', label: 'Đang hoạt động', icon: <CheckCircle sx={{ fontSize: 22 }} />, color: '#2E7D32', bg: '#E8F5E9' },
+  { key: 'totalProducts', label: 'Tổng sản phẩm', icon: <Inventory2 sx={{ fontSize: 22 }} />, color: '#7B1FA2', bg: '#F3E5F5' },
+  { key: 'avgProducts', label: 'TB SP/danh mục', icon: <BarChart sx={{ fontSize: 22 }} />, color: '#E65100', bg: '#FFF3E0' },
+];
 
 export const CategoryManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingCategory, setEditingCategory] = useState<CategoryType | null>(null);
   const [formData, setFormData] = useState({ ...defaultFormState });
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryType[]>([]);
   const [productCounts, setProductCounts] = useState<Record<number, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
-  const [viewCategory, setViewCategory] = useState<Category | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [viewCategory, setViewCategory] = useState<CategoryType | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CategoryType | null>(null);
   const userRole = useAuthStore((state) => state.user?.role);
   const { showToast } = useToast();
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetch = async () => {
       try {
         setIsLoading(true);
         setStatusMessage('');
-        const [categoryList, productList] = await Promise.all([
-          productApi.listCategories('admin'),
-          productApi.listProducts(),
-        ]);
-
+        const [catList, prodList] = await Promise.all([productApi.listCategories('admin'), productApi.listProducts()]);
         const counts: Record<number, number> = {};
-        productList.forEach((p) => {
-          if (p.categoryId !== undefined && p.categoryId !== null) {
-            counts[p.categoryId] = (counts[p.categoryId] ?? 0) + 1;
-          }
-        });
+        prodList.forEach((p) => { if (p.categoryId != null) counts[p.categoryId] = (counts[p.categoryId] ?? 0) + 1; });
         setProductCounts(counts);
-
-        const merged = categoryList.map((cat) => ({
-          ...cat,
-          productCount: cat.productCount ?? counts[cat.categoryId] ?? 0,
-        }));
-        setCategories(merged);
-      } catch {
-        setStatusMessage('Không thể tải danh mục. Vui lòng thử lại sau.');
-      } finally {
-        setIsLoading(false);
-      }
+        setCategories(catList.map((c) => ({ ...c, productCount: c.productCount ?? counts[c.categoryId] ?? 0 })));
+      } catch { setStatusMessage('Không thể tải danh mục.'); } finally { setIsLoading(false); }
     };
-
-    if (userRole !== 'ADMIN') {
-      setStatusMessage('Chỉ quản trị viên mới có thể quản lý danh mục.');
-      setIsLoading(false);
-      return;
-    }
-
-    fetchCategories();
+    if (userRole !== 'ADMIN') { setStatusMessage('Chỉ admin mới có thể quản lý danh mục.'); setIsLoading(false); return; }
+    fetch();
   }, [userRole]);
 
   const filteredCategories = useMemo(() => {
     return categories
-      .filter((category) =>
-        (category.name ?? '')
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        (category.description ?? '')
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())
-      )
-      .sort((a, b) => {
-        const orderA = a.order ?? 0;
-        const orderB = b.order ?? 0;
-        if (orderA !== orderB) return orderA - orderB;
-        return (a.name ?? '').localeCompare(b.name ?? '');
-      });
+      .filter((c) => (c.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) || (c.description ?? '').toLowerCase().includes(searchTerm.toLowerCase()))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.name ?? '').localeCompare(b.name ?? ''));
   }, [categories, searchTerm]);
 
   const stats = useMemo(() => {
     const total = categories.length;
     const active = categories.filter((c) => c.isActive !== false).length;
-    const totalProducts = categories.reduce((sum, c) => sum + (c.productCount ?? 0), 0);
+    const totalProducts = categories.reduce((s, c) => s + (c.productCount ?? 0), 0);
     const avgProducts = total ? Math.round(totalProducts / total) : 0;
-    return { total, active, totalProducts, avgProducts };
+    return { total, active, totalProducts, avgProducts } as Record<string, number>;
   }, [categories]);
 
-  const handleAddCategory = () => {
-    setFormData({ ...defaultFormState });
-    setEditingCategory(null);
-    setShowAddModal(true);
-  };
-
-  const handleEditCategory = (category: Category) => {
-    setFormData({
-      name: category.name,
-      nameEn: category.nameEn ?? '',
-      description: category.description ?? '',
-      icon: category.icon ?? '',
-      isActive: category.isActive ?? true,
-    });
-    setEditingCategory(category);
+  const handleAddCategory = () => { setFormData({ ...defaultFormState }); setEditingCategory(null); setShowAddModal(true); };
+  const handleEditCategory = (cat: CategoryType) => {
+    setFormData({ name: cat.name, nameEn: cat.nameEn ?? '', description: cat.description ?? '', icon: cat.icon ?? '', isActive: cat.isActive ?? true });
+    setEditingCategory(cat);
     setShowAddModal(true);
   };
 
   const handleSaveCategory = async () => {
-    if (!formData.name.trim()) return;
-    if (userRole !== 'ADMIN') {
-      setStatusMessage('Chỉ admin mới có thể tạo danh mục.');
-      return;
-    }
-
+    if (!formData.name.trim() || userRole !== 'ADMIN') return;
     try {
       setIsSubmitting(true);
       if (editingCategory) {
         const updated = await productApi.updateCategory(editingCategory.categoryId ?? Number(editingCategory.id), {
-          name: formData.name,
-          nameEn: formData.nameEn,
-          description: formData.description,
-          icon: formData.icon,
-          isActive: formData.isActive,
+          name: formData.name, nameEn: formData.nameEn, description: formData.description, icon: formData.icon, isActive: formData.isActive,
         });
-        setCategories((prev) =>
-          prev.map((cat) =>
-            cat.id === editingCategory.id
-              ? { ...updated, productCount: updated.productCount ?? productCounts[updated.categoryId] ?? cat.productCount }
-              : cat
-          )
-        );
+        setCategories((prev) => prev.map((c) => c.id === editingCategory.id ? { ...updated, productCount: updated.productCount ?? productCounts[updated.categoryId] ?? c.productCount } : c));
         showToast({ title: 'Đã cập nhật danh mục', variant: 'success' });
       } else {
-        const category = await productApi.createCategory({ name: formData.name, slug: formData.nameEn });
-        setCategories((prev) => [...prev, { ...category, productCount: category.productCount ?? 0 }]);
-        if (category.categoryId !== undefined) {
-          setProductCounts((prev) => ({ ...prev, [category.categoryId]: 0 }));
-        }
+        const cat = await productApi.createCategory({ name: formData.name, slug: formData.nameEn });
+        setCategories((prev) => [...prev, { ...cat, productCount: cat.productCount ?? 0 }]);
+        if (cat.categoryId !== undefined) setProductCounts((prev) => ({ ...prev, [cat.categoryId]: 0 }));
         showToast({ title: 'Đã tạo danh mục', variant: 'success' });
       }
-      setStatusMessage('');
-      setShowAddModal(false);
-      setEditingCategory(null);
-      setFormData({ ...defaultFormState });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Không thể lưu danh mục. Vui lòng thử lại.';
-      setStatusMessage(message);
-      showToast({ title: 'Lưu danh mục thất bại', message, variant: 'error' });
-    } finally {
-      setIsSubmitting(false);
-    }
+      setShowAddModal(false); setEditingCategory(null); setFormData({ ...defaultFormState }); setStatusMessage('');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Không thể lưu danh mục.';
+      showToast({ title: 'Lưu thất bại', message: msg, variant: 'error' });
+    } finally { setIsSubmitting(false); }
   };
 
-  const toggleCategoryStatus = (categoryId: string) => {
-    setCategories((prev) =>
-      prev.map((category) =>
-        category.id === categoryId ? { ...category, isActive: category.isActive === false ? true : false } : category
-      )
-    );
-    setStatusMessage('Đã cập nhật trạng thái danh mục (cục bộ).');
+  const toggleStatus = (id: string) => {
+    setCategories((prev) => prev.map((c) => c.id === id ? { ...c, isActive: !c.isActive } : c));
   };
 
-  const handleDeleteCategory = (category: Category) => {
-    setDeleteTarget(category);
-  };
-
-  const handleViewCategory = async (category: Category) => {
+  const handleViewCategory = async (cat: CategoryType) => {
     try {
-      const detail = await productApi.getCategory(category.categoryId ?? Number(category.id));
-      setViewCategory({
-        ...detail,
-        productCount: detail.productCount ?? productCounts[detail.categoryId] ?? category.productCount,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Không thể tải chi tiết danh mục.';
-      showToast({ title: 'Xem danh mục thất bại', message, variant: 'error' });
-    }
+      const detail = await productApi.getCategory(cat.categoryId ?? Number(cat.id));
+      setViewCategory({ ...detail, productCount: detail.productCount ?? productCounts[detail.categoryId] ?? cat.productCount });
+    } catch { showToast({ title: 'Không thể tải chi tiết', variant: 'error' }); }
   };
 
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <Loader />
-      </div>
-    );
-  }
+  const inputStyle = { borderRadius: 10, height: 40, fontFamily: 'Inter, system-ui, sans-serif' };
 
-  if (userRole !== 'ADMIN') {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center text-red-600">
-        Bạn không có quyền truy cập trang này.
-      </div>
-    );
-  }
+  if (isLoading) return <Paper elevation={0} sx={{ p: 4, border: `1px solid ${palette.border}`, borderRadius: 3, display: 'flex', justifyContent: 'center' }}><Loader /></Paper>;
+  if (userRole !== 'ADMIN') return <Paper elevation={0} sx={{ p: 4, border: `1px solid ${palette.border}`, borderRadius: 3, textAlign: 'center', color: '#C62828' }}>Bạn không có quyền truy cập.</Paper>;
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quản lý danh mục</h1>
-          <p className="text-gray-600">
-            Quản lý các danh mục sản phẩm và phân loại
-          </p>
-        </div>
-        <button
-          onClick={handleAddCategory}
-          className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-        >
-          <FiPlus className="w-5 h-5 mr-2" />
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography sx={{ fontSize: '1.3rem', fontWeight: 700, color: palette.textPrimary }}>Quản lý danh mục</Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: palette.textMuted }}>{categories.length} danh mục</Typography>
+        </Box>
+        <Button type="primary" icon={<Add style={{ fontSize: 18 }} />} onClick={handleAddCategory} style={{ backgroundColor: palette.accent, borderColor: palette.accent, height: 40, borderRadius: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}>
           Thêm danh mục
-        </button>
-      </div>
+        </Button>
+      </Box>
 
       {statusMessage && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg flex items-center gap-2">
-          <FiAlertTriangle className="w-4 h-4" />
-          <span>{statusMessage}</span>
-        </div>
+        <Paper elevation={0} sx={{ p: 2, border: '1px solid #90CAF9', bgcolor: '#E3F2FD', borderRadius: 2 }}>
+          <Typography sx={{ color: '#1565C0', fontSize: '0.88rem' }}>{statusMessage}</Typography>
+        </Paper>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <FiPackage className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Tổng danh mục</p>
-              <p className="text-lg font-bold text-gray-900">{stats.total}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <FiToggleRight className="w-5 h-5 text-green-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Đang hoạt động</p>
-              <p className="text-lg font-bold text-gray-900">{stats.active}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <FiPackage className="w-5 h-5 text-purple-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Tổng sản phẩm</p>
-              <p className="text-lg font-bold text-gray-900">{stats.totalProducts}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <FiPackage className="w-5 h-5 text-orange-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">TB SP/danh mục</p>
-              <p className="text-lg font-bold text-gray-900">{stats.avgProducts}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Stats */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 2 }}>
+        {statCards.map((s) => (
+          <Paper key={s.key} elevation={0} sx={{ p: 2, border: `1px solid ${palette.border}`, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ width: 42, height: 42, borderRadius: 2.5, bgcolor: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</Box>
+            <Box>
+              <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>{s.label}</Typography>
+              <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: palette.textPrimary }}>{stats[s.key]}</Typography>
+            </Box>
+          </Paper>
+        ))}
+      </Box>
 
       {/* Search */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="relative max-w-md">
-          <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm danh mục..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          />
-        </div>
-      </div>
+      <Paper elevation={0} sx={{ p: 2, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: palette.background, borderRadius: 2.5, border: `1px solid ${palette.border}`, px: 1.5, maxWidth: 400, '&:focus-within': { borderColor: palette.accent } }}>
+          <Search sx={{ fontSize: 20, color: palette.textMuted, mr: 1 }} />
+          <InputBase value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Tìm kiếm danh mục..." sx={{ flex: 1, fontSize: '0.88rem', py: 0.8 }} />
+        </Box>
+      </Paper>
 
-      {/* Categories Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCategories.map((category) => (
-          <div
-            key={category.id}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+      {/* Grid */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 2 }}>
+        {filteredCategories.map((cat) => (
+          <Paper
+            key={cat.id}
+            elevation={0}
+            sx={{
+              p: 2.5,
+              border: `1px solid ${palette.border}`,
+              borderRadius: 3,
+              transition: 'all 0.3s ease',
+              '&:hover': { boxShadow: '0 4px 16px rgba(0,0,0,0.06)', borderColor: palette.accent },
+            }}
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <FiPackage className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {category.name}
-                  </h3>
-                  {category.nameEn && <p className="text-sm text-gray-500">{category.nameEn}</p>}
-                </div>
-              </div>
-              <button onClick={() => toggleCategoryStatus(category.id)}>
-                {category.isActive ? (
-                  <FiToggleRight className="w-8 h-8 text-green-500" />
-                ) : (
-                  <FiToggleLeft className="w-8 h-8 text-gray-400" />
-                )}
-              </button>
-            </div>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: palette.accentLight, color: palette.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Category sx={{ fontSize: 22 }} />
+                </Box>
+                <Box>
+                  <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: palette.textPrimary }}>{cat.name}</Typography>
+                  {cat.nameEn && <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>{cat.nameEn}</Typography>}
+                </Box>
+              </Box>
+              <Switch checked={cat.isActive !== false} onChange={() => toggleStatus(cat.id)} size="small" sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: palette.accent }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: palette.accent } }} />
+            </Box>
 
-            <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-              {category.description || 'Chưa có mô tả cho danh mục này.'}
-            </p>
+            <Typography sx={{ fontSize: '0.82rem', color: palette.textMuted, lineHeight: 1.5, mb: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {cat.description || 'Chưa có mô tả'}
+            </Typography>
 
-            <div className="flex items-center text-sm text-gray-500 mb-4">
-              <FiPackage className="w-4 h-4 mr-1" />
-              <span>{category.productCount ?? 0} sản phẩm</span>
-            </div>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Chip label={`${cat.productCount ?? 0} sản phẩm`} size="small" sx={{ bgcolor: palette.accentLight, color: palette.accent, fontWeight: 600, fontSize: '0.72rem', height: 24 }} />
+              <Typography sx={{ fontSize: '0.7rem', color: palette.textMuted }}>
+                {cat.updatedAt ? cat.updatedAt.toLocaleDateString('vi-VN') : '--/--/----'}
+              </Typography>
+            </Box>
 
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-              <div className="text-xs text-gray-500">
-                Cập nhật: {category.updatedAt ? category.updatedAt.toLocaleDateString('vi-VN') : '--/--/----'}
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => handleViewCategory(category)}
-                  className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                >
-                  <FiEye className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleEditCategory(category)}
-                  className="p-1.5 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                >
-                  <FiEdit className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDeleteCategory(category)}
-                  className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                >
-                  <FiTrash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 1.5, pt: 1.5, borderTop: `1px solid ${palette.border}` }}>
+              <IconButton size="small" onClick={() => handleViewCategory(cat)} sx={{ color: palette.textMuted, '&:hover': { bgcolor: '#E3F2FD', color: '#1565C0' } }}>
+                <Visibility sx={{ fontSize: 18 }} />
+              </IconButton>
+              <IconButton size="small" onClick={() => handleEditCategory(cat)} sx={{ color: palette.textMuted, '&:hover': { bgcolor: '#E8F5E9', color: '#2E7D32' } }}>
+                <Edit sx={{ fontSize: 18 }} />
+              </IconButton>
+              <IconButton size="small" onClick={() => setDeleteTarget(cat)} sx={{ color: palette.textMuted, '&:hover': { bgcolor: '#FEF2F2', color: '#EF4444' } }}>
+                <Delete sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Box>
+          </Paper>
         ))}
 
         {!filteredCategories.length && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center col-span-full text-gray-600">
-            Không tìm thấy danh mục nào.
-          </div>
+          <Box sx={{ gridColumn: '1 / -1', textAlign: 'center', py: 6 }}>
+            <Category sx={{ fontSize: 48, color: palette.border, mb: 1.5 }} />
+            <Typography sx={{ fontWeight: 600, color: palette.textPrimary }}>Không tìm thấy danh mục</Typography>
+          </Box>
         )}
-      </div>
+      </Box>
 
       {/* Add/Edit Modal */}
-      {showAddModal && (
-        <Portal>
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                {editingCategory ? 'Sửa danh mục' : 'Thêm danh mục mới'}
-              </h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <FiX className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
+      <Modal open={showAddModal} onCancel={() => { setShowAddModal(false); setEditingCategory(null); }} title={editingCategory ? 'Sửa danh mục' : 'Thêm danh mục mới'} footer={null} width={480} centered>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          <Box>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Tên danh mục (Tiếng Việt) *</Typography>
+            <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ví dụ: Vitamin" style={inputStyle} />
+          </Box>
+          <Box>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Tên (Tiếng Anh)</Typography>
+            <Input value={formData.nameEn} onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })} placeholder="Ví dụ: Vitamins" style={inputStyle} />
+          </Box>
+          <Box>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Mô tả</Typography>
+            <TextArea rows={3} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Mô tả ngắn..." style={{ borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }} />
+          </Box>
+          <Box>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Icon</Typography>
+            <Input value={formData.icon} onChange={(e) => setFormData({ ...formData, icon: e.target.value })} placeholder="Tên icon hoặc URL" style={inputStyle} />
+          </Box>
+          <Paper elevation={0} sx={{ p: 2, bgcolor: palette.background, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box>
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: palette.textPrimary }}>Kích hoạt danh mục</Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>Hiển thị trên website</Typography>
+            </Box>
+            <Switch checked={formData.isActive} onChange={() => setFormData({ ...formData, isActive: !formData.isActive })} sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: palette.accent }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: palette.accent } }} />
+          </Paper>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, pt: 1 }}>
+            <Button onClick={() => { setShowAddModal(false); setEditingCategory(null); }} style={{ height: 40, borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }}>Hủy</Button>
+            <Button type="primary" loading={isSubmitting} onClick={handleSaveCategory} style={{ backgroundColor: palette.accent, borderColor: palette.accent, height: 40, borderRadius: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}>
+              {isSubmitting ? 'Đang lưu...' : editingCategory ? 'Cập nhật' : 'Thêm mới'}
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
 
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tên danh mục (Tiếng Việt) *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Ví dụ: Vitamin"
-                />
-              </div>
+      {/* View Modal */}
+      <Modal open={!!viewCategory} onCancel={() => setViewCategory(null)} title="Chi tiết danh mục" footer={<Button onClick={() => setViewCategory(null)} style={{ borderRadius: 10 }}>Đóng</Button>} width={480} centered>
+        {viewCategory && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ width: 48, height: 48, borderRadius: 2.5, bgcolor: palette.accentLight, color: palette.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Category sx={{ fontSize: 24 }} />
+              </Box>
+              <Box>
+                <Typography sx={{ fontWeight: 600, fontSize: '1.05rem', color: palette.textPrimary }}>{viewCategory.name}</Typography>
+                {viewCategory.nameEn && <Typography sx={{ fontSize: '0.8rem', color: palette.textMuted }}>{viewCategory.nameEn}</Typography>}
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+              <Chip label={viewCategory.isActive ? 'Đang bật' : 'Đang tắt'} size="small" sx={{ bgcolor: viewCategory.isActive ? '#E8F5E9' : '#F5F5F5', color: viewCategory.isActive ? '#2E7D32' : '#757575', fontWeight: 600 }} />
+              <Chip label={`${viewCategory.productCount ?? 0} sản phẩm`} size="small" sx={{ bgcolor: palette.accentLight, color: palette.accent, fontWeight: 600 }} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: '0.78rem', color: palette.textMuted, mb: 0.3 }}>Mô tả</Typography>
+              <Typography sx={{ fontSize: '0.88rem', color: palette.textPrimary }}>{viewCategory.description || 'Chưa có mô tả'}</Typography>
+            </Box>
+            <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>
+              Cập nhật: {viewCategory.updatedAt ? viewCategory.updatedAt.toLocaleDateString('vi-VN') : '--/--/----'}
+            </Typography>
+          </Box>
+        )}
+      </Modal>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tên danh mục (Tiếng Anh)
-                </label>
-                <input
-                  type="text"
-                  value={formData.nameEn}
-                  onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Ví dụ: Vitamins"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mô tả
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Mô tả ngắn về danh mục..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Icon
-                </label>
-                <input
-                  type="text"
-                  value={formData.icon}
-                  onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Tên icon hoặc URL ảnh"
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">Kích hoạt danh mục</h4>
-                  <p className="text-sm text-gray-500">Hiển thị danh mục trên website</p>
-                </div>
-                <button onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}>
-                  {formData.isActive ? (
-                    <FiToggleRight className="w-8 h-8 text-green-500" />
-                  ) : (
-                    <FiToggleLeft className="w-8 h-8 text-gray-400" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSaveCategory}
-                disabled={isSubmitting}
-                className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-60"
-              >
-                <FiSave className="w-4 h-4 mr-2" />
-                {isSubmitting ? 'Đang lưu...' : editingCategory ? 'Cập nhật' : 'Thêm mới'}
-              </button>
-            </div>
-          </div>
-          </div>
-        </Portal>
-      )}
-
-      {viewCategory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="absolute inset-0" onClick={() => setViewCategory(null)} />
-          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
-            <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
-              <div>
-                <p className="text-xs uppercase tracking-[0.12em] text-gray-400 font-semibold">Chi tiết danh mục</p>
-                <h3 className="text-2xl font-semibold text-gray-900 mt-1">{viewCategory.name}</h3>
-                {viewCategory.nameEn && <p className="text-sm text-gray-500">{viewCategory.nameEn}</p>}
-              </div>
-              <button
-                onClick={() => setViewCategory(null)}
-                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                aria-label="Đóng"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="px-6 py-5 space-y-3 text-sm text-gray-700">
-              <div className="flex items-center justify-between">
-                <span>Trạng thái</span>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${viewCategory.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-700'}`}>
-                  {viewCategory.isActive ? 'Đang bật' : 'Đang tắt'}
-                </span>
-              </div>
-              <div>
-                <p className="text-gray-500 mb-1">Mô tả</p>
-                <p className="font-medium text-gray-900">{viewCategory.description || 'Chưa có mô tả'}</p>
-              </div>
-              <div className="text-sm text-gray-600">
-                {viewCategory.productCount ?? 0} sản phẩm
-              </div>
-              <div className="text-xs text-gray-500">
-                Cập nhật: {viewCategory.updatedAt ? viewCategory.updatedAt.toLocaleDateString('vi-VN') : '--/--/----'}
-              </div>
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 flex justify-end">
-              <button
-                onClick={() => setViewCategory(null)}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="absolute inset-0" onClick={() => setDeleteTarget(null)} />
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h3 className="text-xl font-semibold text-gray-900">Xóa danh mục</h3>
-              <p className="text-sm text-gray-600 mt-2">
-                Bạn chắc chắn xóa danh mục “{deleteTarget.name}”? Hành động này cũng sẽ xóa sản phẩm liên quan.
-              </p>
-            </div>
-            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={async () => {
-                  if (!deleteTarget?.categoryId) return;
-                  try {
-                    await productApi.deleteCategory(deleteTarget.categoryId);
-                    setCategories((prev) => prev.filter((cat) => cat.categoryId !== deleteTarget.categoryId));
-                    setProductCounts((prev) => {
-                      const next = { ...prev };
-                      delete next[deleteTarget.categoryId];
-                      return next;
-                    });
-                    showToast({ title: 'Đã xóa danh mục', variant: 'error' });
-                  } catch (err) {
-                    const message = err instanceof Error ? err.message : 'Không thể xóa danh mục.';
-                    showToast({ title: 'Xóa danh mục thất bại', message, variant: 'error' });
-                  } finally {
-                    setDeleteTarget(null);
-                  }
-                }}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
-              >
-                Xóa
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Delete Modal */}
+      <Modal open={!!deleteTarget} onCancel={() => setDeleteTarget(null)} title="Xóa danh mục" footer={null} width={440} centered>
+        <Typography sx={{ fontSize: '0.9rem', color: palette.textSecondary, py: 2 }}>
+          Bạn chắc chắn xóa danh mục &quot;{deleteTarget?.name}&quot;? Hành động này không thể hoàn tác.
+        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+          <Button onClick={() => setDeleteTarget(null)} style={{ height: 40, borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }}>Hủy</Button>
+          <Button type="primary" danger onClick={async () => {
+            if (!deleteTarget?.categoryId) return;
+            try {
+              await productApi.deleteCategory(deleteTarget.categoryId);
+              setCategories((prev) => prev.filter((c) => c.categoryId !== deleteTarget.categoryId));
+              setProductCounts((prev) => { const n = { ...prev }; delete n[deleteTarget.categoryId]; return n; });
+              showToast({ title: 'Đã xóa danh mục', variant: 'error' });
+            } catch (err) {
+              showToast({ title: 'Xóa thất bại', message: err instanceof Error ? err.message : '', variant: 'error' });
+            } finally { setDeleteTarget(null); }
+          }} style={{ height: 40, borderRadius: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}>Xóa</Button>
+        </Box>
+      </Modal>
+    </Box>
   );
 };
