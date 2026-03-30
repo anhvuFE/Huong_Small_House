@@ -1,23 +1,44 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  FiDollarSign,
-  FiShoppingCart,
-  FiPackage,
-  FiUsers,
-  FiTrendingUp,
-  FiTrendingDown,
-  FiEye,
-  FiBarChart,
-} from "react-icons/fi";
-import { Link } from "react-router-dom";
-import { mockDashboardStats } from "../../data/adminData";
-import { orderApi } from "../../services/orderApi";
-import { reportApi } from "../../services/reportApi";
-import { productApi } from "../../services/productApi";
-import { userApi } from "../../services/userApi";
-import { useAuthStore } from "../../store/useAuthStore";
-import type { OrderStatus } from "../../types/admin";
-import { Loader } from "../../components/common/Loader";
+  Box,
+  Typography,
+  Paper,
+  Chip,
+  Avatar,
+} from '@mui/material';
+import {
+  AttachMoney,
+  ShoppingCart,
+  Inventory2,
+  Groups,
+  TrendingUp,
+  TrendingDown,
+  Visibility,
+  ArrowForward,
+} from '@mui/icons-material';
+import { ResponsiveBar } from '@nivo/bar';
+import { ResponsivePie } from '@nivo/pie';
+import { ResponsiveLine } from '@nivo/line';
+import { mockDashboardStats } from '../../data/adminData';
+import { orderApi } from '../../services/orderApi';
+import { reportApi } from '../../services/reportApi';
+import { productApi } from '../../services/productApi';
+import { userApi } from '../../services/userApi';
+import { useAuthStore } from '../../store/useAuthStore';
+import type { OrderStatus } from '../../types/admin';
+import { Loader } from '../../components/common/Loader';
+import logo from '../../assets/logo.png';
+
+const palette = {
+  accent: '#7daf18',
+  accentLight: '#EDF7D5',
+  textPrimary: '#1A2332',
+  textSecondary: '#5A6B7F',
+  textMuted: '#8D99A8',
+  border: '#E8ECF0',
+  background: '#FAFBFC',
+};
 
 interface DashboardCache {
   stats: typeof mockDashboardStats;
@@ -27,117 +48,66 @@ interface DashboardCache {
 
 let dashboardCache: DashboardCache | null = null;
 
-const STATUS_ORDER: OrderStatus[] = [
-  "PENDING",
-  "CONFIRMED",
-  "PROCESSING",
-  "SHIPPING",
-  "DELIVERED",
-  "CANCELLED",
-  "RETURNED",
-];
-const FALLBACK_REVENUE = [
-  { month: "T1", revenue: 0, orders: 0 },
-  { month: "T2", revenue: 0, orders: 0 },
-  { month: "T3", revenue: 0, orders: 0 },
-  { month: "T4", revenue: 0, orders: 0 },
-  { month: "T5", revenue: 0, orders: 0 },
-  { month: "T6", revenue: 0, orders: 0 },
-  { month: "T7", revenue: 0, orders: 0 },
-  { month: "T8", revenue: 0, orders: 0 },
-  { month: "T9", revenue: 0, orders: 0 },
-  { month: "T10", revenue: 0, orders: 0 },
-  { month: "T11", revenue: 0, orders: 0 },
-  { month: "T12", revenue: 0, orders: 0 },
-];
+const STATUS_ORDER: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'RETURNED'];
+const FALLBACK_REVENUE = Array.from({ length: 12 }, (_, i) => ({ month: `T${i + 1}`, revenue: 0, orders: 0 }));
 
+const statusConfig: Record<string, { name: string; color: string; bg: string }> = {
+  PENDING: { name: 'Chờ xác nhận', color: '#F59E0B', bg: '#FFFBEB' },
+  CONFIRMED: { name: 'Đã xác nhận', color: '#3B82F6', bg: '#EFF6FF' },
+  PROCESSING: { name: 'Đang xử lý', color: '#6366F1', bg: '#EEF2FF' },
+  SHIPPING: { name: 'Đang giao', color: '#8B5CF6', bg: '#F5F3FF' },
+  DELIVERED: { name: 'Đã giao', color: '#10B981', bg: '#ECFDF5' },
+  CANCELLED: { name: 'Đã hủy', color: '#EF4444', bg: '#FEF2F2' },
+  RETURNED: { name: 'Đã trả', color: '#6B7280', bg: '#F9FAFB' },
+};
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+
+const formatNumber = (num: number) => new Intl.NumberFormat('vi-VN').format(num);
+
+// Stat card
 const StatCard: React.FC<{
   title: string;
   value: string;
   growth: number;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-}> = ({ title, value, growth, icon: Icon, color }) => {
-  const isPositive = growth >= 0;
-
-  return (
-    <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-xs sm:text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-lg sm:text-2xl font-bold text-gray-900 mt-0.5 sm:mt-1">{value}</p>
-          <div className="flex items-center mt-1 sm:mt-2">
-            {isPositive ? (
-              <FiTrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-0.5 sm:mr-1" />
-            ) : (
-              <FiTrendingDown className="w-3 h-3 sm:w-4 sm:h-4 text-red-500 mr-0.5 sm:mr-1" />
-            )}
-            <span
-              className={`text-xs sm:text-sm font-medium ${
-                isPositive ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {isPositive ? "+" : ""}
-              {growth}%
-            </span>
-            <span className="text-xs sm:text-sm text-gray-500 ml-0.5 sm:ml-1 hidden sm:inline">
-              so với tháng trước
-            </span>
-          </div>
-        </div>
-        <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${color}`}>
-          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const OrderStatusCard: React.FC<{
-  status: string;
-  count: number;
-}> = ({ status, count }) => {
-  const statusConfig = {
-    PENDING: { name: "Chờ xác nhận", bg: "bg-yellow-500", text: "text-white" },
-    CONFIRMED: { name: "Đã xác nhận", bg: "bg-blue-500", text: "text-white" },
-    PROCESSING: { name: "Đang xử lý", bg: "bg-indigo-500", text: "text-white" },
-    SHIPPING: { name: "Đang giao", bg: "bg-purple-500", text: "text-white" },
-    DELIVERED: { name: "Đã giao", bg: "bg-green-500", text: "text-white" },
-    CANCELLED: { name: "Đã hủy", bg: "bg-red-500", text: "text-white" },
-    RETURNED: { name: "Đã trả", bg: "bg-gray-500", text: "text-white" },
-  };
-
-  const config = statusConfig[status as keyof typeof statusConfig];
-
-  return (
-    <div className={`${config.bg} ${config.text} p-3 sm:p-4 rounded-lg text-center flex-1 min-w-0`}>
-      <p className="text-xl sm:text-2xl font-bold">{count}</p>
-      <p className="text-xs sm:text-sm font-medium mt-1 truncate">
-        {config.name}
-      </p>
-    </div>
-  );
-};
+  icon: React.ReactNode;
+  iconBg: string;
+  iconColor: string;
+}> = ({ title, value, growth, icon, iconBg, iconColor }) => (
+  <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Box>
+        <Typography sx={{ fontSize: '0.78rem', fontWeight: 500, color: palette.textMuted, mb: 0.5 }}>{title}</Typography>
+        <Typography sx={{ fontSize: '1.4rem', fontWeight: 700, color: palette.textPrimary }}>{value}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+          {growth >= 0 ? (
+            <TrendingUp sx={{ fontSize: 16, color: '#10B981' }} />
+          ) : (
+            <TrendingDown sx={{ fontSize: 16, color: '#EF4444' }} />
+          )}
+          <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: growth >= 0 ? '#10B981' : '#EF4444' }}>
+            {growth >= 0 ? '+' : ''}{growth}%
+          </Typography>
+          <Typography sx={{ fontSize: '0.72rem', color: palette.textMuted, display: { xs: 'none', sm: 'inline' } }}>
+            vs tháng trước
+          </Typography>
+        </Box>
+      </Box>
+      <Box sx={{ width: 48, height: 48, borderRadius: 3, bgcolor: iconBg, color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {icon}
+      </Box>
+    </Box>
+  </Paper>
+);
 
 export const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<typeof mockDashboardStats | null>(null);
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [revenueChart, setRevenueChart] = useState<
-    { month: string; revenue: number; orders: number }[]
-  >([]);
+  const [error, setError] = useState('');
+  const [, setIsLoading] = useState(true);
+  const [revenueChart, setRevenueChart] = useState<{ month: string; revenue: number; orders: number }[]>([]);
   const userRole = useAuthStore((state) => state.user?.role);
   const hasFetched = useRef(false);
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(amount);
-  };
-
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat("vi-VN").format(num);
-  };
 
   useEffect(() => {
     if (hasFetched.current) return;
@@ -154,9 +124,8 @@ export const AdminDashboard: React.FC = () => {
     const fetchDashboard = async () => {
       try {
         setIsLoading(true);
-        setError("");
-        const now = new Date();
-        const year = now.getFullYear();
+        setError('');
+        const year = new Date().getFullYear();
         const yearly = await reportApi.getYearlyReport(year);
         await sleep(300);
         const topProducts = await reportApi.getTopProducts(5);
@@ -169,63 +138,32 @@ export const AdminDashboard: React.FC = () => {
 
         const statusCounts = orders.reduce<Record<OrderStatus, number>>(
           (acc, order) => {
-            const status = order.status as OrderStatus;
-            acc[status] = (acc[status] ?? 0) + 1;
+            const s = order.status as OrderStatus;
+            acc[s] = (acc[s] ?? 0) + 1;
             return acc;
           },
-          {
-            PENDING: 0,
-            CONFIRMED: 0,
-            PROCESSING: 0,
-            SHIPPING: 0,
-            DELIVERED: 0,
-            CANCELLED: 0,
-            RETURNED: 0,
-          }
+          { PENDING: 0, CONFIRMED: 0, PROCESSING: 0, SHIPPING: 0, DELIVERED: 0, CANCELLED: 0, RETURNED: 0 }
         );
 
-        const ordersByStatus = STATUS_ORDER.filter(
-          (status) => statusCounts[status] !== undefined
-        ).map((status) => ({ status, count: statusCounts[status] ?? 0 }));
-
-        const productMap = new Map(
-          products.map((p) => [p.productId ?? p.id, p])
-        );
+        const ordersByStatus = STATUS_ORDER.filter((s) => statusCounts[s] !== undefined).map((s) => ({ status: s, count: statusCounts[s] ?? 0 }));
+        const productMap = new Map(products.map((p) => [p.productId ?? p.id, p]));
 
         const topSellingProducts = topProducts.map((item, index) => {
-          const product =
-            productMap.get(item.productId) ||
-            productMap.get(Number(item.productId)) ||
-            productMap.get(String(item.productId));
+          const product = productMap.get(item.productId) || productMap.get(Number(item.productId)) || productMap.get(String(item.productId));
           const price = product?.price ?? 0;
-          const thumbnail =
-            product?.thumbnail ||
-            (Array.isArray(product?.images) ? product?.images[0] : undefined) ||
-            "https://placehold.co/80x80?text=Product";
+          const thumbnail = product?.thumbnail || (Array.isArray(product?.images) ? product?.images[0] : undefined) || '';
           return {
-            product: {
-              id: String(item.productId ?? index),
-              name: product?.name || item.name,
-              thumbnail,
-            },
+            product: { id: String(item.productId ?? index), name: product?.name || item.name, thumbnail },
             quantity: item.totalSold,
             revenue: price > 0 ? price * item.totalSold : item.totalSold,
           };
         });
 
-        const chartData =
-          yearly.monthlyBreakdown?.map((item) => ({
-            month: item.month,
-            revenue: item.totalRevenue,
-            orders: item.totalOrders,
-          })) ?? FALLBACK_REVENUE;
+        const chartData = yearly.monthlyBreakdown?.map((item) => ({ month: item.month, revenue: item.totalRevenue, orders: item.totalOrders })) ?? FALLBACK_REVENUE;
 
         const nextStats = {
           totalRevenue: yearly.totalRevenue ?? mockDashboardStats.totalRevenue,
-          totalOrders:
-            yearly.totalOrders ??
-            orders.length ??
-            mockDashboardStats.totalOrders,
+          totalOrders: yearly.totalOrders ?? orders.length ?? mockDashboardStats.totalOrders,
           totalProducts: products.length ?? mockDashboardStats.totalProducts,
           totalUsers: users.length ?? mockDashboardStats.totalUsers,
           revenueGrowth: mockDashboardStats.revenueGrowth,
@@ -239,418 +177,365 @@ export const AdminDashboard: React.FC = () => {
         };
         setStats(nextStats);
         setRevenueChart(chartData);
-        dashboardCache = {
-          stats: nextStats,
-          error: "",
-          revenueChart: chartData.length ? chartData : FALLBACK_REVENUE,
-        };
+        dashboardCache = { stats: nextStats, error: '', revenueChart: chartData.length ? chartData : FALLBACK_REVENUE };
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Không thể tải dashboard.";
+        const message = err instanceof Error ? err.message : 'Không thể tải dashboard.';
         setError(message);
         setStats(mockDashboardStats);
         setRevenueChart(FALLBACK_REVENUE);
-        dashboardCache = {
-          stats: mockDashboardStats,
-          error: message,
-          revenueChart: FALLBACK_REVENUE,
-        };
+        dashboardCache = { stats: mockDashboardStats, error: message, revenueChart: FALLBACK_REVENUE };
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (userRole !== "ADMIN") {
-      setError(
-        "Bạn không có quyền xem dashboard admin. Vui lòng đăng nhập admin."
-      );
+    if (userRole !== 'ADMIN') {
+      setError('Bạn không có quyền xem dashboard admin.');
       setIsLoading(false);
       return;
     }
-
     fetchDashboard();
   }, [userRole]);
 
   if (!stats) {
     return (
-      <div className="space-y-4">
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error}
-          </div>
+          <Paper elevation={0} sx={{ p: 2, border: '1px solid #FCA5A5', bgcolor: '#FEF2F2', borderRadius: 2 }}>
+            <Typography sx={{ color: '#B91C1C', fontSize: '0.88rem' }}>{error}</Typography>
+          </Paper>
         )}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <Paper elevation={0} sx={{ p: 4, border: `1px solid ${palette.border}`, borderRadius: 3, display: 'flex', justifyContent: 'center' }}>
           <Loader />
-        </div>
-      </div>
+        </Paper>
+      </Box>
     );
   }
 
+  // Nivo data transforms
+  const barData = revenueChart.map((d) => ({ month: d.month, 'Doanh thu': d.revenue }));
+
+  const lineData = [
+    {
+      id: 'Đơn hàng',
+      data: revenueChart.map((d) => ({ x: d.month, y: d.orders })),
+    },
+  ];
+
+  const hasOrderData = revenueChart.some((d) => d.orders > 0);
+
+  const pieData = stats.ordersByStatus
+    .filter((o) => o.count > 0)
+    .map((o) => ({
+      id: statusConfig[o.status]?.name ?? o.status,
+      label: statusConfig[o.status]?.name ?? o.status,
+      value: o.count,
+      color: statusConfig[o.status]?.color ?? '#6B7280',
+    }));
+
+  const hasValidImage = (url?: string) =>
+    url && url.startsWith('http') && !url.includes('placeholder') && !url.includes('placehold');
+
   return (
-    <div className="space-y-6">
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-      {isLoading && !stats && (
-        <Loader className="bg-white rounded-lg border border-gray-200" />
+        <Paper elevation={0} sx={{ p: 2, border: '1px solid #FCA5A5', bgcolor: '#FEF2F2', borderRadius: 2 }}>
+          <Typography sx={{ color: '#B91C1C', fontSize: '0.88rem' }}>{error}</Typography>
+        </Paper>
       )}
 
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm sm:text-base text-gray-600">Tổng quan về hoạt động kinh doanh</p>
-      </div>
+      <Box>
+        <Typography sx={{ fontSize: '1.3rem', fontWeight: 700, color: palette.textPrimary }}>Dashboard</Typography>
+        <Typography sx={{ fontSize: '0.88rem', color: palette.textMuted }}>Tổng quan hoạt động kinh doanh</Typography>
+      </Box>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Tổng doanh thu"
-          value={formatCurrency(stats.totalRevenue)}
-          growth={stats.revenueGrowth}
-          icon={FiDollarSign}
-          color="bg-gradient-to-r from-blue-500 to-blue-600"
-        />
-        <StatCard
-          title="Tổng đơn hàng"
-          value={formatNumber(stats.totalOrders)}
-          growth={stats.ordersGrowth}
-          icon={FiShoppingCart}
-          color="bg-gradient-to-r from-green-500 to-green-600"
-        />
-        <StatCard
-          title="Tổng sản phẩm"
-          value={formatNumber(stats.totalProducts)}
-          growth={stats.productsGrowth}
-          icon={FiPackage}
-          color="bg-gradient-to-r from-purple-500 to-purple-600"
-        />
-        <StatCard
-          title="Tổng người dùng"
-          value={formatNumber(stats.totalUsers)}
-          growth={stats.usersGrowth}
-          icon={FiUsers}
-          color="bg-gradient-to-r from-orange-500 to-orange-600"
-        />
-      </div>
+      {/* Stat Cards */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 2 }}>
+        <StatCard title="Tổng doanh thu" value={formatCurrency(stats.totalRevenue)} growth={stats.revenueGrowth} icon={<AttachMoney sx={{ fontSize: 24 }} />} iconBg="#E3F2FD" iconColor="#1565C0" />
+        <StatCard title="Tổng đơn hàng" value={formatNumber(stats.totalOrders)} growth={stats.ordersGrowth} icon={<ShoppingCart sx={{ fontSize: 24 }} />} iconBg="#E8F5E9" iconColor="#2E7D32" />
+        <StatCard title="Tổng sản phẩm" value={formatNumber(stats.totalProducts)} growth={stats.productsGrowth} icon={<Inventory2 sx={{ fontSize: 24 }} />} iconBg="#F3E5F5" iconColor="#7B1FA2" />
+        <StatCard title="Tổng người dùng" value={formatNumber(stats.totalUsers)} growth={stats.usersGrowth} icon={<Groups sx={{ fontSize: 24 }} />} iconBg="#FFF3E0" iconColor="#E65100" />
+      </Box>
 
-      {/* Order Status - Full width horizontal */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-            Trạng thái đơn hàng
-          </h2>
-          <Link
-            to="/admin/orders"
-            className="text-xs sm:text-sm text-primary hover:text-primary-dark font-medium"
-          >
-            Xem tất cả
-          </Link>
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {stats.ordersByStatus.map((order) => (
-            <OrderStatusCard
-              key={order.status}
-              status={order.status}
-              count={order.count}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Selling Products - More compact */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-              Sản phẩm bán chạy
-            </h2>
-            <Link
-              to="/admin/products"
-              className="text-xs sm:text-sm text-primary hover:text-primary-dark font-medium"
-            >
-              Xem tất cả
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {stats.topSellingProducts.slice(0, 5).map((item, index) => (
-              <div
-                key={item.product.id}
-                className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <span className="inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 bg-primary/10 text-primary text-xs sm:text-sm font-semibold rounded-full flex-shrink-0">
-                    {index + 1}
-                  </span>
-                  <img
-                    src={item.product.thumbnail}
-                    alt={item.product.name}
-                    className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-lg flex-shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                      {item.product.name}
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-gray-500">
-                      Đã bán: {formatNumber(item.quantity)}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xs sm:text-sm font-semibold text-gray-900">
-                    {formatCurrency(item.revenue)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Category Distribution Chart */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-              Phân bố sản phẩm theo danh mục
-            </h2>
-            <FiEye className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
-          </div>
-          <div className="relative">
-            {/* Pie Chart */}
-            <div className="flex items-center justify-center">
-              <svg viewBox="0 0 200 200" className="w-48 h-48 sm:w-56 sm:h-56 transform -rotate-90">
-                {(() => {
-                  const categories = [
-                    { name: "Vitamin", value: 35, color: "text-blue-500" },
-                    { name: "Collagen", value: 25, color: "text-green-500" },
-                    { name: "Probiotics", value: 20, color: "text-purple-500" },
-                    { name: "Giảm cân", value: 15, color: "text-orange-500" },
-                    { name: "Khác", value: 5, color: "text-gray-500" }
-                  ];
-                  let cumulativeValue = 0;
-
-                  return categories.map((category, index) => {
-                    const startAngle = (cumulativeValue / 100) * 360;
-                    const endAngle = ((cumulativeValue + category.value) / 100) * 360;
-                    const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
-
-                    const startX = 100 + 80 * Math.cos((startAngle * Math.PI) / 180);
-                    const startY = 100 + 80 * Math.sin((startAngle * Math.PI) / 180);
-                    const endX = 100 + 80 * Math.cos((endAngle * Math.PI) / 180);
-                    const endY = 100 + 80 * Math.sin((endAngle * Math.PI) / 180);
-
-                    const pathData = `M 100 100 L ${startX} ${startY} A 80 80 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
-
-                    cumulativeValue += category.value;
-
-                    const colors = ["#3b82f6", "#10b981", "#8b5cf6", "#f97316", "#6b7280"];
-
-                    return (
-                      <path
-                        key={index}
-                        d={pathData}
-                        fill={colors[index]}
-                        stroke="white"
-                        strokeWidth="2"
-                        className="hover:opacity-80 transition-opacity cursor-pointer"
-                      />
-                    );
-                  });
-                })()}
-                {/* Center circle for donut effect */}
-                <circle cx="100" cy="100" r="40" fill="white" />
-                <text
-                  x="100"
-                  y="100"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="fill-gray-700 text-2xl font-bold"
-                  transform="rotate(90 100 100)"
-                >
-                  {stats.totalProducts}
-                </text>
-                <text
-                  x="100"
-                  y="115"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="fill-gray-500 text-xs"
-                  transform="rotate(90 100 100)"
-                >
-                  Sản phẩm
-                </text>
-              </svg>
-            </div>
-
-            {/* Legend */}
-            <div className="mt-4 grid grid-cols-2 gap-2 text-xs sm:text-sm">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                <span className="text-gray-700">Vitamin (35%)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                <span className="text-gray-700">Collagen (25%)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-purple-500 rounded-full"></span>
-                <span className="text-gray-700">Probiotics (20%)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
-                <span className="text-gray-700">Giảm cân (15%)</span>
-              </div>
-              <div className="flex items-center gap-2 col-span-2">
-                <span className="w-3 h-3 bg-gray-500 rounded-full"></span>
-                <span className="text-gray-700">Khác (5%)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Revenue Chart */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+      {/* Charts Row */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 2 }}>
+        {/* Revenue Bar Chart */}
+        <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+          <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: palette.textPrimary, mb: 2 }}>
             Doanh thu theo tháng
-          </h2>
-          <FiBarChart className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
-        </div>
-        <div className="grid grid-cols-12 gap-1 sm:gap-2 md:gap-3 items-end h-40 sm:h-48 md:h-56">
-          {revenueChart.map((item, index) => {
-            const maxRevenue = Math.max(
-              ...revenueChart.map((d) => d.revenue || 0),
-              1
-            );
-            const value = item.revenue || 0;
-            const barHeight = Math.max((value / maxRevenue) * 180, 24); // px, ensure visible even khi 0
-            return (
-              <div
-                key={`${item.month}-${index}`}
-                className="flex flex-col items-center justify-end space-y-2"
+          </Typography>
+          <Box sx={{ height: 300 }}>
+            {barData.every((d) => d['Doanh thu'] === 0) ? (
+              <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <AttachMoney sx={{ fontSize: 40, color: palette.border, mb: 1 }} />
+                <Typography sx={{ fontSize: '0.88rem', color: palette.textMuted }}>Chưa có dữ liệu doanh thu</Typography>
+                <Typography sx={{ fontSize: '0.78rem', color: palette.textMuted }}>Dữ liệu sẽ hiển thị khi có đơn hàng</Typography>
+              </Box>
+            ) : (
+              <ResponsiveBar
+                data={barData}
+                keys={['Doanh thu']}
+                indexBy="month"
+                margin={{ top: 10, right: 10, bottom: 40, left: 70 }}
+                padding={0.35}
+                colors={[palette.accent]}
+                borderRadius={4}
+                axisBottom={{ tickSize: 0, tickPadding: 8 }}
+                axisLeft={{
+                  tickSize: 0,
+                  tickPadding: 8,
+                  format: (v) => `${(Number(v) / 1000000).toFixed(1)}M`,
+                }}
+                enableGridY
+                gridYValues={5}
+                enableLabel={false}
+                tooltip={({ data, value }) => (
+                  <Paper sx={{ px: 1.5, py: 1, fontSize: '0.78rem' }}>
+                    <strong>{data.month}</strong>: {formatCurrency(value as number)}
+                  </Paper>
+                )}
+                theme={{
+                  axis: { ticks: { text: { fontSize: 11, fill: palette.textMuted } } },
+                  grid: { line: { stroke: '#F0F0F0' } },
+                }}
+              />
+            )}
+          </Box>
+        </Paper>
+
+        {/* Order Status Pie */}
+        <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: palette.textPrimary }}>
+              Trạng thái đơn hàng
+            </Typography>
+            <Link to="/admin/orders" style={{ textDecoration: 'none' }}>
+              <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: palette.accent }}>Xem tất cả</Typography>
+            </Link>
+          </Box>
+          <Box sx={{ height: 220 }}>
+            {pieData.length === 0 ? (
+              <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <ShoppingCart sx={{ fontSize: 36, color: palette.border, mb: 1 }} />
+                <Typography sx={{ fontSize: '0.85rem', color: palette.textMuted }}>Chưa có đơn hàng</Typography>
+              </Box>
+            ) : (
+              <ResponsivePie
+                data={pieData}
+                margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                innerRadius={0.55}
+                padAngle={2}
+                cornerRadius={4}
+                colors={{ datum: 'data.color' }}
+                enableArcLinkLabels={false}
+                arcLabel={(d) => `${d.value}`}
+                arcLabelsTextColor="#fff"
+                arcLabelsSkipAngle={20}
+                tooltip={({ datum }) => (
+                  <Paper sx={{ px: 1.5, py: 1, fontSize: '0.78rem' }}>
+                    <strong>{datum.label}</strong>: {datum.value} đơn
+                  </Paper>
+                )}
+                theme={{ labels: { text: { fontSize: 11, fontWeight: 600 } } }}
+              />
+            )}
+          </Box>
+          {/* Legend */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
+            {stats.ordersByStatus.filter((o) => o.count > 0).map((o) => (
+              <Chip
+                key={o.status}
+                label={`${statusConfig[o.status]?.name}: ${o.count}`}
+                size="small"
+                sx={{
+                  bgcolor: statusConfig[o.status]?.bg,
+                  color: statusConfig[o.status]?.color,
+                  fontWeight: 600,
+                  fontSize: '0.7rem',
+                  height: 24,
+                  border: `1px solid ${statusConfig[o.status]?.color}20`,
+                }}
+              />
+            ))}
+          </Box>
+        </Paper>
+      </Box>
+
+      {/* Orders Line + Top Products */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' }, gap: 2 }}>
+        {/* Orders Line Chart */}
+        <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+          <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: palette.textPrimary, mb: 2 }}>
+            Số đơn hàng theo tháng
+          </Typography>
+          <Box sx={{ height: 260 }}>
+            {!hasOrderData ? (
+              <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <ShoppingCart sx={{ fontSize: 40, color: palette.border, mb: 1 }} />
+                <Typography sx={{ fontSize: '0.88rem', color: palette.textMuted }}>Chưa có dữ liệu đơn hàng</Typography>
+                <Typography sx={{ fontSize: '0.78rem', color: palette.textMuted }}>Dữ liệu sẽ hiển thị khi có đơn hàng mới</Typography>
+              </Box>
+            ) : (
+              <ResponsiveLine
+                data={lineData}
+                margin={{ top: 10, right: 20, bottom: 40, left: 45 }}
+                xScale={{ type: 'point' }}
+                yScale={{ type: 'linear', min: 0, max: 'auto' }}
+                curve="monotoneX"
+                colors={['#1565C0']}
+                lineWidth={2.5}
+                pointSize={8}
+                pointColor="#fff"
+                pointBorderWidth={2.5}
+                pointBorderColor="#1565C0"
+                enableArea
+                areaOpacity={0.08}
+                axisBottom={{ tickSize: 0, tickPadding: 8 }}
+                axisLeft={{ tickSize: 0, tickPadding: 8 }}
+                enableGridX={false}
+                gridYValues={5}
+                tooltip={({ point }) => (
+                  <Paper sx={{ px: 1.5, py: 1, fontSize: '0.78rem' }}>
+                    <strong>{String(point.data.x)}</strong>: {String(point.data.y)} đơn
+                  </Paper>
+                )}
+                theme={{
+                  axis: { ticks: { text: { fontSize: 11, fill: palette.textMuted } } },
+                  grid: { line: { stroke: '#F0F0F0' } },
+                }}
+              />
+            )}
+          </Box>
+        </Paper>
+
+        {/* Top Products */}
+        <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: palette.textPrimary }}>
+              Sản phẩm bán chạy
+            </Typography>
+            <Link to="/admin/products" style={{ textDecoration: 'none' }}>
+              <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: palette.accent }}>Xem tất cả</Typography>
+            </Link>
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {stats.topSellingProducts.slice(0, 5).map((item, index) => (
+              <Box
+                key={item.product.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  p: 1.2,
+                  borderRadius: 2,
+                  transition: 'background 0.2s',
+                  '&:hover': { bgcolor: palette.background },
+                }}
               >
-                <div
-                  className="w-full bg-gradient-to-t from-primary/20 to-primary rounded-md transition-all"
-                  style={{ height: `${barHeight}px` }}
-                  title={`${item.month}: ${formatCurrency(value)}`}
+                <Box
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: '50%',
+                    bgcolor: index < 3 ? palette.accentLight : palette.background,
+                    color: index < 3 ? palette.accent : palette.textMuted,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  {index + 1}
+                </Box>
+                <Avatar
+                  src={hasValidImage(item.product.thumbnail) ? item.product.thumbnail : logo}
+                  variant="rounded"
+                  sx={{ width: 40, height: 40, bgcolor: palette.background, '& img': { objectFit: 'contain', p: 0.3 } }}
                 />
-                <span className="text-xs text-gray-600">{item.month}</span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-4 text-sm text-gray-600 flex items-center justify-between">
-          <span>Tổng doanh thu: {formatCurrency(stats.totalRevenue)}</span>
-          <span>Tổng đơn hàng: {formatNumber(stats.totalOrders)}</span>
-        </div>
-      </div>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontSize: '0.84rem', fontWeight: 500, color: palette.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.product.name}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.72rem', color: palette.textMuted }}>
+                    Đã bán: {formatNumber(item.quantity)}
+                  </Typography>
+                </Box>
+                <Typography sx={{ fontSize: '0.84rem', fontWeight: 600, color: palette.textPrimary, flexShrink: 0 }}>
+                  {formatCurrency(item.revenue)}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Paper>
+      </Box>
 
       {/* Recent Orders */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+      <Paper elevation={0} sx={{ border: `1px solid ${palette.border}`, borderRadius: 3, overflow: 'hidden' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2.5, py: 2, borderBottom: `1px solid ${palette.border}` }}>
+          <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: palette.textPrimary }}>
             Đơn hàng gần đây
-          </h2>
-          <Link
-            to="/admin/orders"
-            className="text-sm text-primary hover:text-primary-dark font-medium"
-          >
-            Xem tất cả
+          </Typography>
+          <Link to="/admin/orders" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: palette.accent }}>Xem tất cả</Typography>
+            <ArrowForward sx={{ fontSize: 14, color: palette.accent }} />
           </Link>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mã đơn hàng
-                </th>
-                <th className="text-left py-3 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Khách hàng
-                </th>
-                <th className="text-left py-3 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trạng thái
-                </th>
-                <th className="text-left py-3 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tổng tiền
-                </th>
-                <th className="text-left py-3 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ngày tạo
-                </th>
-                <th className="text-left py-3 px-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+        </Box>
+        <Box sx={{ overflowX: 'auto' }}>
+          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
+            <Box component="thead">
+              <Box component="tr" sx={{ bgcolor: palette.background }}>
+                {['Mã đơn', 'Khách hàng', 'Trạng thái', 'Tổng tiền', 'Ngày tạo', ''].map((h) => (
+                  <Box key={h} component="th" sx={{ py: 1.5, px: 2, textAlign: 'left', fontSize: '0.72rem', fontWeight: 600, color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {h}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+            <Box component="tbody">
               {stats.recentOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="py-3 px-2">
-                    <span className="text-sm font-medium text-primary">
-                      {order.orderNumber}
-                    </span>
-                  </td>
-                  <td className="py-3 px-2">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {order.user.fullName}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {order.user.email}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="py-3 px-2">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        order.status === "PENDING"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : order.status === "CONFIRMED"
-                          ? "bg-blue-100 text-blue-800"
-                          : order.status === "SHIPPING"
-                          ? "bg-purple-100 text-purple-800"
-                          : order.status === "DELIVERED"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {order.status === "PENDING"
-                        ? "Chờ xác nhận"
-                        : order.status === "CONFIRMED"
-                        ? "Đã xác nhận"
-                        : order.status === "SHIPPING"
-                        ? "Đang giao"
-                        : order.status === "DELIVERED"
-                        ? "Đã giao"
-                        : "Đã hủy"}
-                    </span>
-                  </td>
-                  <td className="py-3 px-2">
-                    <span className="text-sm font-medium text-gray-900">
-                      {formatCurrency(order.total)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-2">
-                    <span className="text-sm text-gray-500">
-                      {order.createdAt.toLocaleDateString("vi-VN")}
-                    </span>
-                  </td>
-                  <td className="py-3 px-2">
-                    <Link
-                      to={`/admin/orders/${order.id}`}
-                      className="text-primary hover:text-primary-dark"
-                    >
-                      <FiEye className="w-4 h-4" />
+                <Box key={order.id} component="tr" sx={{ borderBottom: `1px solid ${palette.border}`, '&:hover': { bgcolor: palette.background } }}>
+                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                    <Typography sx={{ fontSize: '0.84rem', fontWeight: 600, color: palette.accent }}>{order.orderNumber}</Typography>
+                  </Box>
+                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                    <Typography sx={{ fontSize: '0.84rem', fontWeight: 500, color: palette.textPrimary }}>{order.user.fullName}</Typography>
+                    <Typography sx={{ fontSize: '0.72rem', color: palette.textMuted }}>{order.user.email}</Typography>
+                  </Box>
+                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                    <Chip
+                      label={statusConfig[order.status]?.name ?? order.status}
+                      size="small"
+                      sx={{
+                        bgcolor: statusConfig[order.status]?.bg,
+                        color: statusConfig[order.status]?.color,
+                        fontWeight: 600,
+                        fontSize: '0.7rem',
+                        height: 24,
+                      }}
+                    />
+                  </Box>
+                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                    <Typography sx={{ fontSize: '0.84rem', fontWeight: 600, color: palette.textPrimary }}>{formatCurrency(order.total)}</Typography>
+                  </Box>
+                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                    <Typography sx={{ fontSize: '0.82rem', color: palette.textMuted }}>{order.createdAt.toLocaleDateString('vi-VN')}</Typography>
+                  </Box>
+                  <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                    <Link to={`/admin/orders/${order.id}`}>
+                      <Visibility sx={{ fontSize: 18, color: palette.textMuted, '&:hover': { color: palette.accent }, transition: 'color 0.2s' }} />
                     </Link>
-                  </td>
-                </tr>
+                  </Box>
+                </Box>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+            </Box>
+          </Box>
+        </Box>
+      </Paper>
+    </Box>
   );
 };
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
