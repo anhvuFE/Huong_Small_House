@@ -1,13 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  FiPlus,
-  FiSearch,
-  FiEdit,
-  FiTrash2,
-  FiEye,
-  FiPackage,
-} from 'react-icons/fi';
-import { Select } from '../../components/common/Select';
+  Box,
+  Typography,
+  Paper,
+  IconButton,
+  Avatar,
+  Chip,
+  InputBase,
+} from '@mui/material';
+import {
+  Add,
+  Search,
+  Edit,
+  Delete,
+  Visibility,
+  Inventory2,
+} from '@mui/icons-material';
+import { Button, Select as AntSelect, Input, Modal } from 'antd';
 import { Pagination } from '../../components/common/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { productApi } from '../../services/productApi';
@@ -15,6 +24,19 @@ import type { Category, Product } from '../../types';
 import { formatCurrency } from '../../utils/format';
 import { Loader } from '../../components/common/Loader';
 import { useToast } from '../../components/common/Toast';
+import logo from '../../assets/logo.png';
+
+const { TextArea } = Input;
+
+const palette = {
+  accent: '#7daf18',
+  accentLight: '#EDF7D5',
+  textPrimary: '#1A2332',
+  textSecondary: '#5A6B7F',
+  textMuted: '#8D99A8',
+  border: '#E8ECF0',
+  background: '#FAFBFC',
+};
 
 interface ProductFormState {
   name: string;
@@ -27,14 +49,17 @@ interface ProductFormState {
 }
 
 const defaultFormState: ProductFormState = {
-  name: '',
-  brand: '',
-  categoryId: '',
-  description: '',
-  price: '',
-  stock: '',
-  images: '',
+  name: '', brand: '', categoryId: '', description: '', price: '', stock: '', images: '',
 };
+
+const getStockStatus = (stock: number) => {
+  if (stock === 0) return { text: 'Hết hàng', color: '#EF4444', bg: '#FEF2F2' };
+  if (stock < 20) return { text: 'Sắp hết', color: '#F59E0B', bg: '#FFFBEB' };
+  return { text: 'Còn hàng', color: '#10B981', bg: '#ECFDF5' };
+};
+
+const hasValidImage = (url?: string) =>
+  url && url.startsWith('http') && !url.includes('placeholder') && !url.includes('placehold') && !url.includes('/images/products/');
 
 export const ProductManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,332 +74,263 @@ export const ProductManagement: React.FC = () => {
   const [formState, setFormState] = useState<ProductFormState>(defaultFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const { showToast } = useToast();
 
-  const {
-    currentPage,
-    pageSize,
-    handlePageChange,
-    handlePageSizeChange,
-    getPaginatedData,
-  } = usePagination(1, 10);
+  const { currentPage, pageSize, handlePageChange, handlePageSizeChange, getPaginatedData } = usePagination(1, 10);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
         setError('');
-        const [categoryData, productData] = await Promise.all([
+        const [catData, prodData] = await Promise.all([
           productApi.listCategories('admin'),
           productApi.listProducts(),
         ]);
-        setCategories(categoryData);
-        setProducts(productData);
-        const brandSet = new Set(productData.map((product) => product.brand));
-        setBrands([...brandSet]);
+        setCategories(catData);
+        setProducts(prodData);
+        setBrands([...new Set(prodData.map((p) => p.brand))]);
       } catch {
-        setError('Không thể tải dữ liệu sản phẩm. Vui lòng thử lại sau.');
+        setError('Không thể tải dữ liệu sản phẩm.');
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = !selectedCategory || product.categoryId?.toString() === selectedCategory;
-      const matchesBrand = !selectedBrand || product.brand === selectedBrand;
-      return matchesSearch && matchesCategory && matchesBrand;
+    return products.filter((p) => {
+      const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchCat = !selectedCategory || p.categoryId?.toString() === selectedCategory;
+      const matchBrand = !selectedBrand || p.brand === selectedBrand;
+      return matchSearch && matchCat && matchBrand;
     });
   }, [products, searchTerm, selectedCategory, selectedBrand]);
 
   const paginatedData = useMemo(() => getPaginatedData(filteredProducts), [filteredProducts, getPaginatedData]);
 
-  const openCreateModal = () => {
-    setFormState(defaultFormState);
-    setEditingProduct(null);
-    setIsFormOpen(true);
-  };
-
+  const openCreateModal = () => { setFormState(defaultFormState); setEditingProduct(null); setIsFormOpen(true); };
   const openEditModal = (product: Product) => {
     setEditingProduct(product);
     setFormState({
-      name: product.name,
-      brand: product.brand,
-      categoryId: product.categoryId?.toString() ?? '',
-      description: product.description,
-      price: product.price.toString(),
-      stock: product.stock.toString(),
+      name: product.name, brand: product.brand, categoryId: product.categoryId?.toString() ?? '',
+      description: product.description, price: product.price.toString(), stock: product.stock.toString(),
       images: product.images.join('\n'),
     });
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!formState.categoryId) return;
+  const handleFormSubmit = async () => {
+    if (!formState.categoryId || !formState.name) return;
     try {
       setIsSubmitting(true);
       const payload = {
-        name: formState.name,
-        brand: formState.brand,
-        categoryId: Number(formState.categoryId),
-        description: formState.description,
-        price: Number(formState.price),
-        stock: Number(formState.stock),
-        images: formState.images
-          .split('\n')
-          .map((url) => url.trim())
-          .filter(Boolean)
-          .map((url) => ({ url })),
+        name: formState.name, brand: formState.brand, categoryId: Number(formState.categoryId),
+        description: formState.description, price: Number(formState.price), stock: Number(formState.stock),
+        images: formState.images.split('\n').map((u) => u.trim()).filter(Boolean).map((url) => ({ url })),
       };
+      if (editingProduct?.productId) await productApi.updateProduct(editingProduct.productId, payload);
+      else await productApi.createProduct(payload);
 
-      if (editingProduct?.productId) {
-        await productApi.updateProduct(editingProduct.productId, payload);
-      } else {
-        await productApi.createProduct(payload);
-      }
-
-      const [categoryData, productData] = await Promise.all([
-        productApi.listCategories('admin'),
-        productApi.listProducts(),
-      ]);
-      setCategories(categoryData);
-      setProducts(productData);
-      setBrands([...new Set(productData.map((product) => product.brand))]);
+      const [catData, prodData] = await Promise.all([productApi.listCategories('admin'), productApi.listProducts()]);
+      setCategories(catData);
+      setProducts(prodData);
+      setBrands([...new Set(prodData.map((p) => p.brand))]);
       setIsFormOpen(false);
       setEditingProduct(null);
       setFormState(defaultFormState);
       showToast({ title: editingProduct ? 'Đã cập nhật sản phẩm' : 'Đã tạo sản phẩm', variant: 'success' });
     } catch {
-      setError('Không thể lưu sản phẩm. Vui lòng thử lại.');
       showToast({ title: 'Lưu sản phẩm thất bại', variant: 'error' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const [deleteProductTarget, setDeleteProductTarget] = useState<Product | null>(null);
-
-  const handleDeleteProduct = async (product: Product) => {
-    if (!product.productId) return;
-    setDeleteProductTarget(product);
+  const handleDelete = async () => {
+    if (!deleteTarget?.productId) return;
+    try {
+      await productApi.deleteProduct(deleteTarget.productId);
+      setProducts((prev) => prev.filter((p) => p.productId !== deleteTarget.productId));
+      showToast({ title: 'Đã xóa sản phẩm', variant: 'error' });
+    } catch {
+      showToast({ title: 'Xóa sản phẩm thất bại', variant: 'error' });
+    } finally {
+      setDeleteTarget(null);
+    }
   };
 
-  const getStockStatus = (stock: number) => {
-    if (stock === 0) return { text: 'Hết hàng', color: 'bg-red-100 text-red-800' };
-    if (stock < 20) return { text: 'Sắp hết', color: 'bg-yellow-100 text-yellow-800' };
-    return { text: 'Còn hàng', color: 'bg-green-100 text-green-800' };
-  };
+  const inputStyle = { borderRadius: 10, height: 40, fontFamily: 'Inter, system-ui, sans-serif' };
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <Paper elevation={0} sx={{ p: 4, border: `1px solid ${palette.border}`, borderRadius: 3, display: 'flex', justifyContent: 'center' }}>
         <Loader />
-      </div>
+      </Paper>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Quản lý sản phẩm</h1>
-          <p className="text-sm lg:text-base text-gray-600">Quản lý thông tin và trạng thái các sản phẩm</p>
-        </div>
-        <button
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography sx={{ fontSize: '1.3rem', fontWeight: 700, color: palette.textPrimary }}>Quản lý sản phẩm</Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: palette.textMuted }}>{filteredProducts.length} sản phẩm</Typography>
+        </Box>
+        <Button
+          type="primary"
+          icon={<Add style={{ fontSize: 18 }} />}
           onClick={openCreateModal}
-          className="inline-flex items-center px-3 lg:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm lg:text-base"
+          style={{ backgroundColor: palette.accent, borderColor: palette.accent, height: 40, borderRadius: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}
         >
-          <FiPlus className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
-          <span className="hidden sm:inline">Thêm sản phẩm</span>
-          <span className="sm:hidden">Thêm</span>
-        </button>
-      </div>
+          Thêm sản phẩm
+        </Button>
+      </Box>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">{error}</div>
+        <Paper elevation={0} sx={{ p: 2, border: '1px solid #FCA5A5', bgcolor: '#FEF2F2', borderRadius: 2 }}>
+          <Typography sx={{ color: '#B91C1C', fontSize: '0.88rem' }}>{error}</Typography>
+        </Paper>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 lg:w-5 lg:h-5" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm sản phẩm..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 lg:pl-10 pr-4 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <div className="w-full lg:w-48">
-            <Select
-              value={selectedCategory}
-              onChange={setSelectedCategory}
-              options={[
-                { value: '', label: 'Tất cả danh mục' },
-                ...categories.map((cat) => ({ value: cat.categoryId.toString(), label: cat.name })),
-              ]}
-              placeholder="Chọn danh mục"
+      {/* Filters */}
+      <Paper elevation={0} sx={{ p: 2, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 1.5 }}>
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', bgcolor: palette.background, borderRadius: 2.5, border: `1px solid ${palette.border}`, px: 1.5, '&:focus-within': { borderColor: palette.accent } }}>
+            <Search sx={{ fontSize: 20, color: palette.textMuted, mr: 1 }} />
+            <InputBase
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Tìm kiếm sản phẩm..."
+              sx={{ flex: 1, fontSize: '0.88rem', py: 0.8 }}
             />
-          </div>
+          </Box>
+          <AntSelect
+            value={selectedCategory || undefined}
+            onChange={(v) => setSelectedCategory(v || '')}
+            allowClear
+            placeholder="Tất cả danh mục"
+            options={categories.map((c) => ({ value: c.categoryId.toString(), label: c.name }))}
+            style={{ width: 200, height: 40, fontFamily: 'Inter, system-ui, sans-serif' }}
+          />
+          <AntSelect
+            value={selectedBrand || undefined}
+            onChange={(v) => setSelectedBrand(v || '')}
+            allowClear
+            placeholder="Tất cả thương hiệu"
+            options={brands.map((b) => ({ value: b, label: b }))}
+            style={{ width: 200, height: 40, fontFamily: 'Inter, system-ui, sans-serif' }}
+          />
+        </Box>
+      </Paper>
 
-          <div className="w-full lg:w-48">
-            <Select
-              value={selectedBrand}
-              onChange={setSelectedBrand}
-              options={[
-                { value: '', label: 'Tất cả thương hiệu' },
-                ...brands.map((brand) => ({ value: brand, label: brand })),
-              ]}
-              placeholder="Chọn thương hiệu"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto hidden lg:block">
-          <table className="w-full min-w-[800px]">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sản phẩm</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Danh mục</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giá</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tồn kho</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+      {/* Table */}
+      <Paper elevation={0} sx={{ border: `1px solid ${palette.border}`, borderRadius: 3, overflow: 'hidden' }}>
+        {/* Desktop table */}
+        <Box sx={{ display: { xs: 'none', lg: 'block' }, overflowX: 'auto' }}>
+          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
+            <Box component="thead">
+              <Box component="tr" sx={{ bgcolor: palette.background }}>
+                {['Sản phẩm', 'Danh mục', 'Giá', 'Tồn kho', 'Thao tác'].map((h) => (
+                  <Box key={h} component="th" sx={{ py: 1.5, px: 2.5, textAlign: 'left', fontSize: '0.72rem', fontWeight: 600, color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {h}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+            <Box component="tbody">
               {paginatedData.items.map((product) => {
-                const stockStatus = getStockStatus(product.stock);
+                const stock = getStockStatus(product.stock);
                 return (
-                  <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <img src={product.thumbnail} alt={product.name} className="w-16 h-16 rounded-lg object-cover mr-4" />
-                        <div>
-                          <p className="font-medium text-gray-900">{product.name}</p>
-                          <p className="text-sm text-gray-500">{product.brand}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                        {product.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-gray-900">{formatCurrency(product.price)}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${stockStatus.color}`}>
-                        {stockStatus.text}
-                      </span>
-                      <div className="text-xs text-gray-500 mt-1">Còn {product.stock} sản phẩm</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => openEditModal(product)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                        >
-                          <FiEdit className="w-4 h-4" />
-                        </button>
-                      <button
-                        onClick={() => openEditModal(product)}
-                        className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg"
-                        aria-label="Xem chi tiết"
-                      >
-                        <FiEye className="w-4 h-4" />
-                      </button>
-                        <button
-                          onClick={() => handleDeleteProduct(product)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                        >
-                          <FiTrash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                  <Box key={product.id} component="tr" sx={{ borderBottom: `1px solid ${palette.border}`, '&:hover': { bgcolor: palette.background }, transition: 'background 0.15s' }}>
+                    <Box component="td" sx={{ py: 1.5, px: 2.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar
+                          src={hasValidImage(product.thumbnail) ? product.thumbnail : logo}
+                          variant="rounded"
+                          sx={{ width: 48, height: 48, bgcolor: palette.background, '& img': { objectFit: 'contain', p: 0.3 } }}
+                        />
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontSize: '0.88rem', fontWeight: 500, color: palette.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 250 }}>
+                            {product.name}
+                          </Typography>
+                          <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>{product.brand}</Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                    <Box component="td" sx={{ py: 1.5, px: 2.5 }}>
+                      <Chip label={product.category} size="small" sx={{ bgcolor: palette.accentLight, color: palette.accent, fontWeight: 600, fontSize: '0.72rem', height: 24 }} />
+                    </Box>
+                    <Box component="td" sx={{ py: 1.5, px: 2.5 }}>
+                      <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: palette.textPrimary }}>{formatCurrency(product.price)}</Typography>
+                    </Box>
+                    <Box component="td" sx={{ py: 1.5, px: 2.5 }}>
+                      <Chip label={stock.text} size="small" sx={{ bgcolor: stock.bg, color: stock.color, fontWeight: 600, fontSize: '0.72rem', height: 24 }} />
+                      <Typography sx={{ fontSize: '0.7rem', color: palette.textMuted, mt: 0.3 }}>Còn {product.stock}</Typography>
+                    </Box>
+                    <Box component="td" sx={{ py: 1.5, px: 2.5 }}>
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton size="small" onClick={() => openEditModal(product)} sx={{ color: '#1565C0', '&:hover': { bgcolor: '#E3F2FD' } }}>
+                          <Edit sx={{ fontSize: 18 }} />
+                        </IconButton>
+                        <IconButton size="small" onClick={() => openEditModal(product)} sx={{ color: palette.textMuted, '&:hover': { bgcolor: palette.background } }}>
+                          <Visibility sx={{ fontSize: 18 }} />
+                        </IconButton>
+                        <IconButton size="small" onClick={() => setDeleteTarget(product)} sx={{ color: '#EF4444', '&:hover': { bgcolor: '#FEF2F2' } }}>
+                          <Delete sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  </Box>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </Box>
+          </Box>
+        </Box>
 
         {/* Mobile cards */}
-        <div className="lg:hidden divide-y divide-gray-200 border-t border-gray-200">
-          {filteredProducts.map((product) => {
-            const stockStatus = getStockStatus(product.stock);
+        <Box sx={{ display: { xs: 'flex', lg: 'none' }, flexDirection: 'column' }}>
+          {paginatedData.items.map((product) => {
+            const stock = getStockStatus(product.stock);
             return (
-              <div
-                key={product.id}
-                className="p-4 bg-white flex gap-3"
-              >
-                <img src={product.thumbnail} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-gray-900 leading-snug text-sm">{product.name}</p>
-                      <p className="text-xs text-gray-500">{product.brand}</p>
-                    </div>
-                    <button
-                      onClick={() => openEditModal(product)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg shrink-0"
-                      aria-label="Chỉnh sửa"
-                    >
-                      <FiEdit className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">
-                      {product.category}
-                    </span>
-                    <span className="text-sm font-bold text-gray-900">{formatCurrency(product.price)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${stockStatus.color}`}>
-                      {stockStatus.text}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEditModal(product)}
-                        className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg"
-                        aria-label="Xem chi tiết"
-                      >
-                        <FiEye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteProduct(product)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                        aria-label="Xóa"
-                      >
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <Box key={product.id} sx={{ display: 'flex', gap: 1.5, p: 2, borderBottom: `1px solid ${palette.border}` }}>
+                <Avatar
+                  src={hasValidImage(product.thumbnail) ? product.thumbnail : logo}
+                  variant="rounded"
+                  sx={{ width: 56, height: 56, bgcolor: palette.background, '& img': { objectFit: 'contain', p: 0.3 } }}
+                />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: palette.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {product.name}
+                    </Typography>
+                    <IconButton size="small" onClick={() => openEditModal(product)} sx={{ color: '#1565C0', ml: 0.5 }}>
+                      <Edit sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Box>
+                  <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted, mb: 0.8 }}>{product.brand}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label={product.category} size="small" sx={{ bgcolor: palette.accentLight, color: palette.accent, fontWeight: 600, fontSize: '0.68rem', height: 22 }} />
+                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: palette.textPrimary }}>{formatCurrency(product.price)}</Typography>
+                    <Chip label={stock.text} size="small" sx={{ bgcolor: stock.bg, color: stock.color, fontWeight: 600, fontSize: '0.68rem', height: 22, ml: 'auto' }} />
+                  </Box>
+                </Box>
+              </Box>
             );
           })}
-        </div>
+        </Box>
 
         {paginatedData.totalItems === 0 && (
-          <div className="text-center py-12">
-            <FiPackage className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy sản phẩm nào</h3>
-            <p className="text-gray-500">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
-          </div>
+          <Box sx={{ textAlign: 'center', py: 6 }}>
+            <Inventory2 sx={{ fontSize: 48, color: palette.border, mb: 1.5 }} />
+            <Typography sx={{ fontWeight: 600, color: palette.textPrimary, mb: 0.5 }}>Không tìm thấy sản phẩm</Typography>
+            <Typography sx={{ fontSize: '0.88rem', color: palette.textMuted }}>Thử thay đổi bộ lọc hoặc từ khóa</Typography>
+          </Box>
         )}
-      </div>
+      </Paper>
 
       <Pagination
         currentPage={currentPage}
@@ -382,159 +338,99 @@ export const ProductManagement: React.FC = () => {
         totalItems={paginatedData.totalItems}
         itemsPerPage={pageSize}
         onPageChange={handlePageChange}
-        showPageSizeSelect={true}
+        showPageSizeSelect
         onPageSizeChange={handlePageSizeChange}
       />
 
-      {isFormOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6">
-            <h2 className="text-xl font-bold mb-4">
-              {editingProduct ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
-            </h2>
-            <form onSubmit={handleFormSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tên sản phẩm</label>
-                  <input
-                    type="text"
-                    value={formState.name}
-                    onChange={(e) => setFormState((prev) => ({ ...prev, name: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Thương hiệu</label>
-                  <input
-                    type="text"
-                    value={formState.brand}
-                    onChange={(e) => setFormState((prev) => ({ ...prev, brand: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                    required
-                  />
-                </div>
-                <div>
-                  <Select
-                    label="Danh mục"
-                    value={formState.categoryId}
-                    onChange={(val) => setFormState((prev) => ({ ...prev, categoryId: val }))}
-                    options={[
-                      { value: '', label: 'Chọn danh mục' },
-                      ...categories.map((cat) => ({
-                        value: cat.categoryId.toString(),
-                        label: cat.name,
-                      })),
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Giá</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={formState.price}
-                    onChange={(e) => setFormState((prev) => ({ ...prev, price: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tồn kho</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={formState.stock}
-                    onChange={(e) => setFormState((prev) => ({ ...prev, stock: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                    required
-                  />
-                </div>
-              </div>
+      {/* Create/Edit Modal */}
+      <Modal
+        open={isFormOpen}
+        onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
+        title={editingProduct ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
+        footer={null}
+        width={640}
+        centered
+        styles={{ header: { borderBottom: `1px solid ${palette.border}`, paddingBottom: 12 } }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 2 }}>
+            <Box>
+              <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Tên sản phẩm *</Typography>
+              <Input value={formState.name} onChange={(e) => setFormState((p) => ({ ...p, name: e.target.value }))} style={inputStyle} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Thương hiệu *</Typography>
+              <Input value={formState.brand} onChange={(e) => setFormState((p) => ({ ...p, brand: e.target.value }))} style={inputStyle} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Danh mục *</Typography>
+              <AntSelect
+                value={formState.categoryId || undefined}
+                onChange={(v) => setFormState((p) => ({ ...p, categoryId: v }))}
+                placeholder="Chọn danh mục"
+                options={categories.map((c) => ({ value: c.categoryId.toString(), label: c.name }))}
+                style={{ width: '100%', height: 40, fontFamily: 'Inter, system-ui, sans-serif' }}
+              />
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Giá *</Typography>
+              <Input type="number" min={0} value={formState.price} onChange={(e) => setFormState((p) => ({ ...p, price: e.target.value }))} style={inputStyle} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Tồn kho *</Typography>
+              <Input type="number" min={0} value={formState.stock} onChange={(e) => setFormState((p) => ({ ...p, stock: e.target.value }))} style={inputStyle} />
+            </Box>
+          </Box>
+          <Box>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Mô tả</Typography>
+            <TextArea rows={3} value={formState.description} onChange={(e) => setFormState((p) => ({ ...p, description: e.target.value }))} style={{ borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }} />
+          </Box>
+          <Box>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Ảnh sản phẩm (mỗi dòng 1 URL)</Typography>
+            <TextArea rows={3} value={formState.images} onChange={(e) => setFormState((p) => ({ ...p, images: e.target.value }))} style={{ borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }} />
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, pt: 1 }}>
+            <Button onClick={() => { setIsFormOpen(false); setEditingProduct(null); }} style={{ height: 40, borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Hủy
+            </Button>
+            <Button
+              type="primary"
+              loading={isSubmitting}
+              onClick={handleFormSubmit}
+              style={{ backgroundColor: palette.accent, borderColor: palette.accent, height: 40, borderRadius: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}
+            >
+              {isSubmitting ? 'Đang lưu...' : 'Lưu sản phẩm'}
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
-                <textarea
-                  rows={3}
-                  value={formState.description}
-                  onChange={(e) => setFormState((prev) => ({ ...prev, description: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh sản phẩm (mỗi dòng một URL)</label>
-                <textarea
-                  rows={3}
-                  value={formState.images}
-                  onChange={(e) => setFormState((prev) => ({ ...prev, images: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  className="px-4 py-2 border border-gray-300 rounded-lg"
-                  onClick={() => {
-                    setIsFormOpen(false);
-                    setEditingProduct(null);
-                  }}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Đang lưu...' : 'Lưu sản phẩm'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {deleteProductTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="absolute inset-0" onClick={() => setDeleteProductTarget(null)} />
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h3 className="text-xl font-semibold text-gray-900">Xóa sản phẩm</h3>
-              <p className="text-sm text-gray-600 mt-2">
-                Bạn có chắc muốn xóa “{deleteProductTarget.name}”? Hành động này không thể hoàn tác.
-              </p>
-            </div>
-            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteProductTarget(null)}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={async () => {
-                  if (!deleteProductTarget?.productId) return;
-                  try {
-                    await productApi.deleteProduct(deleteProductTarget.productId);
-                    setProducts((prev) => prev.filter((item) => item.productId !== deleteProductTarget.productId));
-                    showToast({ title: 'Đã xóa sản phẩm', variant: 'error' });
-                  } catch {
-                    setError('Không thể xóa sản phẩm. Vui lòng thử lại.');
-                    showToast({ title: 'Xóa sản phẩm thất bại', variant: 'error' });
-                  } finally {
-                    setDeleteProductTarget(null);
-                  }
-                }}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
-              >
-                Xóa
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Delete Confirmation */}
+      <Modal
+        open={!!deleteTarget}
+        onCancel={() => setDeleteTarget(null)}
+        title="Xóa sản phẩm"
+        centered
+        footer={null}
+        width={440}
+      >
+        <Typography sx={{ fontSize: '0.9rem', color: palette.textSecondary, py: 2 }}>
+          Bạn có chắc muốn xóa &quot;{deleteTarget?.name}&quot;? Hành động này không thể hoàn tác.
+        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+          <Button onClick={() => setDeleteTarget(null)} style={{ height: 40, borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }}>
+            Hủy
+          </Button>
+          <Button
+            type="primary"
+            danger
+            onClick={handleDelete}
+            style={{ height: 40, borderRadius: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}
+          >
+            Xóa
+          </Button>
+        </Box>
+      </Modal>
+    </Box>
   );
 };
