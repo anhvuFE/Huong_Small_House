@@ -1,24 +1,82 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import {
-  FiPlus,
-  FiSearch,
-  FiEdit,
-  FiTrash2,
-  FiEye,
-  FiImage,
-  FiFileText,
-  FiGlobe,
-  FiCalendar,
-  FiToggleLeft,
-  FiToggleRight,
-} from 'react-icons/fi';
-import { Select } from '../../components/common/Select';
+  Box,
+  Typography,
+  Paper,
+  IconButton,
+  Chip,
+  InputBase,
+  Switch,
+} from '@mui/material';
+import {
+  Add,
+  Search,
+  Visibility,
+  Edit,
+  Delete,
+  Article,
+  Public,
+  Image,
+  Campaign,
+  CheckCircle,
+  EditNote,
+  RemoveRedEye,
+} from '@mui/icons-material';
+import { Button, Select as AntSelect, Input, Modal } from 'antd';
 import { contentApi } from '../../services/contentApi';
 import { getErrorMessage } from '../../utils/error';
 import type { ContentItem } from '../../types';
 import { Loader } from '../../components/common/Loader';
 import { useToast } from '../../components/common/Toast';
+import { Pagination } from '../../components/common/Pagination';
+import { usePagination } from '../../hooks/usePagination';
+
+const { TextArea } = Input;
+
+const palette = {
+  accent: '#7daf18',
+  accentLight: '#EDF7D5',
+  textPrimary: '#1A2332',
+  textSecondary: '#5A6B7F',
+  textMuted: '#8D99A8',
+  border: '#E8ECF0',
+  background: '#FAFBFC',
+};
+
+const typeConfig: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
+  PAGE: { label: 'Trang web', icon: <Public sx={{ fontSize: 18 }} />, color: '#1565C0', bg: '#E3F2FD' },
+  BLOG: { label: 'Bài viết', icon: <Article sx={{ fontSize: 18 }} />, color: '#2E7D32', bg: '#E8F5E9' },
+  BANNER: { label: 'Banner', icon: <Image sx={{ fontSize: 18 }} />, color: '#E65100', bg: '#FFF3E0' },
+  ANNOUNCEMENT: { label: 'Thông báo', icon: <Campaign sx={{ fontSize: 18 }} />, color: '#7B1FA2', bg: '#F3E5F5' },
+};
+
+const statusChip: Record<string, { label: string; color: string; bg: string }> = {
+  PUBLISHED: { label: 'Đã xuất bản', color: '#10B981', bg: '#ECFDF5' },
+  DRAFT: { label: 'Bản nháp', color: '#F59E0B', bg: '#FFFBEB' },
+  ARCHIVED: { label: 'Lưu trữ', color: '#6B7280', bg: '#F9FAFB' },
+};
+
+const typeOpts = [
+  { value: 'PAGE', label: 'Trang web' },
+  { value: 'BLOG', label: 'Bài viết' },
+  { value: 'BANNER', label: 'Banner' },
+  { value: 'ANNOUNCEMENT', label: 'Thông báo' },
+];
+
+const statusOpts = [
+  { value: 'PUBLISHED', label: 'Đã xuất bản' },
+  { value: 'DRAFT', label: 'Bản nháp' },
+  { value: 'ARCHIVED', label: 'Lưu trữ' },
+];
+
+const quickStats = [
+  { key: 'total', label: 'Tổng nội dung', icon: <Article sx={{ fontSize: 22 }} />, color: '#1565C0', bg: '#E3F2FD' },
+  { key: 'published', label: 'Đã xuất bản', icon: <CheckCircle sx={{ fontSize: 22 }} />, color: '#2E7D32', bg: '#E8F5E9' },
+  { key: 'draft', label: 'Bản nháp', icon: <EditNote sx={{ fontSize: 22 }} />, color: '#F59E0B', bg: '#FFFBEB' },
+  { key: 'totalViews', label: 'Tổng lượt xem', icon: <RemoveRedEye sx={{ fontSize: 22 }} />, color: '#7B1FA2', bg: '#F3E5F5' },
+];
+
+const inputStyle = { borderRadius: 10, height: 40, fontFamily: 'Inter, system-ui, sans-serif' };
 
 export const ContentManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,683 +85,277 @@ export const ContentManagement: React.FC = () => {
   const [content, setContent] = useState<ContentItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [actionMessage, setActionMessage] = useState('');
   const [isWorking, setIsWorking] = useState<string | null>(null);
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState({
-    title: '',
-    slug: '',
-    excerpt: '',
-    published: false,
-    tagsText: '',
-    body: '',
-  });
+  const [editForm, setEditForm] = useState({ title: '', slug: '', excerpt: '', published: false, tagsText: '', body: '' });
   const [editError, setEditError] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ContentItem | null>(null);
   const { showToast } = useToast();
-
-  const typeOptions = [
-    { value: '', label: 'Tất cả loại' },
-    { value: 'PAGE', label: 'Trang web' },
-    { value: 'BLOG', label: 'Bài viết' },
-    { value: 'BANNER', label: 'Banner' },
-    { value: 'ANNOUNCEMENT', label: 'Thông báo' },
-  ];
-
-  const statusOptions = [
-    { value: '', label: 'Tất cả trạng thái' },
-    { value: 'PUBLISHED', label: 'Đã xuất bản' },
-    { value: 'DRAFT', label: 'Bản nháp' },
-    { value: 'ARCHIVED', label: 'Lưu trữ' },
-  ];
+  const { currentPage, pageSize, handlePageChange, handlePageSizeChange, getPaginatedData } = usePagination(1, 10);
 
   useEffect(() => {
-    const loadContent = async () => {
-      setIsLoading(true);
-      setError('');
-      try {
-        const data = await contentApi.listContent();
-        setContent(data);
-      } catch (err) {
-        setError(getErrorMessage(err, 'Không thể tải danh sách nội dung.'));
-      } finally {
-        setIsLoading(false);
-      }
+    const load = async () => {
+      setIsLoading(true); setError('');
+      try { setContent(await contentApi.listContent()); } catch (err) { setError(getErrorMessage(err, 'Không thể tải nội dung.')); } finally { setIsLoading(false); }
     };
-
-    loadContent();
+    load();
   }, []);
 
   const filteredContent = useMemo(() => {
-    return content.filter((item) => {
-      const matchesSearch =
-        item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.slug.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = !typeFilter || item.type === typeFilter;
-      const matchesStatus = !statusFilter || item.status === statusFilter;
-      return matchesSearch && matchesType && matchesStatus;
+    return content.filter((c) => {
+      const q = searchTerm.toLowerCase();
+      return (c.title.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q)) && (!typeFilter || c.type === typeFilter) && (!statusFilter || c.status === statusFilter);
     });
   }, [content, searchTerm, typeFilter, statusFilter]);
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'PAGE':
-        return <FiGlobe className="w-4 h-4" />;
-      case 'BLOG':
-        return <FiFileText className="w-4 h-4" />;
-      case 'BANNER':
-        return <FiImage className="w-4 h-4" />;
-      case 'ANNOUNCEMENT':
-        return <FiCalendar className="w-4 h-4" />;
-      default:
-        return <FiFileText className="w-4 h-4" />;
-    }
-  };
-
-  const getTypeLabel = (type: string) => {
-    const types = {
-      PAGE: 'Trang web',
-      BLOG: 'Bài viết',
-      BANNER: 'Banner',
-      ANNOUNCEMENT: 'Thông báo',
-    };
-    return types[type as keyof typeof types] || type;
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      PUBLISHED: { text: 'Đã xuất bản', color: 'bg-green-100 text-green-800' },
-      DRAFT: { text: 'Bản nháp', color: 'bg-yellow-100 text-yellow-800' },
-      ARCHIVED: { text: 'Lưu trữ', color: 'bg-gray-100 text-gray-800' },
-    };
-    const config = statusConfig[status as keyof typeof statusConfig];
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-        {config.text}
-      </span>
-    );
-  };
+  const paginatedData = useMemo(() => getPaginatedData(filteredContent), [filteredContent, getPaginatedData]);
 
   const stats = useMemo(() => {
     const total = content.length;
-    const published = content.filter(c => c.status === 'PUBLISHED').length;
-    const draft = content.filter(c => c.status === 'DRAFT').length;
-    const totalViews = content.reduce((sum, c) => sum + (c.views || 0), 0);
-    return { total, published, draft, totalViews };
+    const published = content.filter((c) => c.status === 'PUBLISHED').length;
+    const draft = content.filter((c) => c.status === 'DRAFT').length;
+    const totalViews = content.reduce((s, c) => s + (c.views || 0), 0);
+    return { total, published, draft, totalViews } as Record<string, number>;
   }, [content]);
 
   const handleToggleActive = (id: string) => {
-    const current = content.find((c) => c.id === id);
-    if (!current) return;
-    const next = !current.published;
+    const cur = content.find((c) => c.id === id);
+    if (!cur) return;
+    const next = !cur.published;
     setIsWorking(id);
-    setActionMessage('');
-
-    // optimistic update
-    setContent((prev) => prev.map((item) => (item.id === id ? { ...item, published: next, isActive: next, status: next ? 'PUBLISHED' : 'DRAFT' } : item)));
-
-    contentApi
-      .updateContent(id, { published: next })
-      .then((updated) => {
-        setContent((prev) => prev.map((item) => (item.id === id ? updated : item)));
-        setActionMessage(next ? 'Đã bật nội dung' : 'Đã tắt nội dung');
-        showToast({ title: next ? 'Đã bật nội dung' : 'Đã tắt nội dung', variant: 'success' });
-      })
-      .catch((err) => {
-        setContent((prev) => prev.map((item) => (item.id === id ? { ...item, published: !next, isActive: !next, status: !next ? 'PUBLISHED' : 'DRAFT' } : item)));
-        setError(getErrorMessage(err, 'Không thể cập nhật trạng thái.'));
-        showToast({ title: 'Cập nhật trạng thái thất bại', variant: 'error' });
-      })
+    setContent((prev) => prev.map((i) => i.id === id ? { ...i, published: next, isActive: next, status: next ? 'PUBLISHED' : 'DRAFT' } : i));
+    contentApi.updateContent(id, { published: next })
+      .then((u) => { setContent((prev) => prev.map((i) => i.id === id ? u : i)); showToast({ title: next ? 'Đã bật' : 'Đã tắt', variant: 'success' }); })
+      .catch(() => { setContent((prev) => prev.map((i) => i.id === id ? { ...i, published: !next, isActive: !next, status: !next ? 'PUBLISHED' : 'DRAFT' } : i)); showToast({ title: 'Cập nhật thất bại', variant: 'error' }); })
       .finally(() => setIsWorking(null));
-  };
-
-  const [deleteTarget, setDeleteTarget] = useState<ContentItem | null>(null);
-
-  const handleDelete = async (id: string) => {
-    const target = content.find((c) => c.id === id);
-    if (!target) return;
-    setDeleteTarget(target);
   };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setIsWorking(deleteTarget.id);
-    setActionMessage('');
-    try {
-      await contentApi.deleteContent(deleteTarget.id);
-      setContent((prev) => prev.filter((item) => item.id !== deleteTarget.id));
-      setActionMessage('Đã xóa nội dung.');
-      showToast({ title: 'Đã xóa nội dung', variant: 'error' });
-    } catch (err) {
-      setError(getErrorMessage(err, 'Không thể xóa nội dung.'));
-      showToast({ title: 'Xóa nội dung thất bại', variant: 'error' });
-    } finally {
-      setIsWorking(null);
-      setDeleteTarget(null);
-    }
-  };
-
-  const handleView = (item: ContentItem) => {
-    setSelectedContent(item);
-    setIsDetailOpen(true);
+    try { await contentApi.deleteContent(deleteTarget.id); setContent((prev) => prev.filter((i) => i.id !== deleteTarget.id)); showToast({ title: 'Đã xóa', variant: 'success' }); }
+    catch { showToast({ title: 'Xóa thất bại', variant: 'error' }); }
+    finally { setIsWorking(null); setDeleteTarget(null); }
   };
 
   const handleEdit = (item: ContentItem) => {
     setSelectedContent(item);
-    setEditForm({
-      title: item.title,
-      slug: item.slug,
-      excerpt: item.excerpt || '',
-      published: item.published ?? item.isActive,
-      tagsText: item.tags?.join(', ') || '',
-      body: item.body || '',
-    });
-    setEditError('');
-    setIsEditOpen(true);
+    setEditForm({ title: item.title, slug: item.slug, excerpt: item.excerpt || '', published: item.published ?? item.isActive, tagsText: item.tags?.join(', ') || '', body: item.body || '' });
+    setEditError(''); setIsEditOpen(true);
   };
 
   const handleSaveEdit = async () => {
     if (!selectedContent) return;
-    if (!editForm.title.trim()) {
-      setEditError('Tiêu đề không được để trống.');
-      return;
-    }
-    if (!editForm.body.trim()) {
-      setEditError('Nội dung không được để trống.');
-      return;
-    }
-    setIsSavingEdit(true);
-    setEditError('');
-    const tags = editForm.tagsText
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
+    if (!editForm.title.trim()) { setEditError('Tiêu đề không được để trống.'); return; }
+    if (!editForm.body.trim()) { setEditError('Nội dung không được để trống.'); return; }
+    setIsSavingEdit(true); setEditError('');
     try {
       const updated = await contentApi.updateContent(selectedContent.id, {
-        title: editForm.title,
-        slug: editForm.slug,
-        excerpt: editForm.excerpt,
-        published: editForm.published,
-        tags,
-        body: editForm.body,
+        title: editForm.title, slug: editForm.slug, excerpt: editForm.excerpt, published: editForm.published,
+        tags: editForm.tagsText.split(',').map((t) => t.trim()).filter(Boolean), body: editForm.body,
       });
-      setContent((prev) => prev.map((item) => (item.id === selectedContent.id ? updated : item)));
-      setIsEditOpen(false);
-      setActionMessage('Đã cập nhật nội dung.');
-      showToast({ title: 'Đã lưu nội dung', variant: 'success' });
-    } catch (err) {
-      setEditError(getErrorMessage(err, 'Không thể lưu nội dung.'));
-      showToast({ title: 'Lưu nội dung thất bại', variant: 'error' });
-    } finally {
-      setIsSavingEdit(false);
-    }
+      setContent((prev) => prev.map((i) => i.id === selectedContent.id ? updated : i));
+      setIsEditOpen(false); showToast({ title: 'Đã lưu', variant: 'success' });
+    } catch (err) { setEditError(getErrorMessage(err, 'Không thể lưu.')); }
+    finally { setIsSavingEdit(false); }
   };
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quản lý nội dung</h1>
-          <p className="text-gray-600">
-            Quản lý trang web, bài viết, banner và thông báo
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <FiImage className="w-4 h-4 mr-2" />
-            Thư viện ảnh
-          </button>
-          <button className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
-            <FiPlus className="w-5 h-5 mr-2" />
-            Tạo nội dung
-          </button>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography sx={{ fontSize: '1.3rem', fontWeight: 700, color: palette.textPrimary }}>Quản lý nội dung</Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: palette.textMuted }}>{content.length} nội dung</Typography>
+        </Box>
+        <Button type="primary" icon={<Add style={{ fontSize: 18 }} />} style={{ backgroundColor: palette.accent, borderColor: palette.accent, height: 40, borderRadius: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}>
+          Tạo nội dung
+        </Button>
+      </Box>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <FiFileText className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Tổng nội dung</p>
-              <p className="text-lg font-bold text-gray-900">{stats.total}</p>
-            </div>
-          </div>
-        </div>
+      {error && <Paper elevation={0} sx={{ p: 2, border: '1px solid #FCA5A5', bgcolor: '#FEF2F2', borderRadius: 2 }}><Typography sx={{ color: '#B91C1C', fontSize: '0.88rem' }}>{error}</Typography></Paper>}
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <FiGlobe className="w-5 h-5 text-green-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Đã xuất bản</p>
-              <p className="text-lg font-bold text-gray-900">{stats.published}</p>
-            </div>
-          </div>
-        </div>
+      {/* Stats */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 2 }}>
+        {quickStats.map((s) => (
+          <Paper key={s.key} elevation={0} sx={{ p: 2, border: `1px solid ${palette.border}`, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ width: 42, height: 42, borderRadius: 2.5, bgcolor: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</Box>
+            <Box>
+              <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>{s.label}</Typography>
+              <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: palette.textPrimary }}>{typeof stats[s.key] === 'number' && stats[s.key] > 999 ? stats[s.key].toLocaleString() : stats[s.key]}</Typography>
+            </Box>
+          </Paper>
+        ))}
+      </Box>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <FiEdit className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Bản nháp</p>
-              <p className="text-lg font-bold text-gray-900">{stats.draft}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <FiEye className="w-5 h-5 text-purple-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Tổng lượt xem</p>
-              <p className="text-lg font-bold text-gray-900">{stats.totalViews.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {isLoading && <Paper elevation={0} sx={{ p: 4, border: `1px solid ${palette.border}`, borderRadius: 3, display: 'flex', justifyContent: 'center' }}><Loader /></Paper>}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Search */}
-          <div className="md:col-span-1">
-            <div className="relative">
-              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm nội dung..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            </div>
-          </div>
+      {!isLoading && (
+        <Paper elevation={0} sx={{ p: 2, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.5 }}>
+            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', bgcolor: palette.background, borderRadius: 2.5, border: `1px solid ${palette.border}`, px: 1.5, '&:focus-within': { borderColor: palette.accent } }}>
+              <Search sx={{ fontSize: 20, color: palette.textMuted, mr: 1 }} />
+              <InputBase value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Tìm theo tiêu đề hoặc slug..." sx={{ flex: 1, fontSize: '0.88rem', py: 0.8 }} />
+            </Box>
+            <AntSelect value={typeFilter || undefined} onChange={(v) => setTypeFilter(v || '')} allowClear placeholder="Loại" options={typeOpts} style={{ width: 160, height: 40, fontFamily: 'Inter, system-ui, sans-serif' }} />
+            <AntSelect value={statusFilter || undefined} onChange={(v) => setStatusFilter(v || '')} allowClear placeholder="Trạng thái" options={statusOpts} style={{ width: 160, height: 40, fontFamily: 'Inter, system-ui, sans-serif' }} />
+          </Box>
+        </Paper>
+      )}
 
-          {/* Type Filter */}
-          <div>
-            <Select
-              value={typeFilter}
-              onChange={setTypeFilter}
-              options={typeOptions}
-              placeholder="Loại nội dung"
-            />
-          </div>
+      {/* Table */}
+      {!isLoading && (
+        <Paper elevation={0} sx={{ border: `1px solid ${palette.border}`, borderRadius: 3, overflow: 'hidden' }}>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
+              <Box component="thead">
+                <Box component="tr" sx={{ bgcolor: palette.background }}>
+                  {['Nội dung', 'Loại', 'Trạng thái', 'Lượt xem', 'Bật/Tắt', ''].map((h) => (
+                    <Box key={h} component="th" sx={{ py: 1.5, px: 2, textAlign: 'left', fontSize: '0.72rem', fontWeight: 600, color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</Box>
+                  ))}
+                </Box>
+              </Box>
+              <Box component="tbody">
+                {paginatedData.items.map((item) => {
+                  const tc = typeConfig[item.type] ?? typeConfig.BLOG;
+                  const sc = statusChip[item.status] ?? statusChip.DRAFT;
+                  return (
+                    <Box key={item.id} component="tr" sx={{ borderBottom: `1px solid ${palette.border}`, '&:hover': { bgcolor: palette.background }, transition: 'background 0.15s' }}>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: tc.bg, color: tc.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{tc.icon}</Box>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography sx={{ fontSize: '0.88rem', fontWeight: 500, color: palette.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280 }}>{item.title}</Typography>
+                            <Typography sx={{ fontSize: '0.72rem', color: palette.textMuted }}>{item.author} · {item.updatedAt.toLocaleDateString('vi-VN')}</Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Chip label={tc.label} size="small" sx={{ bgcolor: tc.bg, color: tc.color, fontWeight: 600, fontSize: '0.7rem', height: 24 }} />
+                      </Box>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Chip label={sc.label} size="small" sx={{ bgcolor: sc.bg, color: sc.color, fontWeight: 600, fontSize: '0.7rem', height: 24 }} />
+                      </Box>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Typography sx={{ fontSize: '0.88rem', color: palette.textPrimary }}>{item.views.toLocaleString()}</Typography>
+                      </Box>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Switch checked={item.isActive} onChange={() => handleToggleActive(item.id)} disabled={isWorking === item.id} size="small" sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: palette.accent }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: palette.accent } }} />
+                      </Box>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton size="small" onClick={() => { setSelectedContent(item); setIsDetailOpen(true); }} sx={{ color: palette.textMuted, '&:hover': { bgcolor: '#E3F2FD', color: '#1565C0' } }}><Visibility sx={{ fontSize: 18 }} /></IconButton>
+                          <IconButton size="small" onClick={() => handleEdit(item)} sx={{ color: palette.textMuted, '&:hover': { bgcolor: '#E8F5E9', color: '#2E7D32' } }}><Edit sx={{ fontSize: 18 }} /></IconButton>
+                          <IconButton size="small" onClick={() => setDeleteTarget(item)} sx={{ color: palette.textMuted, '&:hover': { bgcolor: '#FEF2F2', color: '#EF4444' } }}><Delete sx={{ fontSize: 18 }} /></IconButton>
+                        </Box>
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Box>
+          </Box>
 
-          {/* Status Filter */}
-          <div>
-            <Select
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={statusOptions}
-              placeholder="Trạng thái"
-            />
-          </div>
-        </div>
-      </div>
+          {paginatedData.totalItems === 0 && (
+            <Box sx={{ textAlign: 'center', py: 6 }}>
+              <Article sx={{ fontSize: 48, color: palette.border, mb: 1.5 }} />
+              <Typography sx={{ fontWeight: 600, color: palette.textPrimary }}>Không có nội dung nào</Typography>
+            </Box>
+          )}
+        </Paper>
+      )}
 
-      {/* Content Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        {error && (
-          <div className="px-4 py-3 bg-red-50 border-b border-red-100 text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-        {actionMessage && (
-          <div className="px-4 py-3 bg-emerald-50 border-b border-emerald-100 text-emerald-700 text-sm">
-            {actionMessage}
-          </div>
-        )}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nội dung
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Loại
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trạng thái
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tác giả
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Lượt xem
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cập nhật
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {isLoading && (
-                <tr>
-                  <td colSpan={7} className="py-6 px-4">
-                    <Loader />
-                  </td>
-                </tr>
-              )}
-              {!isLoading && filteredContent.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="py-4 px-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        {getTypeIcon(item.type)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {item.title}
-                        </p>
-                        <p className="text-xs text-gray-500">ID: {item.id}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="text-sm text-gray-900">
-                      {getTypeLabel(item.type)}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    {getStatusBadge(item.status)}
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="text-sm text-gray-900">{item.author}</span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <FiEye className="w-4 h-4 mr-1 text-gray-400" />
-                      {item.views.toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="text-sm text-gray-500">
-                      {item.updatedAt.toLocaleDateString('vi-VN')}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        onClick={() => handleView(item)}
-                        aria-label="Xem"
-                      >
-                        <FiEye className="w-4 h-4" />
-                      </button>
-                      <button
-                        className="p-1.5 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                        onClick={() => handleEdit(item)}
-                        aria-label="Chỉnh sửa"
-                      >
-                        <FiEdit className="w-4 h-4" />
-                      </button>
-                      <button
-                        className="inline-flex items-center"
-                        onClick={() => handleToggleActive(item.id)}
-                        aria-label={item.isActive ? 'Tắt' : 'Bật'}
-                        disabled={isWorking === item.id}
-                      >
-                        {item.isActive ? (
-                          <FiToggleRight className="w-8 h-8 text-green-500" />
-                        ) : (
-                          <FiToggleLeft className="w-8 h-8 text-gray-400" />
-                        )}
-                      </button>
-                      <button
-                        className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                        onClick={() => handleDelete(item.id)}
-                        aria-label="Xóa"
-                        disabled={isWorking === item.id}
-                      >
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+      {!isLoading && filteredContent.length > 0 && (
+        <Pagination currentPage={currentPage} totalPages={paginatedData.totalPages} totalItems={paginatedData.totalItems} itemsPerPage={pageSize} onPageChange={handlePageChange} showPageSizeSelect onPageSizeChange={handlePageSizeChange} />
+      )}
+
+      {/* View Detail */}
+      <Modal open={isDetailOpen} onCancel={() => setIsDetailOpen(false)} title={`Chi tiết: ${selectedContent?.title}`} footer={<Button onClick={() => setIsDetailOpen(false)} style={{ borderRadius: 10 }}>Đóng</Button>} width={640} centered>
+        {selectedContent && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+              {[
+                ['Loại', typeConfig[selectedContent.type]?.label],
+                ['Tác giả', selectedContent.author || '---'],
+                ['Lượt xem', selectedContent.views?.toLocaleString()],
+                ['Cập nhật', selectedContent.updatedAt?.toLocaleDateString('vi-VN')],
+                ['Slug', selectedContent.slug],
+              ].map(([label, value], i) => (
+                <Box key={i}>
+                  <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted, mb: 0.3 }}>{label}</Typography>
+                  <Typography sx={{ fontSize: '0.88rem', fontWeight: 500, color: palette.textPrimary }}>{value}</Typography>
+                </Box>
               ))}
-            </tbody>
-          </table>
-        </div>
-        {!isLoading && filteredContent.length === 0 && (
-          <div className="py-10 text-center text-gray-500 text-sm">
-            Không có nội dung nào. Thử thay đổi bộ lọc hoặc tạo mới.
-          </div>
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted, mb: 0.3 }}>Tóm tắt</Typography>
+              <Typography sx={{ fontSize: '0.88rem', color: palette.textPrimary }}>{selectedContent.excerpt || 'Chưa có'}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Chip label={statusChip[selectedContent.status]?.label} size="small" sx={{ bgcolor: statusChip[selectedContent.status]?.bg, color: statusChip[selectedContent.status]?.color, fontWeight: 600 }} />
+              <Chip label={selectedContent.isActive ? 'Đang bật' : 'Đang tắt'} size="small" sx={{ bgcolor: selectedContent.isActive ? '#ECFDF5' : '#F9FAFB', color: selectedContent.isActive ? '#10B981' : '#6B7280', fontWeight: 600 }} />
+              {selectedContent.tags?.map((tag) => <Chip key={tag} label={`#${tag}`} size="small" sx={{ bgcolor: palette.background, color: palette.textSecondary, fontSize: '0.72rem' }} />)}
+            </Box>
+          </Box>
         )}
-      </div>
+      </Modal>
 
-      {isDetailOpen && selectedContent && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="absolute inset-0" onClick={() => setIsDetailOpen(false)} />
-          <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
-            <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
-              <div>
-                <p className="text-xs uppercase tracking-[0.12em] text-gray-400 font-semibold">Chi tiết nội dung</p>
-                <h3 className="text-2xl font-semibold text-gray-900 mt-1">{selectedContent.title}</h3>
-                <p className="text-xs text-gray-500 mt-1">ID: {selectedContent.id}</p>
-              </div>
-              <button
-                onClick={() => setIsDetailOpen(false)}
-                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                aria-label="Đóng"
-              >
-                ✕
-              </button>
-            </div>
+      {/* Edit */}
+      <Modal open={isEditOpen} onCancel={() => setIsEditOpen(false)} title={`Chỉnh sửa: ${selectedContent?.title}`} footer={null} width={640} centered>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+            <Box>
+              <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Tiêu đề *</Typography>
+              <Input value={editForm.title} onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))} style={inputStyle} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Slug</Typography>
+              <Input value={editForm.slug} onChange={(e) => setEditForm((p) => ({ ...p, slug: e.target.value }))} style={inputStyle} />
+            </Box>
+          </Box>
+          <Box>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Tóm tắt</Typography>
+            <TextArea rows={2} value={editForm.excerpt} onChange={(e) => setEditForm((p) => ({ ...p, excerpt: e.target.value }))} style={{ borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }} />
+          </Box>
+          <Box>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Tags (phẩy ngăn cách)</Typography>
+            <Input value={editForm.tagsText} onChange={(e) => setEditForm((p) => ({ ...p, tagsText: e.target.value }))} style={inputStyle} />
+          </Box>
+          <Box>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: palette.textPrimary, mb: 0.5 }}>Nội dung *</Typography>
+            <TextArea rows={6} value={editForm.body} onChange={(e) => setEditForm((p) => ({ ...p, body: e.target.value }))} style={{ borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }} />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ fontSize: '0.85rem', color: palette.textPrimary }}>Xuất bản</Typography>
+              <Switch checked={editForm.published} onChange={() => setEditForm((p) => ({ ...p, published: !p.published }))} sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: palette.accent }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: palette.accent } }} />
+              <Typography sx={{ fontSize: '0.78rem', color: palette.textMuted }}>{editForm.published ? 'Đang xuất bản' : 'Bản nháp'}</Typography>
+            </Box>
+            {editError && <Typography sx={{ fontSize: '0.82rem', color: '#C62828' }}>{editError}</Typography>}
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, pt: 1 }}>
+            <Button onClick={() => setIsEditOpen(false)} style={{ height: 40, borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }}>Hủy</Button>
+            <Button type="primary" loading={isSavingEdit} onClick={handleSaveEdit} style={{ backgroundColor: palette.accent, borderColor: palette.accent, height: 40, borderRadius: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}>
+              {isSavingEdit ? 'Đang lưu...' : 'Lưu'}
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
 
-            <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm text-gray-700">
-              <div className="space-y-1.5">
-                <p className="text-gray-500">Loại</p>
-                <p className="font-semibold text-gray-900">{getTypeLabel(selectedContent.type)}</p>
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-gray-500">Trạng thái</p>
-                <div className="font-semibold text-gray-900">{getStatusBadge(selectedContent.status)}</div>
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-gray-500">Tác giả</p>
-                <p className="font-semibold text-gray-900">{selectedContent.author || 'Không rõ'}</p>
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-gray-500">Lượt xem</p>
-                <p className="font-semibold text-gray-900">{selectedContent.views?.toLocaleString() || 0}</p>
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-gray-500">Cập nhật</p>
-                <p className="font-semibold text-gray-900">
-                  {selectedContent.updatedAt ? selectedContent.updatedAt.toLocaleDateString('vi-VN') : 'Không rõ'}
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-gray-500">Slug</p>
-                <p className="font-semibold text-gray-900">{selectedContent.slug}</p>
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <p className="text-gray-500">Tóm tắt</p>
-                <p className="font-semibold text-gray-800">{selectedContent.excerpt || 'Chưa có tóm tắt'}</p>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${selectedContent.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-700'}`}>
-                  {selectedContent.isActive ? 'Đang bật' : 'Đang tắt'}
-                </span>
-                {selectedContent.tags?.length ? (
-                  <div className="flex flex-wrap gap-1">
-                    {selectedContent.tags.map((tag) => (
-                      <span key={tag} className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">#{tag}</span>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              <button
-                onClick={() => setIsDetailOpen(false)}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      , document.body)}
-
-      {deleteTarget && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="absolute inset-0" onClick={() => setDeleteTarget(null)} />
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h3 className="text-xl font-semibold text-gray-900">Xóa nội dung</h3>
-              <p className="text-sm text-gray-600 mt-2">
-                Bạn có chắc muốn xóa “{deleteTarget.title}”? Hành động này không thể hoàn tác.
-              </p>
-            </div>
-            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={isWorking === deleteTarget.id}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-60"
-              >
-                {isWorking === deleteTarget.id ? 'Đang xóa...' : 'Xóa'}
-              </button>
-            </div>
-          </div>
-        </div>
-      , document.body)}
-
-      {isEditOpen && selectedContent && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="absolute inset-0" onClick={() => setIsEditOpen(false)} />
-          <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
-            <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
-              <div>
-                <p className="text-xs uppercase tracking-[0.12em] text-gray-400 font-semibold">Chỉnh sửa nội dung</p>
-                <h3 className="text-2xl font-semibold text-gray-900 mt-1">{selectedContent.title}</h3>
-                <p className="text-xs text-gray-500 mt-1">ID: {selectedContent.id}</p>
-              </div>
-              <button
-                onClick={() => setIsEditOpen(false)}
-                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                aria-label="Đóng"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Tiêu đề</label>
-                  <input
-                    type="text"
-                    value={editForm.title}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Slug</label>
-                  <input
-                    type="text"
-                    value={editForm.slug}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, slug: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Tóm tắt</label>
-                <textarea
-                  rows={3}
-                  value={editForm.excerpt}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, excerpt: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Tags (ngăn cách bằng dấu phẩy)</label>
-                <input
-                  type="text"
-                  value={editForm.tagsText}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, tagsText: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Nội dung (text)</label>
-                <textarea
-                  rows={6}
-                  value={editForm.body}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, body: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Nhập nội dung bài viết (nếu cần chỉnh)"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-gray-700">
-                  <span>Xuất bản</span>
-                  <button
-                    type="button"
-                    onClick={() => setEditForm((prev) => ({ ...prev, published: !prev.published }))}
-                    className="inline-flex items-center"
-                  >
-                    {editForm.published ? (
-                      <FiToggleRight className="w-8 h-8 text-green-500" />
-                    ) : (
-                      <FiToggleLeft className="w-8 h-8 text-gray-400" />
-                    )}
-                  </button>
-                  <span className="text-xs text-gray-500">
-                    {editForm.published ? 'Đang xuất bản' : 'Bản nháp'}
-                  </span>
-                </div>
-                {editError && <p className="text-sm text-red-600">{editError}</p>}
-              </div>
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
-              <button
-                onClick={() => setIsEditOpen(false)}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={isSavingEdit}
-                className="px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary-dark disabled:opacity-60"
-              >
-                {isSavingEdit ? 'Đang lưu...' : 'Lưu'}
-              </button>
-            </div>
-          </div>
-        </div>
-      , document.body)}
-    </div>
+      {/* Delete */}
+      <Modal open={!!deleteTarget} onCancel={() => setDeleteTarget(null)} title="Xóa nội dung" footer={null} width={440} centered>
+        <Typography sx={{ fontSize: '0.9rem', color: palette.textSecondary, py: 2 }}>
+          Xóa &quot;{deleteTarget?.title}&quot;? Hành động không thể hoàn tác.
+        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+          <Button onClick={() => setDeleteTarget(null)} style={{ height: 40, borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }}>Hủy</Button>
+          <Button type="primary" danger loading={isWorking === deleteTarget?.id} onClick={confirmDelete} style={{ height: 40, borderRadius: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}>Xóa</Button>
+        </Box>
+      </Modal>
+    </Box>
   );
 };
