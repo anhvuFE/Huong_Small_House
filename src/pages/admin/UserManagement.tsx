@@ -1,32 +1,84 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import {
-  FiSearch,
-  FiFilter,
-  FiMail,
-  FiPhone,
-  FiMapPin,
-  FiUser,
-  FiCalendar,
-  FiCheckCircle,
-  FiXCircle,
-  FiEye,
-  FiLock,
-  FiUnlock,
-  FiX,
-} from 'react-icons/fi';
-import { Select } from '../../components/common/Select';
+  Box,
+  Typography,
+  Paper,
+  IconButton,
+  Chip,
+  InputBase,
+  Avatar,
+} from '@mui/material';
+import {
+  Search,
+  Visibility,
+  Lock,
+  LockOpen,
+  Groups,
+  VerifiedUser,
+  Schedule,
+  PersonAdd,
+  Email,
+  Phone,
+  LocationOn,
+  CalendarToday,
+} from '@mui/icons-material';
+import { Button, Select as AntSelect, Modal } from 'antd';
 import { userApi } from '../../services/userApi';
 import { getErrorMessage } from '../../utils/error';
 import type { User } from '../../types';
 import { Loader } from '../../components/common/Loader';
 import { useToast } from '../../components/common/Toast';
+import { Pagination } from '../../components/common/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import logo from '../../assets/logo.png';
+
+const palette = {
+  accent: '#7daf18',
+  accentLight: '#EDF7D5',
+  textPrimary: '#1A2332',
+  textSecondary: '#5A6B7F',
+  textMuted: '#8D99A8',
+  border: '#E8ECF0',
+  background: '#FAFBFC',
+};
 
 const getDaysSinceLogin = (lastLogin?: Date) => {
   if (!lastLogin) return Infinity;
   return Math.floor((Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24));
 };
+
+const getVerificationChip = (user: User) => {
+  if (user.isEmailVerified && user.isPhoneVerified) return { text: 'Đã xác minh', color: '#10B981', bg: '#ECFDF5' };
+  if (!user.isEmailVerified && !user.isPhoneVerified) return { text: 'Chưa xác minh', color: '#EF4444', bg: '#FEF2F2' };
+  return { text: 'Một phần', color: '#F59E0B', bg: '#FFFBEB' };
+};
+
+const getActivityText = (lastLogin?: Date) => {
+  if (!lastLogin) return { text: 'Chưa đăng nhập', color: palette.textMuted };
+  const d = getDaysSinceLogin(lastLogin);
+  if (d <= 1) return { text: 'Hôm nay', color: '#10B981' };
+  if (d <= 7) return { text: `${d} ngày trước`, color: '#3B82F6' };
+  if (d <= 30) return { text: `${d} ngày trước`, color: '#F59E0B' };
+  return { text: `${d} ngày trước`, color: '#EF4444' };
+};
+
+const verificationOptions = [
+  { value: 'verified', label: 'Đã xác minh' },
+  { value: 'unverified', label: 'Chưa xác minh' },
+  { value: 'partial', label: 'Một phần' },
+];
+
+const activityOptions = [
+  { value: 'active', label: 'Hoạt động gần đây' },
+  { value: 'inactive', label: 'Không hoạt động' },
+];
+
+const quickStats = [
+  { key: 'total', label: 'Tổng người dùng', icon: <Groups sx={{ fontSize: 22 }} />, color: '#1565C0', bg: '#E3F2FD' },
+  { key: 'verified', label: 'Đã xác minh', icon: <VerifiedUser sx={{ fontSize: 22 }} />, color: '#2E7D32', bg: '#E8F5E9' },
+  { key: 'active', label: 'Hoạt động tuần', icon: <Schedule sx={{ fontSize: 22 }} />, color: '#7B1FA2', bg: '#F3E5F5' },
+  { key: 'new', label: 'Mới tháng này', icon: <PersonAdd sx={{ fontSize: 22 }} />, color: '#E65100', bg: '#FFF3E0' },
+];
 
 export const UserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,569 +91,265 @@ export const UserManagement: React.FC = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [lockedUsers, setLockedUsers] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
-
-  const verificationOptions = [
-    { value: '', label: 'Tất cả' },
-    { value: 'verified', label: 'Đã xác minh' },
-    { value: 'unverified', label: 'Chưa xác minh' },
-    { value: 'partial', label: 'Xác minh một phần' },
-  ];
-
-  const activityOptions = [
-    { value: '', label: 'Tất cả hoạt động' },
-    { value: 'active', label: 'Hoạt động gần đây' },
-    { value: 'inactive', label: 'Không hoạt động' },
-  ];
+  const { currentPage, pageSize, handlePageChange, handlePageSizeChange, getPaginatedData } = usePagination(1, 10);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      setIsLoading(true);
-      setError('');
-      try {
-        const data = await userApi.listUsers();
-        setUsers(data);
-      } catch (err) {
-        setError(getErrorMessage(err, 'Không thể tải danh sách người dùng.'));
-      } finally {
-        setIsLoading(false);
-      }
+    const fetch = async () => {
+      setIsLoading(true); setError('');
+      try { setUsers(await userApi.listUsers()); } catch (err) { setError(getErrorMessage(err, 'Không thể tải người dùng.')); } finally { setIsLoading(false); }
     };
-
-    fetchUsers();
+    fetch();
   }, []);
 
   const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
-      const matchesSearch =
-        user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone.includes(searchTerm);
-
-      let matchesVerification = true;
-      if (verificationFilter === 'verified') {
-        matchesVerification = user.isEmailVerified && user.isPhoneVerified;
-      } else if (verificationFilter === 'unverified') {
-        matchesVerification = !user.isEmailVerified && !user.isPhoneVerified;
-      } else if (verificationFilter === 'partial') {
-        matchesVerification = user.isEmailVerified !== user.isPhoneVerified;
-      }
-
-      let matchesActivity = true;
-      if (activityFilter === 'active') {
-        matchesActivity = getDaysSinceLogin(user.lastLogin) <= 7;
-      } else if (activityFilter === 'inactive') {
-        matchesActivity = getDaysSinceLogin(user.lastLogin) > 30;
-      }
-
-      return matchesSearch && matchesVerification && matchesActivity;
+    return users.filter((u) => {
+      const q = searchTerm.toLowerCase();
+      const matchSearch = u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.phone.includes(searchTerm);
+      let matchVerify = true;
+      if (verificationFilter === 'verified') matchVerify = u.isEmailVerified && u.isPhoneVerified;
+      else if (verificationFilter === 'unverified') matchVerify = !u.isEmailVerified && !u.isPhoneVerified;
+      else if (verificationFilter === 'partial') matchVerify = u.isEmailVerified !== u.isPhoneVerified;
+      let matchActivity = true;
+      if (activityFilter === 'active') matchActivity = getDaysSinceLogin(u.lastLogin) <= 7;
+      else if (activityFilter === 'inactive') matchActivity = getDaysSinceLogin(u.lastLogin) > 30;
+      return matchSearch && matchVerify && matchActivity;
     });
   }, [users, searchTerm, verificationFilter, activityFilter]);
 
-  const getVerificationStatus = (user: User) => {
-    if (user.isEmailVerified && user.isPhoneVerified) {
-      return { text: 'Đã xác minh', color: 'bg-green-100 text-green-800', icon: FiCheckCircle };
-    } else if (!user.isEmailVerified && !user.isPhoneVerified) {
-      return { text: 'Chưa xác minh', color: 'bg-red-100 text-red-800', icon: FiXCircle };
-    } else {
-      return { text: 'Một phần', color: 'bg-yellow-100 text-yellow-800', icon: FiXCircle };
-    }
-  };
-
-  const getActivityStatus = (lastLogin?: Date) => {
-    if (!lastLogin) {
-      return { text: 'Chưa đăng nhập', color: 'text-gray-500' };
-    }
-    const daysSinceLogin = getDaysSinceLogin(lastLogin);
-
-    if (daysSinceLogin <= 1) {
-      return { text: 'Hôm nay', color: 'text-green-600' };
-    } else if (daysSinceLogin <= 7) {
-      return { text: `${daysSinceLogin} ngày trước`, color: 'text-blue-600' };
-    } else if (daysSinceLogin <= 30) {
-      return { text: `${daysSinceLogin} ngày trước`, color: 'text-yellow-600' };
-    } else {
-      return { text: `${daysSinceLogin} ngày trước`, color: 'text-red-600' };
-    }
-  };
+  const paginatedData = useMemo(() => getPaginatedData(filteredUsers), [filteredUsers, getPaginatedData]);
 
   const stats = useMemo(() => {
-    const totalUsers = users.length;
-    const verifiedUsers = users.filter(u => u.isEmailVerified && u.isPhoneVerified).length;
-    const activeUsers = users.filter(u => getDaysSinceLogin(u.lastLogin) <= 7).length;
-    const newUsers = users.filter(u => {
-      const daysSinceJoin = Math.floor((Date.now() - u.createdAt.getTime()) / (1000 * 60 * 60 * 24));
-      return daysSinceJoin <= 30;
-    }).length;
-    return { totalUsers, verifiedUsers, activeUsers, newUsers };
+    const total = users.length;
+    const verified = users.filter((u) => u.isEmailVerified && u.isPhoneVerified).length;
+    const active = users.filter((u) => getDaysSinceLogin(u.lastLogin) <= 7).length;
+    const newU = users.filter((u) => Math.floor((Date.now() - u.createdAt.getTime()) / (1000 * 60 * 60 * 24)) <= 30).length;
+    return { total, verified, active, new: newU } as Record<string, number>;
   }, [users]);
-
-  const handleOpenDetail = (user: User) => {
-    setSelectedUser(user);
-    setIsDetailOpen(true);
-  };
 
   const handleToggleLock = (userId: string) => {
     const next = !lockedUsers[userId];
     setLockedUsers((prev) => ({ ...prev, [userId]: next }));
-    showToast({
-      title: next ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản',
-      variant: next ? 'error' : 'success',
-    });
+    showToast({ title: next ? 'Đã khóa tài khoản' : 'Đã mở khóa', variant: next ? 'error' : 'success' });
   };
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Quản lý người dùng</h1>
-          <p className="text-sm sm:text-base text-gray-600">
-            Theo dõi và quản lý thông tin khách hàng
-          </p>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button className="inline-flex items-center px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <FiFilter className="w-4 h-4 mr-1.5 sm:mr-2" />
-            <span className="hidden sm:inline">Xuất Excel</span>
-            <span className="sm:hidden">Excel</span>
-          </button>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography sx={{ fontSize: '1.3rem', fontWeight: 700, color: palette.textPrimary }}>Quản lý người dùng</Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: palette.textMuted }}>{users.length} người dùng</Typography>
+        </Box>
+        <Button icon={<Search style={{ fontSize: 16 }} />} style={{ height: 40, borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }}>Xuất Excel</Button>
+      </Box>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg w-fit">
-              <FiUser className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs sm:text-sm font-medium text-gray-600">Tổng người dùng</p>
-              <p className="text-base sm:text-lg font-bold text-gray-900">{stats.totalUsers}</p>
-            </div>
-          </div>
-        </div>
+      {error && <Paper elevation={0} sx={{ p: 2, border: '1px solid #FCA5A5', bgcolor: '#FEF2F2', borderRadius: 2 }}><Typography sx={{ color: '#B91C1C', fontSize: '0.88rem' }}>{error}</Typography></Paper>}
 
-        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg w-fit">
-              <FiCheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs sm:text-sm font-medium text-gray-600">Đã xác minh</p>
-              <p className="text-base sm:text-lg font-bold text-gray-900">{stats.verifiedUsers}</p>
-            </div>
-          </div>
-        </div>
+      {/* Stats */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 2 }}>
+        {quickStats.map((s) => (
+          <Paper key={s.key} elevation={0} sx={{ p: 2, border: `1px solid ${palette.border}`, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ width: 42, height: 42, borderRadius: 2.5, bgcolor: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</Box>
+            <Box>
+              <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>{s.label}</Typography>
+              <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: palette.textPrimary }}>{stats[s.key]}</Typography>
+            </Box>
+          </Paper>
+        ))}
+      </Box>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg w-fit">
-              <FiCalendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs sm:text-sm font-medium text-gray-600">Hoạt động tuần</p>
-              <p className="text-base sm:text-lg font-bold text-gray-900">{stats.activeUsers}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg w-fit">
-              <FiUser className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs sm:text-sm font-medium text-gray-600">Mới tháng này</p>
-              <p className="text-base sm:text-lg font-bold text-gray-900">{stats.newUsers}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {isLoading && <Paper elevation={0} sx={{ p: 4, border: `1px solid ${palette.border}`, borderRadius: 3, display: 'flex', justifyContent: 'center' }}><Loader /></Paper>}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-          {/* Search */}
-          <div className="sm:col-span-2 md:col-span-1">
-            <div className="relative">
-              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          {/* Verification Filter */}
-          <div>
-            <Select
-              value={verificationFilter}
-              onChange={setVerificationFilter}
-              options={verificationOptions}
-              placeholder="Trạng thái xác minh"
-            />
-          </div>
-
-          {/* Activity Filter */}
-          <div>
-            <Select
-              value={activityFilter}
-              onChange={setActivityFilter}
-              options={activityOptions}
-              placeholder="Hoạt động"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Users Cards (mobile) */}
-      <div className="space-y-2 sm:space-y-3 md:hidden">
-        {isLoading && (
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <Loader />
-          </div>
-        )}
-        {!isLoading && filteredUsers.map((user) => {
-          const verificationStatus = getVerificationStatus(user);
-          const activityStatus = getActivityStatus(user.lastLogin);
-          const VerificationIcon = verificationStatus.icon;
-          return (
-            <div key={user.id} className="bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-sm p-3 sm:p-4 space-y-2.5 sm:space-y-3">
-              <div className="flex items-start justify-between gap-2 sm:gap-3">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                    <img src={user.avatar || logo} alt={user.fullName} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover p-0.5 sm:p-1" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{user.fullName}</p>
-                    <p className="text-xs text-gray-500">ID: {user.id}</p>
-                  </div>
-                </div>
-                <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-medium flex-shrink-0 ${verificationStatus.color}`}>
-                  <VerificationIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
-                  <span className="hidden xs:inline">{verificationStatus.text}</span>
-                  <span className="xs:hidden">{verificationStatus.text.split(' ')[0]}</span>
-                </span>
-              </div>
-
-              <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-700">
-                <div className="flex items-center gap-1.5 sm:gap-2 text-gray-600">
-                  <FiMail className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span className="truncate">{user.email}</span>
-                </div>
-                <div className="flex items-center gap-1.5 sm:gap-2 text-gray-600">
-                  <FiPhone className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span>{user.phone || '---'}</span>
-                </div>
-                <div className="flex items-start gap-1.5 sm:gap-2 text-gray-600">
-                  <FiMapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 mt-0.5 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm line-clamp-2">
-                    {user.addresses?.length
-                      ? `${user.addresses[0].street}${user.addresses[0].ward ? ', ' + user.addresses[0].ward : ''}`
-                      : 'Chưa có địa chỉ'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-                  <div className="flex items-center gap-1 text-[11px] sm:text-xs text-gray-500">
-                    <FiCalendar className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                    {user.createdAt?.toLocaleDateString('vi-VN')}
-                  </div>
-                  <span className={`text-xs sm:text-sm font-medium ${activityStatus.color}`}>
-                    {activityStatus.text}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-1.5 sm:gap-2 pt-2 border-t border-gray-100">
-                <button
-                  className="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  onClick={() => handleOpenDetail(user)}
-                  aria-label="Xem chi tiết người dùng"
-                >
-                  <FiEye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </button>
-                <button
-                  className={`p-1.5 sm:p-2 rounded-lg transition-colors ${lockedUsers[user.id]
-                    ? 'text-red-600 hover:bg-red-50'
-                    : 'text-green-600 hover:bg-green-50'}`}
-                  onClick={() => handleToggleLock(user.id)}
-                  aria-label={lockedUsers[user.id] ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
-                >
-                  {lockedUsers[user.id] ? (
-                    <FiUnlock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  ) : (
-                    <FiLock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-
-        {!isLoading && filteredUsers.length === 0 && (
-          <div className="text-center py-6 sm:py-8 text-sm sm:text-base text-gray-600 bg-white border border-gray-200 rounded-lg sm:rounded-xl">
-            Không tìm thấy người dùng nào.
-          </div>
-        )}
-      </div>
-
-      {/* Users Table (desktop) */}
-      <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        {error && (
-          <div className="px-4 py-3 bg-red-50 border-b border-red-100 text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Người dùng
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Liên hệ
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Địa chỉ
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Xác minh
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Hoạt động cuối
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ngày tham gia
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {isLoading && (
-                <tr>
-                  <td colSpan={7} className="py-6 px-4">
-                    <Loader />
-                  </td>
-                </tr>
-              )}
-              {!isLoading && filteredUsers.map((user) => {
-                const verificationStatus = getVerificationStatus(user);
-                const activityStatus = getActivityStatus(user.lastLogin);
-                const VerificationIcon = verificationStatus.icon;
-
-                return (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="py-4 px-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                            <img
-                              src={user.avatar || logo}
-                              alt={user.fullName}
-                              className="w-10 h-10 rounded-full object-cover p-1"
-                            />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {user.fullName}
-                          </p>
-                          <p className="text-xs text-gray-500">ID: {user.id}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm text-gray-600">
-                          <FiMail className="w-4 h-4 mr-2 flex-shrink-0" />
-                          <span className="truncate">{user.email}</span>
-                          {user.isEmailVerified && (
-                            <FiCheckCircle className="w-3 h-3 ml-1 text-green-500" />
-                          )}
-                        </div>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <FiPhone className="w-4 h-4 mr-2 flex-shrink-0" />
-                          <span>{user.phone}</span>
-                          {user.isPhoneVerified && (
-                            <FiCheckCircle className="w-3 h-3 ml-1 text-green-500" />
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      {user.addresses.length > 0 ? (
-                        <div className="flex items-start text-sm text-gray-600">
-                          <FiMapPin className="w-4 h-4 mr-2 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="line-clamp-1">
-                              {user.addresses[0].street}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {user.addresses[0].ward}, {user.addresses[0].district}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">Chưa có địa chỉ</span>
-                      )}
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${verificationStatus.color}`}>
-                        <VerificationIcon className="w-3 h-3 mr-1" />
-                        {verificationStatus.text}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`text-sm font-medium ${activityStatus.color}`}>
-                        {activityStatus.text}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="text-sm text-gray-500">
-                        {user.createdAt.toLocaleDateString('vi-VN')}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          onClick={() => handleOpenDetail(user)}
-                          aria-label="Xem chi tiết người dùng"
-                        >
-                          <FiEye className="w-4 h-4" />
-                        </button>
-                        <button
-                          className={`p-1.5 rounded transition-colors ${lockedUsers[user.id]
-                            ? 'text-red-600 hover:bg-red-50'
-                            : 'text-green-600 hover:bg-green-50'}`}
-                          onClick={() => handleToggleLock(user.id)}
-                          aria-label={lockedUsers[user.id] ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
-                        >
-                          {lockedUsers[user.id] ? (
-                            <FiUnlock className="w-4 h-4" />
-                          ) : (
-                            <FiLock className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Empty State */}
-        {filteredUsers.length === 0 && (
-          <div className="text-center py-12">
-            <FiUser className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Không tìm thấy người dùng nào
-            </h3>
-            <p className="text-gray-500">
-              Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Pagination */}
-      {filteredUsers.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 bg-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg shadow-sm border border-gray-200">
-          <div className="text-xs sm:text-sm text-gray-700 text-center sm:text-left">
-            Hiển thị <span className="font-medium">1</span> đến{' '}
-            <span className="font-medium">{filteredUsers.length}</span> trong tổng số{' '}
-            <span className="font-medium">{filteredUsers.length}</span> người dùng
-          </div>
-          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-            <button className="px-2.5 sm:px-3 py-1 border border-gray-300 rounded text-xs sm:text-sm text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50">
-              Trước
-            </button>
-            <button className="px-2.5 sm:px-3 py-1 bg-primary text-white rounded text-xs sm:text-sm">
-              1
-            </button>
-            <button className="px-2.5 sm:px-3 py-1 border border-gray-300 rounded text-xs sm:text-sm text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50">
-              Sau
-            </button>
-          </div>
-        </div>
+      {!isLoading && (
+        <Paper elevation={0} sx={{ p: 2, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.5 }}>
+            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', bgcolor: palette.background, borderRadius: 2.5, border: `1px solid ${palette.border}`, px: 1.5, '&:focus-within': { borderColor: palette.accent } }}>
+              <Search sx={{ fontSize: 20, color: palette.textMuted, mr: 1 }} />
+              <InputBase value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Tìm theo tên, email, SĐT..." sx={{ flex: 1, fontSize: '0.88rem', py: 0.8 }} />
+            </Box>
+            <AntSelect value={verificationFilter || undefined} onChange={(v) => setVerificationFilter(v || '')} allowClear placeholder="Xác minh" options={verificationOptions} style={{ width: 170, height: 40, fontFamily: 'Inter, system-ui, sans-serif' }} />
+            <AntSelect value={activityFilter || undefined} onChange={(v) => setActivityFilter(v || '')} allowClear placeholder="Hoạt động" options={activityOptions} style={{ width: 180, height: 40, fontFamily: 'Inter, system-ui, sans-serif' }} />
+          </Box>
+        </Paper>
       )}
 
-      {isDetailOpen && selectedUser && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] bg-white rounded-xl sm:rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
-            <div className="flex items-start justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100">
-              <div className="pr-2">
-                <p className="text-[10px] sm:text-xs uppercase tracking-[0.12em] text-gray-400 font-semibold">Chi tiết người dùng</p>
-                <h3 className="text-lg sm:text-2xl font-semibold text-gray-900 mt-1">{selectedUser.fullName}</h3>
-                <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">ID: {selectedUser.id}</p>
-              </div>
-              <button
-                onClick={() => setIsDetailOpen(false)}
-                className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                aria-label="Đóng"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
+      {/* Table */}
+      {!isLoading && (
+        <Paper elevation={0} sx={{ border: `1px solid ${palette.border}`, borderRadius: 3, overflow: 'hidden' }}>
+          {/* Desktop */}
+          <Box sx={{ display: { xs: 'none', md: 'block' }, overflowX: 'auto' }}>
+            <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+              <Box component="thead">
+                <Box component="tr" sx={{ bgcolor: palette.background }}>
+                  {['Người dùng', 'Liên hệ', 'Xác minh', 'Hoạt động', 'Ngày tham gia', ''].map((h) => (
+                    <Box key={h} component="th" sx={{ py: 1.5, px: 2, textAlign: 'left', fontSize: '0.72rem', fontWeight: 600, color: palette.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</Box>
+                  ))}
+                </Box>
+              </Box>
+              <Box component="tbody">
+                {paginatedData.items.map((user) => {
+                  const v = getVerificationChip(user);
+                  const a = getActivityText(user.lastLogin);
+                  return (
+                    <Box key={user.id} component="tr" sx={{ borderBottom: `1px solid ${palette.border}`, '&:hover': { bgcolor: palette.background }, transition: 'background 0.15s' }}>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar src={user.avatar || logo} sx={{ width: 38, height: 38, bgcolor: palette.background, '& img': { objectFit: 'contain', p: 0.3 } }} />
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography sx={{ fontSize: '0.88rem', fontWeight: 500, color: palette.textPrimary }}>{user.fullName}</Typography>
+                            <Typography sx={{ fontSize: '0.7rem', color: palette.textMuted }}>ID: {user.id}</Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Email sx={{ fontSize: 14, color: palette.textMuted }} />
+                            <Typography sx={{ fontSize: '0.82rem', color: palette.textSecondary }}>{user.email}</Typography>
+                            {user.isEmailVerified && <VerifiedUser sx={{ fontSize: 12, color: '#10B981' }} />}
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Phone sx={{ fontSize: 14, color: palette.textMuted }} />
+                            <Typography sx={{ fontSize: '0.82rem', color: palette.textSecondary }}>{user.phone || '---'}</Typography>
+                            {user.isPhoneVerified && <VerifiedUser sx={{ fontSize: 12, color: '#10B981' }} />}
+                          </Box>
+                        </Box>
+                      </Box>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Chip label={v.text} size="small" sx={{ bgcolor: v.bg, color: v.color, fontWeight: 600, fontSize: '0.7rem', height: 24 }} />
+                      </Box>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Typography sx={{ fontSize: '0.84rem', fontWeight: 500, color: a.color }}>{a.text}</Typography>
+                      </Box>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Typography sx={{ fontSize: '0.82rem', color: palette.textMuted }}>{user.createdAt.toLocaleDateString('vi-VN')}</Typography>
+                      </Box>
+                      <Box component="td" sx={{ py: 1.5, px: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton size="small" onClick={() => { setSelectedUser(user); setIsDetailOpen(true); }} sx={{ color: palette.textMuted, '&:hover': { bgcolor: '#E3F2FD', color: '#1565C0' } }}><Visibility sx={{ fontSize: 18 }} /></IconButton>
+                          <IconButton size="small" onClick={() => handleToggleLock(user.id)} sx={{ color: lockedUsers[user.id] ? '#EF4444' : palette.textMuted, '&:hover': { bgcolor: lockedUsers[user.id] ? '#FEF2F2' : '#E8F5E9', color: lockedUsers[user.id] ? '#EF4444' : '#2E7D32' } }}>
+                            {lockedUsers[user.id] ? <LockOpen sx={{ fontSize: 18 }} /> : <Lock sx={{ fontSize: 18 }} />}
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Box>
+          </Box>
 
-            <div className="px-4 sm:px-6 py-4 sm:py-5 max-h-[60vh] overflow-y-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 text-xs sm:text-sm text-gray-700">
-                <div className="space-y-1 sm:space-y-1.5">
-                  <p className="text-gray-500">Email</p>
-                  <p className="font-semibold text-gray-900 break-all">{selectedUser.email}</p>
-                </div>
-                <div className="space-y-1 sm:space-y-1.5">
-                  <p className="text-gray-500">Số điện thoại</p>
-                  <p className="font-semibold text-gray-900">{selectedUser.phone || 'Chưa có'}</p>
-                </div>
-                <div className="space-y-1 sm:space-y-1.5">
-                  <p className="text-gray-500">Ngày tham gia</p>
-                  <p className="font-semibold text-gray-900">
-                    {selectedUser.createdAt ? selectedUser.createdAt.toLocaleDateString('vi-VN') : 'Không rõ'}
-                  </p>
-                </div>
-                <div className="space-y-1 sm:space-y-1.5">
-                  <p className="text-gray-500">Hoạt động cuối</p>
-                  <p className="font-semibold text-gray-900">
-                    {selectedUser.lastLogin ? selectedUser.lastLogin.toLocaleString('vi-VN') : 'Chưa xác định'}
-                  </p>
-                </div>
-                <div className="space-y-1 sm:space-y-1.5 col-span-1 sm:col-span-2">
-                  <p className="text-gray-500">Địa chỉ</p>
-                  {selectedUser.addresses?.length ? (
-                    <div className="space-y-1">
-                      <p className="font-semibold text-gray-900">{selectedUser.addresses[0].street}</p>
-                      <p className="text-[11px] sm:text-xs text-gray-500">
-                        {[selectedUser.addresses[0].ward, selectedUser.addresses[0].district, selectedUser.addresses[0].province]
-                          .filter(Boolean)
-                          .join(', ')}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="font-semibold text-gray-500">Chưa có địa chỉ</p>
-                  )}
-                </div>
-              </div>
-            </div>
+          {/* Mobile cards */}
+          <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column' }}>
+            {paginatedData.items.map((user) => {
+              const v = getVerificationChip(user);
+              const a = getActivityText(user.lastLogin);
+              return (
+                <Box key={user.id} sx={{ p: 2, borderBottom: `1px solid ${palette.border}` }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                      <Avatar src={user.avatar || logo} sx={{ width: 36, height: 36, bgcolor: palette.background }} />
+                      <Box>
+                        <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: palette.textPrimary }}>{user.fullName}</Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>{user.email}</Typography>
+                      </Box>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 0.3 }}>
+                      <IconButton size="small" onClick={() => { setSelectedUser(user); setIsDetailOpen(true); }} sx={{ color: '#1565C0' }}><Visibility sx={{ fontSize: 16 }} /></IconButton>
+                      <IconButton size="small" onClick={() => handleToggleLock(user.id)} sx={{ color: lockedUsers[user.id] ? '#EF4444' : '#2E7D32' }}>
+                        {lockedUsers[user.id] ? <LockOpen sx={{ fontSize: 16 }} /> : <Lock sx={{ fontSize: 16 }} />}
+                      </IconButton>
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Chip label={v.text} size="small" sx={{ bgcolor: v.bg, color: v.color, fontWeight: 600, fontSize: '0.68rem', height: 22 }} />
+                    <Typography sx={{ fontSize: '0.78rem', fontWeight: 500, color: a.color }}>{a.text}</Typography>
+                    <Typography sx={{ fontSize: '0.72rem', color: palette.textMuted, ml: 'auto' }}>{user.createdAt.toLocaleDateString('vi-VN')}</Typography>
+                  </Box>
+                </Box>
+              );
+            })}
+          </Box>
 
-            <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 flex justify-end">
-              <button
-                onClick={() => setIsDetailOpen(false)}
-                className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-white transition-colors"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      , document.body)}
-    </div>
+          {paginatedData.totalItems === 0 && (
+            <Box sx={{ textAlign: 'center', py: 6 }}>
+              <Groups sx={{ fontSize: 48, color: palette.border, mb: 1.5 }} />
+              <Typography sx={{ fontWeight: 600, color: palette.textPrimary }}>Không tìm thấy người dùng</Typography>
+              <Typography sx={{ fontSize: '0.88rem', color: palette.textMuted }}>Thử thay đổi bộ lọc</Typography>
+            </Box>
+          )}
+        </Paper>
+      )}
+
+      {!isLoading && filteredUsers.length > 0 && (
+        <Pagination currentPage={currentPage} totalPages={paginatedData.totalPages} totalItems={paginatedData.totalItems} itemsPerPage={pageSize} onPageChange={handlePageChange} showPageSizeSelect onPageSizeChange={handlePageSizeChange} />
+      )}
+
+      {/* Detail Modal */}
+      <Modal open={isDetailOpen} onCancel={() => setIsDetailOpen(false)} title={`Chi tiết: ${selectedUser?.fullName}`} footer={<Button onClick={() => setIsDetailOpen(false)} style={{ borderRadius: 10 }}>Đóng</Button>} width={560} centered>
+        {selectedUser && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar src={selectedUser.avatar || logo} sx={{ width: 56, height: 56, bgcolor: palette.background, border: `2px solid ${palette.border}`, '& img': { objectFit: 'contain', p: 0.3 } }} />
+              <Box>
+                <Typography sx={{ fontWeight: 600, fontSize: '1.05rem', color: palette.textPrimary }}>{selectedUser.fullName}</Typography>
+                <Typography sx={{ fontSize: '0.78rem', color: palette.textMuted }}>ID: {selectedUser.id}</Typography>
+              </Box>
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.3 }}>
+                  <Email sx={{ fontSize: 14, color: palette.textMuted }} />
+                  <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>Email</Typography>
+                </Box>
+                <Typography sx={{ fontSize: '0.88rem', color: palette.textPrimary, wordBreak: 'break-all' }}>{selectedUser.email}</Typography>
+              </Box>
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.3 }}>
+                  <Phone sx={{ fontSize: 14, color: palette.textMuted }} />
+                  <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>SĐT</Typography>
+                </Box>
+                <Typography sx={{ fontSize: '0.88rem', color: palette.textPrimary }}>{selectedUser.phone || 'Chưa có'}</Typography>
+              </Box>
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.3 }}>
+                  <CalendarToday sx={{ fontSize: 14, color: palette.textMuted }} />
+                  <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>Ngày tham gia</Typography>
+                </Box>
+                <Typography sx={{ fontSize: '0.88rem', color: palette.textPrimary }}>{selectedUser.createdAt?.toLocaleDateString('vi-VN') ?? '---'}</Typography>
+              </Box>
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.3 }}>
+                  <Schedule sx={{ fontSize: 14, color: palette.textMuted }} />
+                  <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>Hoạt động cuối</Typography>
+                </Box>
+                <Typography sx={{ fontSize: '0.88rem', color: palette.textPrimary }}>{selectedUser.lastLogin?.toLocaleString('vi-VN') ?? 'Chưa xác định'}</Typography>
+              </Box>
+            </Box>
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.3 }}>
+                <LocationOn sx={{ fontSize: 14, color: palette.textMuted }} />
+                <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted }}>Địa chỉ</Typography>
+              </Box>
+              {selectedUser.addresses?.length ? (
+                <Box>
+                  <Typography sx={{ fontSize: '0.88rem', color: palette.textPrimary }}>{selectedUser.addresses[0].street}</Typography>
+                  <Typography sx={{ fontSize: '0.78rem', color: palette.textMuted }}>
+                    {[selectedUser.addresses[0].ward, selectedUser.addresses[0].district, selectedUser.addresses[0].province].filter(Boolean).join(', ')}
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography sx={{ fontSize: '0.88rem', color: palette.textMuted }}>Chưa có địa chỉ</Typography>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Chip label={getVerificationChip(selectedUser).text} size="small" sx={{ bgcolor: getVerificationChip(selectedUser).bg, color: getVerificationChip(selectedUser).color, fontWeight: 600 }} />
+              {lockedUsers[selectedUser.id] && <Chip label="Đã khóa" size="small" sx={{ bgcolor: '#FEF2F2', color: '#EF4444', fontWeight: 600 }} />}
+            </Box>
+          </Box>
+        )}
+      </Modal>
+    </Box>
   );
 };
