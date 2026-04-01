@@ -1,31 +1,68 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FiDownload,
-  FiCalendar,
-  FiDollarSign,
-  FiShoppingCart,
-  FiUsers,
-  FiTrendingUp,
-  FiTrendingDown,
-  FiBarChart,
-  FiPieChart,
-  FiFilter,
-} from 'react-icons/fi';
-import { Select } from '../../components/common/Select';
+  Box,
+  Typography,
+  Paper,
+  LinearProgress,
+} from '@mui/material';
+import {
+  AttachMoney,
+  ShoppingCart,
+  Groups,
+  TrendingUp,
+  Download,
+  CalendarMonth,
+  Inventory2,
+} from '@mui/icons-material';
+import { Button, Select as AntSelect } from 'antd';
+import { ResponsiveBar } from '@nivo/bar';
+import { ResponsivePie } from '@nivo/pie';
 import { reportApi } from '../../services/reportApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Loader } from '../../components/common/Loader';
+
+const palette = {
+  accent: '#7daf18',
+  accentLight: '#EDF7D5',
+  textPrimary: '#1A2332',
+  textSecondary: '#5A6B7F',
+  textMuted: '#8D99A8',
+  border: '#E8ECF0',
+  background: '#FAFBFC',
+};
 
 interface ReportsCache {
   monthlyRevenue: number;
   monthlyOrders: number;
   yearlyRevenueData: { month: string; revenue: number; orders: number }[];
-  topProductsData: { name: string; revenue: number; quantity: number; growth: number }[];
+  topProductsData: { name: string; revenue: number; quantity: number }[];
   error: string;
 }
 
 let reportsCache: ReportsCache | null = null;
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+
+const dateRangeOpts = [
+  { value: '7days', label: '7 ngày qua' },
+  { value: '30days', label: '30 ngày qua' },
+  { value: '90days', label: '3 tháng qua' },
+  { value: '1year', label: '1 năm qua' },
+];
+
+const reportTypeOpts = [
+  { value: 'overview', label: 'Tổng quan' },
+  { value: 'revenue', label: 'Doanh thu' },
+  { value: 'products', label: 'Sản phẩm' },
+  { value: 'orders', label: 'Đơn hàng' },
+];
+
+const customerStats = [
+  { metric: 'Khách hàng mới', value: '245', growth: 18.2, color: '#1565C0', bg: '#E3F2FD' },
+  { metric: 'Khách quay lại', value: '156', growth: 12.5, color: '#2E7D32', bg: '#E8F5E9' },
+  { metric: 'Tỷ lệ chuyển đổi', value: '3.2%', growth: 8.7, color: '#E65100', bg: '#FFF3E0' },
+  { metric: 'Giá trị đơn TB', value: '850K', growth: 5.3, color: '#7B1FA2', bg: '#F3E5F5' },
+];
 
 export const Reports: React.FC = () => {
   const [dateRange, setDateRange] = useState('30days');
@@ -35,42 +72,11 @@ export const Reports: React.FC = () => {
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
   const [monthlyOrders, setMonthlyOrders] = useState(0);
   const [yearlyRevenueData, setYearlyRevenueData] = useState<{ month: string; revenue: number; orders: number }[]>([]);
-  const [topProductsData, setTopProductsData] = useState<{ name: string; revenue: number; quantity: number; growth: number }[]>([]);
-  const userRole = useAuthStore((state) => state.user?.role);
+  const [topProductsData, setTopProductsData] = useState<{ name: string; revenue: number; quantity: number }[]>([]);
+  const userRole = useAuthStore((s) => s.user?.role);
   const hasFetched = useRef(false);
 
-  const dateRangeOptions = [
-    { value: '7days', label: '7 ngày qua' },
-    { value: '30days', label: '30 ngày qua' },
-    { value: '90days', label: '3 tháng qua' },
-    { value: '1year', label: '1 năm qua' },
-    { value: 'custom', label: 'Tùy chọn' },
-  ];
-
-  const reportTypeOptions = [
-    { value: 'overview', label: 'Tổng quan' },
-    { value: 'revenue', label: 'Doanh thu' },
-    { value: 'products', label: 'Sản phẩm' },
-    { value: 'customers', label: 'Khách hàng' },
-    { value: 'orders', label: 'Đơn hàng' },
-  ];
-
-  const revenueData = useMemo(() => yearlyRevenueData, [yearlyRevenueData]);
-
-  const topProducts = useMemo(() => topProductsData, [topProductsData]);
-
-  const customerStats = [
-    { metric: 'Khách hàng mới', value: 245, growth: 18.2 },
-    { metric: 'Khách hàng quay lại', value: 156, growth: 12.5 },
-    { metric: 'Tỷ lệ chuyển đổi', value: '3.2%', growth: 8.7 },
-    { metric: 'Giá trị đơn TB', value: '850.000đ', growth: 5.3 },
-  ];
-
   useEffect(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-
     if (hasFetched.current) return;
     hasFetched.current = true;
 
@@ -84,356 +90,202 @@ export const Reports: React.FC = () => {
       return;
     }
 
-    const fetchReports = async () => {
+    const fetch = async () => {
       try {
-        setIsLoading(true);
-        setError('');
-        const monthly = await reportApi.getMonthlyReport(year, month);
+        setIsLoading(true); setError('');
+        const now = new Date();
+        const monthly = await reportApi.getMonthlyReport(now.getFullYear(), now.getMonth() + 1);
         await sleep(300);
-        const yearly = await reportApi.getYearlyReport(year);
+        const yearly = await reportApi.getYearlyReport(now.getFullYear());
         await sleep(300);
-        const topProductsRes = await reportApi.getTopProducts(5);
+        const topRes = await reportApi.getTopProducts(5);
 
         setMonthlyRevenue(monthly.totalRevenue ?? 0);
         setMonthlyOrders(monthly.totalOrders ?? 0);
-
-        const yearlyData = (yearly.monthlyBreakdown ?? []).map((item) => ({
-          month: item.month,
-          revenue: item.totalRevenue,
-          orders: item.totalOrders,
-        }));
-        setYearlyRevenueData(yearlyData);
-
-        const topMapped = topProductsRes.map((item) => ({
-          name: item.name,
-          revenue: item.totalSold, // backend không trả revenue, dùng totalSold làm proxy
-          quantity: item.totalSold,
-          growth: 0,
-        }));
-        setTopProductsData(topMapped);
-        reportsCache = {
-          monthlyRevenue: monthly.totalRevenue ?? 0,
-          monthlyOrders: monthly.totalOrders ?? 0,
-          yearlyRevenueData: yearlyData,
-          topProductsData: topMapped,
-          error: '',
-        };
+        const yd = (yearly.monthlyBreakdown ?? []).map((i) => ({ month: i.month, revenue: i.totalRevenue, orders: i.totalOrders }));
+        setYearlyRevenueData(yd);
+        const tp = topRes.map((i) => ({ name: i.name, revenue: i.totalSold, quantity: i.totalSold }));
+        setTopProductsData(tp);
+        reportsCache = { monthlyRevenue: monthly.totalRevenue ?? 0, monthlyOrders: monthly.totalOrders ?? 0, yearlyRevenueData: yd, topProductsData: tp, error: '' };
       } catch (err) {
-        const status = (err as { response?: { status?: number } })?.response?.status;
-        const message = err instanceof Error ? err.message : 'Không thể tải báo cáo.';
-        // Nếu 401/token lỗi, không hiển thị mock.
-        if (message.toLowerCase().includes('đăng nhập') || status === 401) {
-          setError(message);
-          setYearlyRevenueData([]);
-          setTopProductsData([]);
-          reportsCache = {
-            monthlyRevenue: 0,
-            monthlyOrders: 0,
-            yearlyRevenueData: [],
-            topProductsData: [],
-            error: message,
-          };
-        } else {
-          setError(message);
-          setYearlyRevenueData([]);
-          setTopProductsData([]);
-          reportsCache = {
-            monthlyRevenue: 0,
-            monthlyOrders: 0,
-            yearlyRevenueData: [],
-            topProductsData: [],
-            error: message,
-          };
-        }
-      } finally {
-        setIsLoading(false);
-      }
+        const msg = err instanceof Error ? err.message : 'Không thể tải báo cáo.';
+        setError(msg);
+        reportsCache = { monthlyRevenue: 0, monthlyOrders: 0, yearlyRevenueData: [], topProductsData: [], error: msg };
+      } finally { setIsLoading(false); }
     };
 
-    if (userRole !== 'ADMIN') {
-      setError('Bạn không có quyền xem báo cáo. Vui lòng đăng nhập admin.');
-      setIsLoading(false);
-      return;
-    }
-
-    fetchReports();
+    if (userRole !== 'ADMIN') { setError('Không có quyền xem báo cáo.'); setIsLoading(false); return; }
+    fetch();
   }, [userRole]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
-  };
+  const barData = useMemo(() => yearlyRevenueData.map((d) => ({ month: d.month, 'Doanh thu': d.revenue })), [yearlyRevenueData]);
+  const hasBarData = barData.some((d) => d['Doanh thu'] > 0);
+
+  const pieData = useMemo(() => {
+    if (!topProductsData.length) return [];
+    const colors = ['#7daf18', '#1565C0', '#E65100', '#7B1FA2', '#C62828'];
+    return topProductsData.map((p, i) => ({ id: p.name, label: p.name, value: p.quantity, color: colors[i % colors.length] }));
+  }, [topProductsData]);
 
   return (
-    <div className="space-y-6">
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      {error && <Paper elevation={0} sx={{ p: 2, border: '1px solid #FCA5A5', bgcolor: '#FEF2F2', borderRadius: 2 }}><Typography sx={{ color: '#B91C1C', fontSize: '0.88rem' }}>{error}</Typography></Paper>}
+      {isLoading && <Paper elevation={0} sx={{ p: 4, border: `1px solid ${palette.border}`, borderRadius: 3, display: 'flex', justifyContent: 'center' }}><Loader /></Paper>}
 
-      {isLoading && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <Loader />
-        </div>
-      )}
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Báo cáo & Thống kê</h1>
-          <p className="text-gray-600">
-            Phân tích doanh thu, đơn hàng và hiệu suất kinh doanh
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <FiDownload className="w-4 h-4 mr-2" />
-            Xuất báo cáo
-          </button>
-          <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <FiFilter className="w-4 h-4 mr-2" />
-            Bộ lọc nâng cao
-          </button>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography sx={{ fontSize: '1.3rem', fontWeight: 700, color: palette.textPrimary }}>Báo cáo & Thống kê</Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: palette.textMuted }}>Phân tích doanh thu và hiệu suất kinh doanh</Typography>
+        </Box>
+        <Button icon={<Download style={{ fontSize: 16 }} />} style={{ height: 40, borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif' }}>Xuất báo cáo</Button>
+      </Box>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Khoảng thời gian
-            </label>
-            <Select
-              value={dateRange}
-              onChange={setDateRange}
-              options={dateRangeOptions}
-              placeholder="Chọn khoảng thời gian"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Loại báo cáo
-            </label>
-            <Select
-              value={reportType}
-              onChange={setReportType}
-              options={reportTypeOptions}
-              placeholder="Chọn loại báo cáo"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tùy chọn thời gian
-            </label>
-            <div className="flex items-center space-x-2">
-              <input
-                type="date"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-              <span className="text-gray-500">đến</span>
-              <input
-                type="date"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <Paper elevation={0} sx={{ p: 2, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.5 }}>
+          <AntSelect value={dateRange} onChange={setDateRange} options={dateRangeOpts} style={{ width: 180, height: 40, fontFamily: 'Inter, system-ui, sans-serif' }} />
+          <AntSelect value={reportType} onChange={setReportType} options={reportTypeOpts} style={{ width: 160, height: 40, fontFamily: 'Inter, system-ui, sans-serif' }} />
+        </Box>
+      </Paper>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Doanh thu tháng này</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatCurrency(monthlyRevenue)}
-              </p>
-              <div className="flex items-center mt-2 text-sm text-gray-500">
-                <span>so với tháng trước</span>
-              </div>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <FiDollarSign className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 2 }}>
+        {[
+          { label: 'Doanh thu tháng', value: formatCurrency(monthlyRevenue), icon: <AttachMoney sx={{ fontSize: 22 }} />, color: '#1565C0', bg: '#E3F2FD' },
+          { label: 'Đơn hàng tháng', value: String(monthlyOrders), icon: <ShoppingCart sx={{ fontSize: 22 }} />, color: '#2E7D32', bg: '#E8F5E9' },
+          { label: 'Khách hàng mới', value: '245', icon: <Groups sx={{ fontSize: 22 }} />, color: '#7B1FA2', bg: '#F3E5F5' },
+          { label: 'Tỷ lệ chuyển đổi', value: '3.2%', icon: <TrendingUp sx={{ fontSize: 22 }} />, color: '#E65100', bg: '#FFF3E0' },
+        ].map((s, i) => (
+          <Paper key={i} elevation={0} sx={{ p: 2.5, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography sx={{ fontSize: '0.75rem', color: palette.textMuted, mb: 0.5 }}>{s.label}</Typography>
+                <Typography sx={{ fontSize: '1.3rem', fontWeight: 700, color: palette.textPrimary }}>{s.value}</Typography>
+              </Box>
+              <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</Box>
+            </Box>
+          </Paper>
+        ))}
+      </Box>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Đơn hàng tháng này</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{monthlyOrders}</p>
-              <div className="flex items-center mt-2 text-sm text-gray-500">
-                <span>so với tháng trước</span>
-              </div>
-            </div>
-            <div className="p-3 bg-green-100 rounded-xl">
-              <FiShoppingCart className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
+      {/* Charts */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 2 }}>
+        {/* Revenue Bar */}
+        <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+          <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: palette.textPrimary, mb: 2 }}>Doanh thu theo tháng</Typography>
+          <Box sx={{ height: 300 }}>
+            {!hasBarData ? (
+              <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <AttachMoney sx={{ fontSize: 40, color: palette.border, mb: 1 }} />
+                <Typography sx={{ fontSize: '0.88rem', color: palette.textMuted }}>Chưa có dữ liệu doanh thu</Typography>
+              </Box>
+            ) : (
+              <ResponsiveBar
+                data={barData}
+                keys={['Doanh thu']}
+                indexBy="month"
+                margin={{ top: 10, right: 10, bottom: 40, left: 70 }}
+                padding={0.35}
+                colors={[palette.accent]}
+                borderRadius={4}
+                axisBottom={{ tickSize: 0, tickPadding: 8 }}
+                axisLeft={{ tickSize: 0, tickPadding: 8, format: (v) => `${(Number(v) / 1000000).toFixed(1)}M` }}
+                enableGridY
+                gridYValues={5}
+                enableLabel={false}
+                tooltip={({ data, value }) => (
+                  <Paper sx={{ px: 1.5, py: 1, fontSize: '0.78rem' }}>
+                    <strong>{data.month}</strong>: {formatCurrency(value as number)}
+                  </Paper>
+                )}
+                theme={{ axis: { ticks: { text: { fontSize: 11, fill: palette.textMuted } } }, grid: { line: { stroke: '#F0F0F0' } } }}
+              />
+            )}
+          </Box>
+        </Paper>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Khách hàng mới</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">245</p>
-              <div className="flex items-center mt-2">
-                <FiTrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm font-medium text-green-600">+18.2%</span>
-                <span className="text-sm text-gray-500 ml-1">so với tháng trước</span>
-              </div>
-            </div>
-            <div className="p-3 bg-purple-100 rounded-xl">
-              <FiUsers className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Tỷ lệ chuyển đổi</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">3.2%</p>
-              <div className="flex items-center mt-2">
-                <FiTrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm font-medium text-green-600">+0.8%</span>
-                <span className="text-sm text-gray-500 ml-1">so với tháng trước</span>
-              </div>
-            </div>
-            <div className="p-3 bg-orange-100 rounded-xl">
-              <FiBarChart className="w-6 h-6 text-orange-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Doanh thu theo tháng</h2>
-            <FiBarChart className="w-5 h-5 text-gray-400" />
-          </div>
-          <div className="space-y-4">
-            {revenueData.slice(-6).map((item) => (
-              <div key={item.month} className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm font-medium text-gray-600 w-8">
-                    {item.month}
-                  </span>
-                  <div className="flex-1 bg-gray-200 rounded-full h-2 w-48">
-                    <div
-                      className="bg-primary h-2 rounded-full transition-all duration-300"
-                      style={{
-                        width: `${(item.revenue / Math.max(...revenueData.map(d => d.revenue))) * 100}%`
-                      }}
-                    ></div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {formatCurrency(item.revenue)}
-                  </p>
-                  <p className="text-xs text-gray-500">{item.orders} đơn</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Top Products */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Sản phẩm bán chạy</h2>
-            <FiPieChart className="w-5 h-5 text-gray-400" />
-          </div>
-          <div className="space-y-4">
-            {topProducts.map((product, index) => (
-              <div key={product.name} className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <span className="inline-flex items-center justify-center w-6 h-6 bg-primary text-white text-xs font-medium rounded-full">
-                    {index + 1}
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 line-clamp-1">
-                      {product.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {product.quantity} sản phẩm
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {formatCurrency(product.revenue)}
-                  </p>
-                  <div className="flex items-center">
-                    {product.growth >= 0 ? (
-                      <FiTrendingUp className="w-3 h-3 text-green-500 mr-1" />
-                    ) : (
-                      <FiTrendingDown className="w-3 h-3 text-red-500 mr-1" />
-                    )}
-                    <span className={`text-xs font-medium ${
-                      product.growth >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {product.growth >= 0 ? '+' : ''}{product.growth}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+        {/* Top Products Pie */}
+        <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+          <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: palette.textPrimary, mb: 2 }}>Sản phẩm bán chạy</Typography>
+          <Box sx={{ height: 220 }}>
+            {pieData.length === 0 ? (
+              <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Inventory2 sx={{ fontSize: 36, color: palette.border, mb: 1 }} />
+                <Typography sx={{ fontSize: '0.85rem', color: palette.textMuted }}>Chưa có dữ liệu</Typography>
+              </Box>
+            ) : (
+              <ResponsivePie
+                data={pieData}
+                margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                innerRadius={0.5}
+                padAngle={2}
+                cornerRadius={4}
+                colors={{ datum: 'data.color' }}
+                enableArcLinkLabels={false}
+                arcLabel={(d) => `${d.value}`}
+                arcLabelsTextColor="#fff"
+                arcLabelsSkipAngle={20}
+                tooltip={({ datum }) => (
+                  <Paper sx={{ px: 1.5, py: 1, fontSize: '0.78rem' }}>
+                    <strong>{datum.label}</strong>: {datum.value} đã bán
+                  </Paper>
+                )}
+              />
+            )}
+          </Box>
+          {/* Legend */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, mt: 1.5 }}>
+            {topProductsData.map((p, i) => {
+              const maxQty = Math.max(...topProductsData.map((x) => x.quantity), 1);
+              const colors = ['#7daf18', '#1565C0', '#E65100', '#7B1FA2', '#C62828'];
+              return (
+                <Box key={p.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: palette.accentLight, color: palette.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, flexShrink: 0 }}>{i + 1}</Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography sx={{ fontSize: '0.78rem', color: palette.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</Typography>
+                    <LinearProgress variant="determinate" value={(p.quantity / maxQty) * 100} sx={{ height: 4, borderRadius: 2, bgcolor: '#F0F0F0', '& .MuiLinearProgress-bar': { bgcolor: colors[i % colors.length], borderRadius: 2 }, mt: 0.3 }} />
+                  </Box>
+                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: palette.textSecondary, flexShrink: 0 }}>{p.quantity}</Typography>
+                </Box>
+              );
+            })}
+          </Box>
+        </Paper>
+      </Box>
 
       {/* Customer Analytics */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">Phân tích khách hàng</h2>
-          <button className="text-sm text-primary hover:text-primary-dark font-medium">
-            Xem chi tiết
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {customerStats.map((stat) => (
-            <div key={stat.metric} className="text-center">
-              <p className="text-sm text-gray-600 mb-1">{stat.metric}</p>
-              <p className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</p>
-              <div className="flex items-center justify-center">
-                <FiTrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm font-medium text-green-600">
-                  +{stat.growth}%
-                </span>
-              </div>
-            </div>
+      <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+        <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: palette.textPrimary, mb: 2.5 }}>Phân tích khách hàng</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2 }}>
+          {customerStats.map((s) => (
+            <Box key={s.metric} sx={{ textAlign: 'center', p: 2, borderRadius: 2.5, bgcolor: palette.background }}>
+              <Typography sx={{ fontSize: '0.78rem', color: palette.textMuted, mb: 0.5 }}>{s.metric}</Typography>
+              <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: palette.textPrimary, mb: 0.5 }}>{s.value}</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.3 }}>
+                <TrendingUp sx={{ fontSize: 14, color: '#10B981' }} />
+                <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: '#10B981' }}>+{s.growth}%</Typography>
+              </Box>
+            </Box>
           ))}
-        </div>
-      </div>
+        </Box>
+      </Paper>
 
-      {/* Export Options */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Xuất báo cáo</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <FiDownload className="w-5 h-5 mr-2 text-gray-600" />
-            <span className="font-medium">Xuất Excel</span>
-          </button>
-          <button className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <FiDownload className="w-5 h-5 mr-2 text-gray-600" />
-            <span className="font-medium">Xuất PDF</span>
-          </button>
-          <button className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <FiCalendar className="w-5 h-5 mr-2 text-gray-600" />
-            <span className="font-medium">Lập lịch gửi</span>
-          </button>
-        </div>
-      </div>
-    </div>
+      {/* Export */}
+      <Paper elevation={0} sx={{ p: 2.5, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+        <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: palette.textPrimary, mb: 2 }}>Xuất báo cáo</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+          {[
+            { label: 'Xuất Excel', icon: <Download style={{ fontSize: 18 }} /> },
+            { label: 'Xuất PDF', icon: <Download style={{ fontSize: 18 }} /> },
+            { label: 'Lập lịch gửi', icon: <CalendarMonth style={{ fontSize: 18 }} /> },
+          ].map((btn) => (
+            <Button key={btn.label} icon={btn.icon} style={{ height: 44, borderRadius: 10, fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 500 }}>
+              {btn.label}
+            </Button>
+          ))}
+        </Box>
+      </Paper>
+    </Box>
   );
 };
