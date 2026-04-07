@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { useRive, useStateMachineInput } from '@rive-app/react-canvas';
 import { useAuthStore } from '../store/useAuthStore';
 import { authApi } from '../services/authApi';
 import { getErrorMessage } from '../utils/error';
+
+const STATE_MACHINE_NAME = 'Login Machine';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -17,6 +20,18 @@ export const LoginPage: React.FC = () => {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [formError, setFormError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const { rive, RiveComponent } = useRive({
+    src: '/login_character.riv',
+    stateMachines: STATE_MACHINE_NAME,
+    autoplay: true,
+  });
+
+  const isChecking = useStateMachineInput(rive, STATE_MACHINE_NAME, 'isChecking');
+  const isHandsUp = useStateMachineInput(rive, STATE_MACHINE_NAME, 'isHandsUp');
+  const trigSuccess = useStateMachineInput(rive, STATE_MACHINE_NAME, 'trigSuccess');
+  const trigFail = useStateMachineInput(rive, STATE_MACHINE_NAME, 'trigFail');
+  const numLook = useStateMachineInput(rive, STATE_MACHINE_NAME, 'numLook');
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -53,16 +68,21 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     setFormError('');
 
+    if (isChecking) isChecking.value = false;
+    if (isHandsUp) isHandsUp.value = false;
+
     try {
       const result = await authApi.login({
         email: formData.email,
         password: formData.password,
       });
 
+      trigSuccess?.fire();
       login(result.user, result.accessToken, result.refreshToken);
       const destination = result.user.role === 'ADMIN' ? '/admin' : '/';
-      navigate(destination);
+      setTimeout(() => navigate(destination), 800);
     } catch (error) {
+      trigFail?.fire();
       const message = getErrorMessage(error, 'Đăng nhập thất bại, vui lòng thử lại.');
       setFormError(message);
     } finally {
@@ -97,8 +117,12 @@ export const LoginPage: React.FC = () => {
     >
       <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20"></div>
       <div className="max-w-md w-full space-y-8 relative z-10 bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl">
+        <div className="flex justify-center -mt-4 -mb-2">
+          <RiveComponent style={{ width: 250, height: 250 }} />
+        </div>
+
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="text-center text-3xl font-extrabold text-gray-900">
             Đăng nhập tài khoản
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
@@ -125,7 +149,17 @@ export const LoginPage: React.FC = () => {
                   type="email"
                   autoComplete="email"
                   value={formData.email}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (numLook) numLook.value = Math.min(e.target.value.length * 2, 100);
+                  }}
+                  onFocus={() => {
+                    if (isChecking) isChecking.value = true;
+                    if (isHandsUp) isHandsUp.value = false;
+                  }}
+                  onBlur={() => {
+                    if (isChecking) isChecking.value = false;
+                  }}
                   className={`appearance-none block w-full pl-10 pr-3 py-2 border ${
                     errors.email ? 'border-red-300' : 'border-gray-300'
                   } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
@@ -152,6 +186,13 @@ export const LoginPage: React.FC = () => {
                   autoComplete="current-password"
                   value={formData.password}
                   onChange={handleChange}
+                  onFocus={() => {
+                    if (isChecking) isChecking.value = false;
+                    if (isHandsUp) isHandsUp.value = true;
+                  }}
+                  onBlur={() => {
+                    if (isHandsUp) isHandsUp.value = false;
+                  }}
                   className={`appearance-none block w-full pl-10 pr-10 py-2 border ${
                     errors.password ? 'border-red-300' : 'border-gray-300'
                   } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
@@ -160,7 +201,10 @@ export const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => {
+                    setShowPassword(!showPassword);
+                    if (isHandsUp) isHandsUp.value = showPassword;
+                  }}
                 >
                   {showPassword ? (
                     <FiEyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
