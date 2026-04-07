@@ -19,6 +19,7 @@
     "@nivo/core": "^0.99.0",
     "@nivo/line": "^0.99.0",
     "@nivo/pie": "^0.99.0",
+    "@rive-app/react-canvas": "^4.27.3",
     "antd": "^6.3.4",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
