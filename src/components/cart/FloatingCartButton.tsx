@@ -14,7 +14,7 @@ export const FloatingCartButton: React.FC = () => {
     <button
       onClick={toggleCart}
       className={cn(
-        "fixed bottom-6 right-6 z-40",
+        "fixed right-6 z-40 bottom-24",
         "bg-primary hover:bg-secondary text-white",
         "w-14 h-14 rounded-full shadow-lg",
         "flex items-center justify-center",
