@@ -100,8 +100,7 @@ const ProductCardComponent: FC<ProductCardProps> = ({ product }) => {
                 left: 0,
                 width: '100%',
                 height: '100%',
-                objectFit: 'contain',
-                p: 2,
+                objectFit: hasValidImage ? 'cover' : 'contain',
                 transition: 'transform 0.35s ease',
               }}
             />
