@@ -1,35 +1,51 @@
 import React, { memo } from 'react';
 import { Box, Typography, Container, Paper } from '@mui/material';
 import { motion } from 'framer-motion';
+import CountUp from 'react-countup';
 import { Science, EmojiEvents, Groups, WorkspacePremium } from '@mui/icons-material';
 import { useScrollAnimation, fadeInUp, staggerContainer } from '../../../hooks/useScrollAnimation';
 import { palette } from '../../../theme';
 
-const stats = [
+interface StatItem {
+  icon: React.ReactNode;
+  value: number;
+  suffix: string;
+  decimals?: number;
+  label: string;
+  color: string;
+  bg: string;
+}
+
+const stats: StatItem[] = [
   {
     icon: <Science sx={{ fontSize: 30 }} />,
-    number: '500+',
+    value: 500,
+    suffix: '+',
     label: 'Sản phẩm chính hãng',
     color: palette.secondary,
     bg: palette.secondarySoft,
   },
   {
     icon: <Groups sx={{ fontSize: 30 }} />,
-    number: '10,000+',
+    value: 10000,
+    suffix: '+',
     label: 'Khách hàng tin tưởng',
     color: palette.primary,
     bg: palette.primarySoft,
   },
   {
     icon: <EmojiEvents sx={{ fontSize: 30 }} />,
-    number: '50+',
+    value: 50,
+    suffix: '+',
     label: 'Thương hiệu quốc tế',
     color: palette.warning,
     bg: palette.warningSoft,
   },
   {
     icon: <WorkspacePremium sx={{ fontSize: 30 }} />,
-    number: '99.5%',
+    value: 99.5,
+    suffix: '%',
+    decimals: 1,
     label: 'Khách hàng hài lòng',
     color: '#7B1FA2',
     bg: '#F3E5F5',
@@ -74,8 +90,8 @@ const StatsSection: React.FC = () => {
                     transition: 'all 0.3s ease',
                     cursor: 'default',
                     '&:hover': {
-                      borderColor: palette.accent,
-                      boxShadow: `0 4px 20px rgba(125,175,24,0.1)`,
+                      borderColor: stat.color,
+                      boxShadow: `0 4px 20px ${stat.color}20`,
                     },
                   }}
                 >
@@ -103,7 +119,17 @@ const StatsSection: React.FC = () => {
                       lineHeight: 1.2,
                     }}
                   >
-                    {stat.number}
+                    {isInView ? (
+                      <CountUp
+                        end={stat.value}
+                        duration={2.5}
+                        separator=","
+                        decimals={stat.decimals ?? 0}
+                        suffix={stat.suffix}
+                      />
+                    ) : (
+                      `0${stat.suffix}`
+                    )}
                   </Typography>
                   <Typography
                     sx={{

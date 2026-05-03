@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useRive, useStateMachineInput } from '@rive-app/react-canvas';
@@ -32,14 +32,6 @@ export const LoginPage: React.FC = () => {
   const trigSuccess = useStateMachineInput(rive, STATE_MACHINE_NAME, 'trigSuccess');
   const trigFail = useStateMachineInput(rive, STATE_MACHINE_NAME, 'trigFail');
   const numLook = useStateMachineInput(rive, STATE_MACHINE_NAME, 'numLook');
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, []);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
