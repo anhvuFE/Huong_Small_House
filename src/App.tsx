@@ -4,6 +4,7 @@ import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { ShoppingCart } from './components/cart/ShoppingCart';
 import { FloatingCartButton } from './components/cart/FloatingCartButton';
+import { ChatWidget } from './components/chat/ChatWidget';
 import { ScrollToTop } from './components/common/ScrollToTop';
 import { useAuthStore } from './store/useAuthStore';
 import { Loader } from './components/common/Loader';
@@ -134,6 +135,7 @@ function App() {
                 <Footer />
                 <ShoppingCart />
                 <FloatingCartButton />
+                <ChatWidget />
               </div>
             }
           />
