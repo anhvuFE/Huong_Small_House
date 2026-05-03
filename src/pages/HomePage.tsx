@@ -11,6 +11,7 @@ import HeroSection from '../components/home/HeroSection';
 import TrustSection from '../components/home/TrustSection';
 
 // Lazy loaded — below the fold for performance
+const StatsSection = lazy(() => import('../components/home/StatsSection'));
 const CategorySection = lazy(() => import('../components/home/CategorySection'));
 const ProductHighlight = lazy(() => import('../components/home/ProductHighlight'));
 const PromoBanner = lazy(() => import('../components/home/PromoBanner'));
@@ -76,6 +77,10 @@ export const HomePage: React.FC = () => {
       <TrustSection />
 
       {/* === Below the fold — lazy loaded sections === */}
+      <Suspense fallback={<SectionFallback />}>
+        <StatsSection />
+      </Suspense>
+
       <Suspense fallback={<SectionFallback />}>
         <CategorySection />
       </Suspense>
