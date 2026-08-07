@@ -182,10 +182,10 @@ export const AboutPage: React.FC = () => {
                       textAlign: 'center',
                       height: '100%',
                       transition: 'all 0.3s ease',
-                      '&:hover': { borderColor: v.color, boxShadow: `0 4px 20px rgba(0,0,0,0.06)` },
+                      '&:hover': { borderColor: palette.primary, boxShadow: `0 4px 20px rgba(0,0,0,0.06)` },
                     }}
                   >
-                    <Box sx={{ width: 56, height: 56, borderRadius: '50%', bgcolor: v.bg, color: v.color, display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
+                    <Box sx={{ width: 56, height: 56, borderRadius: '50%', bgcolor: palette.primarySoft, color: palette.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
                       {v.icon}
                     </Box>
                     <Typography sx={{ fontWeight: 600, fontSize: '1rem', color: palette.textPrimary, mb: 0.8 }}>{v.title}</Typography>
