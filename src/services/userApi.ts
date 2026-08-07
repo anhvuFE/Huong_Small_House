@@ -18,4 +18,12 @@ export const userApi = {
     const response = await apiClient.get<ApiResponse<BackendUser[]>>('/users');
     return response.data.data.map(transformBackendUser);
   },
+
+  async lockUser(userId: string): Promise<void> {
+    await apiClient.patch<ApiResponse<BackendUser>>(`/users/${userId}/lock`);
+  },
+
+  async unlockUser(userId: string): Promise<void> {
+    await apiClient.patch<ApiResponse<BackendUser>>(`/users/${userId}/unlock`);
+  },
 };

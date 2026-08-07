@@ -20,6 +20,7 @@ export interface BackendUser {
   email: string;
   phone?: string;
   role?: string;
+  status?: string;
   createdAt?: string;
   updatedAt?: string;
   lastLogin?: string;
@@ -102,6 +103,7 @@ export const transformBackendUser = (payload: BackendUser): User => {
     fullName: payload.name ?? payload.email ?? 'Người dùng',
     avatar: payload.avatar,
     role: normalizeRole(payload.role),
+    status: payload.status === 'locked' ? 'locked' : 'active',
     isEmailVerified: true,
     isPhoneVerified: Boolean(payload.phone),
     addresses,
