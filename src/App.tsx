@@ -42,6 +42,7 @@ const UserManagement = lazyComponent(() => import('./pages/admin/UserManagement'
 const PromotionManagement = lazyComponent(() => import('./pages/admin/PromotionManagement'), 'PromotionManagement');
 const ContentManagement = lazyComponent(() => import('./pages/admin/ContentManagement'), 'ContentManagement');
 const FeedbackManagement = lazyComponent(() => import('./pages/admin/FeedbackManagement'), 'FeedbackManagement');
+const ConsultationManagement = lazyComponent(() => import('./pages/admin/ConsultationManagement'), 'ConsultationManagement');
 const Reports = lazyComponent(() => import('./pages/admin/Reports'), 'Reports');
 const Settings = lazyComponent(() => import('./pages/admin/Settings'), 'Settings');
 const CategoryManagement = lazyComponent(() => import('./pages/admin/CategoryManagement'), 'CategoryManagement');
@@ -108,6 +109,7 @@ function App() {
             <Route path="promotions" element={<PromotionManagement />} />
             <Route path="content" element={<ContentManagement />} />
             <Route path="feedback" element={<FeedbackManagement />} />
+            <Route path="consultations" element={<ConsultationManagement />} />
             <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<Settings />} />
           </Route>
