@@ -11,7 +11,6 @@ import HeroSection from '../components/home/HeroSection';
 import TrustSection from '../components/home/TrustSection';
 
 // Lazy loaded — below the fold for performance
-const StatsSection = lazy(() => import('../components/home/StatsSection'));
 const CategorySection = lazy(() => import('../components/home/CategorySection'));
 const ProductHighlight = lazy(() => import('../components/home/ProductHighlight'));
 const PromoBanner = lazy(() => import('../components/home/PromoBanner'));
@@ -52,23 +51,23 @@ export const HomePage: React.FC = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const featuredProducts = useMemo(
-    () => products.filter((p) => p.isFeatured).slice(0, 4),
-    [products]
-  );
+  // Chọn 3 nhóm sản phẩm KHÔNG trùng nhau (kho ít SP -> tránh lặp lại card).
+  const { featured, bestSellers, newProducts } = useMemo(() => {
+    const used = new Set<string>();
+    const take = (list: Product[]) => {
+      const picked = list.filter((p) => !used.has(p.id)).slice(0, 4);
+      picked.forEach((p) => used.add(p.id));
+      return picked;
+    };
 
-  const bestSellers = useMemo(
-    () => [...products].sort((a, b) => b.soldCount - a.soldCount).slice(0, 4),
-    [products]
-  );
-
-  const newProducts = useMemo(
-    () => [...products].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 4),
-    [products]
-  );
-
-  // Fallback: if no featured products flagged, take first 4
-  const featured = featuredProducts.length > 0 ? featuredProducts : products.slice(0, 4);
+    const featuredSource = products.filter((p) => p.isFeatured);
+    const featured = take(featuredSource.length > 0 ? featuredSource : products);
+    const bestSellers = take([...products].sort((a, b) => b.soldCount - a.soldCount));
+    const newProducts = take(
+      [...products].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+    );
+    return { featured, bestSellers, newProducts };
+  }, [products]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -77,9 +76,6 @@ export const HomePage: React.FC = () => {
       <TrustSection />
 
       {/* === Below the fold — lazy loaded sections === */}
-      <Suspense fallback={<SectionFallback />}>
-        <StatsSection />
-      </Suspense>
 
       <Suspense fallback={<SectionFallback />}>
         <CategorySection />

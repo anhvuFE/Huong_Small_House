@@ -133,14 +133,20 @@ const HeroSection: React.FC = () => {
           }}
         >
           <AnimatePresence mode="wait">
-            <motion.div
+            <Box
+              component={motion.div}
               key={slide.id}
               initial="enter"
               animate="center"
               exit="exit"
               variants={textVariants}
               transition={{ duration: 0.5, ease: 'easeOut' }}
-              style={{ maxWidth: 560, flexShrink: 0 }}
+              sx={{
+                width: '100%',
+                maxWidth: { xs: '100%', md: 560 },
+                flexShrink: { md: 0 },
+                minWidth: 0,
+              }}
             >
               <Chip
                 label={slide.chipLabel}
@@ -203,7 +209,7 @@ const HeroSection: React.FC = () => {
                   {slide.cta}
                 </Button>
               </Link>
-            </motion.div>
+            </Box>
           </AnimatePresence>
 
           {/* Showcase sản phẩm bên phải (ẩn trên mobile) */}
