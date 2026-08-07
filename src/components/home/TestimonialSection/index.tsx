@@ -158,7 +158,8 @@ const TestimonialSection: React.FC = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     <Avatar
                       sx={{
-                        bgcolor: t.avatarColor,
+                        bgcolor: palette.primarySoft,
+                        color: palette.primary,
                         width: 42,
                         height: 42,
                         fontSize: '0.95rem',
