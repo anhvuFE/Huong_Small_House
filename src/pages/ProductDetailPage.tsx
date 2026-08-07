@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { FiChevronLeft, FiShoppingCart, FiPlus, FiMinus, FiStar, FiCheck } from 'react-icons/fi';
 import { ProductList } from '../components/products/ProductList';
@@ -6,6 +6,9 @@ import { useCartStore } from '../store/useCartStore';
 import { formatCurrency, calculateDiscount } from '../utils/format';
 import { cn } from '../utils/cn';
 import { productApi } from '../services/productApi';
+import { reviewApi, type Review } from '../services/reviewApi';
+import { useAuthStore } from '../store/useAuthStore';
+import { getErrorMessage } from '../utils/error';
 import type { Product } from '../types';
 import { extractIdFromSlug } from '../utils/slugify';
 import { Loader } from '../components/common/Loader';
@@ -23,6 +26,44 @@ export const ProductDetailPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const { addItem, toggleCart } = useCartStore();
+
+  const { isAuthenticated } = useAuthStore();
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+
+  const productId = product?.productId;
+
+  const loadReviews = useCallback(async (id: number) => {
+    try {
+      setReviews(await reviewApi.list(id));
+    } catch {
+      setReviews([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof productId === 'number') loadReviews(productId);
+  }, [productId, loadReviews]);
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (typeof productId !== 'number') return;
+    setReviewSubmitting(true);
+    setReviewError('');
+    try {
+      await reviewApi.create({ productId, rating: reviewRating, comment: reviewComment.trim() || undefined });
+      setReviewComment('');
+      setReviewRating(5);
+      await loadReviews(productId);
+    } catch (err) {
+      setReviewError(getErrorMessage(err, 'Không gửi được đánh giá.'));
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (!slug) {
@@ -320,6 +361,65 @@ export const ProductDetailPage: React.FC = () => {
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-8">
+          <h2 className="text-xl md:text-2xl font-bold mb-4">Đánh giá ({reviews.length})</h2>
+
+          {reviews.length === 0 ? (
+            <p className="text-sm text-gray-500 mb-6">Chưa có đánh giá nào cho sản phẩm này.</p>
+          ) : (
+            <div className="space-y-4 mb-6">
+              {reviews.map((r) => (
+                <div key={r.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-gray-800">{r.author}</span>
+                    <span className="flex">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <FiStar
+                          key={i}
+                          className={cn('w-3.5 h-3.5', i < r.rating ? 'text-[#FFB300] fill-current' : 'text-gray-300')}
+                        />
+                      ))}
+                    </span>
+                  </div>
+                  {r.comment && <p className="text-sm text-gray-700 mt-1">{r.comment}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isAuthenticated ? (
+            <form onSubmit={handleSubmitReview} className="border-t border-gray-100 pt-4">
+              <h3 className="text-base font-semibold mb-3">Viết đánh giá của bạn</h3>
+              <div className="flex items-center gap-1 mb-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <button type="button" key={i} onClick={() => setReviewRating(i + 1)} aria-label={`${i + 1} sao`}>
+                    <FiStar className={cn('w-6 h-6', i < reviewRating ? 'text-[#FFB300] fill-current' : 'text-gray-300')} />
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                rows={3}
+                placeholder="Chia sẻ cảm nhận của bạn về sản phẩm..."
+                className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-primary"
+              />
+              {reviewError && <p className="text-sm text-red-600 mt-2">{reviewError}</p>}
+              <button
+                type="submit"
+                disabled={reviewSubmitting}
+                className="mt-3 bg-primary hover:bg-secondary text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+              >
+                {reviewSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+              </button>
+            </form>
+          ) : (
+            <p className="text-sm text-gray-500 border-t border-gray-100 pt-4">
+              <Link to="/login" className="text-primary font-semibold hover:underline">Đăng nhập</Link> để viết đánh giá.
+            </p>
+          )}
         </div>
 
         <div>
