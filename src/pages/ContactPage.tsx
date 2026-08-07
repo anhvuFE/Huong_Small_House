@@ -28,6 +28,8 @@ import {
 import { fadeInUp, staggerContainer } from '../hooks/useScrollAnimation';
 import { palette } from '../theme';
 import { SITE } from '../config/site';
+import { feedbackApi } from '../services/feedbackApi';
+import { getErrorMessage } from '../utils/error';
 
 const { TextArea } = Input;
 
@@ -96,16 +98,22 @@ export const ContactPage: React.FC = () => {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      // Backend feedback chỉ có name/email/message -> ghép chủ đề & SĐT vào nội dung.
+      const message = `Chủ đề: ${formData.subject}\nSĐT: ${formData.phone}\n\n${formData.message}`;
+      await feedbackApi.submit({ name: formData.fullName, email: formData.email, message });
       setSubmitSuccess(true);
-      setIsSubmitting(false);
       setFormData({ fullName: '', email: '', phone: '', subject: '', message: '' });
       setTimeout(() => setSubmitSuccess(false), 5000);
-    }, 2000);
+    } catch (err) {
+      setErrors((prev) => ({ ...prev, message: getErrorMessage(err, 'Gửi liên hệ thất bại, vui lòng thử lại.') }));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const inputStyle = { borderRadius: 10, height: 44, fontFamily: 'Inter, system-ui, sans-serif' };
