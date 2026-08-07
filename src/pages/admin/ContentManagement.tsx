@@ -139,18 +139,32 @@ export const ContentManagement: React.FC = () => {
     setEditError(''); setIsEditOpen(true);
   };
 
+  const handleOpenCreate = () => {
+    setSelectedContent(null);
+    setEditForm({ title: '', slug: '', excerpt: '', published: false, tagsText: '', body: '' });
+    setEditError('');
+    setIsEditOpen(true);
+  };
+
   const handleSaveEdit = async () => {
-    if (!selectedContent) return;
     if (!editForm.title.trim()) { setEditError('Tiêu đề không được để trống.'); return; }
     if (!editForm.body.trim()) { setEditError('Nội dung không được để trống.'); return; }
     setIsSavingEdit(true); setEditError('');
+    const payload = {
+      title: editForm.title, slug: editForm.slug, excerpt: editForm.excerpt, published: editForm.published,
+      tags: editForm.tagsText.split(',').map((t) => t.trim()).filter(Boolean), body: editForm.body,
+    };
     try {
-      const updated = await contentApi.updateContent(selectedContent.id, {
-        title: editForm.title, slug: editForm.slug, excerpt: editForm.excerpt, published: editForm.published,
-        tags: editForm.tagsText.split(',').map((t) => t.trim()).filter(Boolean), body: editForm.body,
-      });
-      setContent((prev) => prev.map((i) => i.id === selectedContent.id ? updated : i));
-      setIsEditOpen(false); showToast({ title: 'Đã lưu', variant: 'success' });
+      if (selectedContent) {
+        const updated = await contentApi.updateContent(selectedContent.id, payload);
+        setContent((prev) => prev.map((i) => i.id === selectedContent.id ? updated : i));
+        showToast({ title: 'Đã lưu', variant: 'success' });
+      } else {
+        const created = await contentApi.createContent(payload);
+        setContent((prev) => [created, ...prev]);
+        showToast({ title: 'Đã tạo nội dung', variant: 'success' });
+      }
+      setIsEditOpen(false);
     } catch (err) { setEditError(getErrorMessage(err, 'Không thể lưu.')); }
     finally { setIsSavingEdit(false); }
   };
@@ -163,7 +177,7 @@ export const ContentManagement: React.FC = () => {
           <Typography sx={{ fontSize: '1.3rem', fontWeight: 700, color: palette.textPrimary }}>Quản lý nội dung</Typography>
           <Typography sx={{ fontSize: '0.85rem', color: palette.textMuted }}>{content.length} nội dung</Typography>
         </Box>
-        <Button type="primary" icon={<Add style={{ fontSize: 18 }} />} style={{ backgroundColor: palette.accent, borderColor: palette.accent, height: 40, borderRadius: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <Button type="primary" onClick={handleOpenCreate} icon={<Add style={{ fontSize: 18 }} />} style={{ backgroundColor: palette.accent, borderColor: palette.accent, height: 40, borderRadius: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}>
           Tạo nội dung
         </Button>
       </Box>
@@ -297,7 +311,7 @@ export const ContentManagement: React.FC = () => {
       </Modal>
 
       {/* Edit */}
-      <Modal open={isEditOpen} onCancel={() => setIsEditOpen(false)} title={`Chỉnh sửa: ${selectedContent?.title}`} footer={null} width={640} centered>
+      <Modal open={isEditOpen} onCancel={() => setIsEditOpen(false)} title={selectedContent ? `Chỉnh sửa: ${selectedContent.title}` : 'Tạo nội dung mới'} footer={null} width={640} centered>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
             <Box>
