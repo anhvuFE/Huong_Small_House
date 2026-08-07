@@ -142,6 +142,13 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const handleViewDetail = (user: User) => {
+    setSelectedUser(user);
+    setIsDetailOpen(true);
+    // Lấy bản chi tiết mới nhất từ API (không chặn hiển thị).
+    userApi.getUser(user.id).then(setSelectedUser).catch(() => {});
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       {/* Header */}
@@ -237,7 +244,7 @@ export const UserManagement: React.FC = () => {
                       </Box>
                       <Box component="td" sx={{ py: 1.5, px: 2 }}>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <IconButton size="small" onClick={() => { setSelectedUser(user); setIsDetailOpen(true); }} sx={{ color: palette.textMuted, '&:hover': { bgcolor: '#E3F2FD', color: '#1565C0' } }}><Visibility sx={{ fontSize: 18 }} /></IconButton>
+                          <IconButton size="small" onClick={() => handleViewDetail(user)} sx={{ color: palette.textMuted, '&:hover': { bgcolor: '#E3F2FD', color: '#1565C0' } }}><Visibility sx={{ fontSize: 18 }} /></IconButton>
                           <IconButton size="small" onClick={() => handleToggleLock(user.id)} sx={{ color: lockedUsers[user.id] ? '#EF4444' : palette.textMuted, '&:hover': { bgcolor: lockedUsers[user.id] ? '#FEF2F2' : '#E8F5E9', color: lockedUsers[user.id] ? '#EF4444' : '#2E7D32' } }}>
                             {lockedUsers[user.id] ? <LockOpen sx={{ fontSize: 18 }} /> : <Lock sx={{ fontSize: 18 }} />}
                           </IconButton>
@@ -266,7 +273,7 @@ export const UserManagement: React.FC = () => {
                       </Box>
                     </Box>
                     <Box sx={{ display: 'flex', gap: 0.3 }}>
-                      <IconButton size="small" onClick={() => { setSelectedUser(user); setIsDetailOpen(true); }} sx={{ color: '#1565C0' }}><Visibility sx={{ fontSize: 16 }} /></IconButton>
+                      <IconButton size="small" onClick={() => handleViewDetail(user)} sx={{ color: '#1565C0' }}><Visibility sx={{ fontSize: 16 }} /></IconButton>
                       <IconButton size="small" onClick={() => handleToggleLock(user.id)} sx={{ color: lockedUsers[user.id] ? '#EF4444' : '#2E7D32' }}>
                         {lockedUsers[user.id] ? <LockOpen sx={{ fontSize: 16 }} /> : <Lock sx={{ fontSize: 16 }} />}
                       </IconButton>

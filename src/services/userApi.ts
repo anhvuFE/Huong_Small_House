@@ -19,6 +19,11 @@ export const userApi = {
     return response.data.data.map(transformBackendUser);
   },
 
+  async getUser(userId: string): Promise<User> {
+    const response = await apiClient.get<ApiResponse<BackendUser>>(`/users/${userId}`);
+    return transformBackendUser(response.data.data);
+  },
+
   async lockUser(userId: string): Promise<void> {
     await apiClient.patch<ApiResponse<BackendUser>>(`/users/${userId}/lock`);
   },
