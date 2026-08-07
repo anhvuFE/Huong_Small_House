@@ -24,6 +24,7 @@ import { orderApi } from '../../services/orderApi';
 import type { Order as AdminOrder, OrderStatus, PaymentStatus } from '../../types/admin';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Loader } from '../../components/common/Loader';
+import { getProductImage } from '../../utils/productImage';
 import { useToast } from '../../components/common/Toast';
 import { Pagination } from '../../components/common/Pagination';
 import { usePagination } from '../../hooks/usePagination';
@@ -320,7 +321,7 @@ export const OrderManagement: React.FC = () => {
               <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: palette.textPrimary, mb: 1.5 }}>Sản phẩm ({(orderDetail ?? selectedOrder).items.length})</Typography>
               {(orderDetail ?? selectedOrder).items.map((item) => (
                 <Box key={item.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1, borderBottom: `1px solid ${palette.border}`, '&:last-child': { borderBottom: 'none' } }}>
-                  <Avatar src={item.product.thumbnail} variant="rounded" sx={{ width: 40, height: 40, bgcolor: '#fff' }} />
+                  <Avatar src={getProductImage(item.product)} variant="rounded" sx={{ width: 40, height: 40, bgcolor: '#fff' }} />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography sx={{ fontSize: '0.84rem', fontWeight: 500, color: palette.textPrimary }}>{item.product.name}</Typography>
                     <Typography sx={{ fontSize: '0.72rem', color: palette.textMuted }}>SL: {item.quantity} × {formatCurrency(item.price)}</Typography>

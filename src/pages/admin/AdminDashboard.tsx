@@ -28,7 +28,7 @@ import { userApi } from '../../services/userApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import type { OrderStatus } from '../../types/admin';
 import { Loader } from '../../components/common/Loader';
-import logo from '../../assets/logo.png';
+import { getProductImage } from '../../utils/productImage';
 
 const palette = {
   accent: '#7daf18',
@@ -232,9 +232,6 @@ export const AdminDashboard: React.FC = () => {
       value: o.count,
       color: statusConfig[o.status]?.color ?? '#6B7280',
     }));
-
-  const hasValidImage = (url?: string) =>
-    url && url.startsWith('http') && !url.includes('placeholder') && !url.includes('placehold');
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -451,7 +448,7 @@ export const AdminDashboard: React.FC = () => {
                   {index + 1}
                 </Box>
                 <Avatar
-                  src={hasValidImage(item.product.thumbnail) ? item.product.thumbnail : logo}
+                  src={getProductImage(item.product)}
                   variant="rounded"
                   sx={{ width: 40, height: 40, bgcolor: palette.background, '& img': { objectFit: 'contain', p: 0.3 } }}
                 />

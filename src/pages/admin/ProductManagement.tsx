@@ -24,7 +24,7 @@ import type { Category, Product } from '../../types';
 import { formatCurrency } from '../../utils/format';
 import { Loader } from '../../components/common/Loader';
 import { useToast } from '../../components/common/Toast';
-import logo from '../../assets/logo.png';
+import { getProductImage } from '../../utils/productImage';
 
 const { TextArea } = Input;
 
@@ -58,8 +58,6 @@ const getStockStatus = (stock: number) => {
   return { text: 'Còn hàng', color: '#10B981', bg: '#ECFDF5' };
 };
 
-const hasValidImage = (url?: string) =>
-  url && url.startsWith('http') && !url.includes('placeholder') && !url.includes('placehold') && !url.includes('/images/products/');
 
 export const ProductManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -249,7 +247,7 @@ export const ProductManagement: React.FC = () => {
                     <Box component="td" sx={{ py: 1.5, px: 2.5 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <Avatar
-                          src={hasValidImage(product.thumbnail) ? product.thumbnail : logo}
+                          src={getProductImage(product)}
                           variant="rounded"
                           sx={{ width: 48, height: 48, bgcolor: palette.background, '& img': { objectFit: 'contain', p: 0.3 } }}
                         />
@@ -298,7 +296,7 @@ export const ProductManagement: React.FC = () => {
             return (
               <Box key={product.id} sx={{ display: 'flex', gap: 1.5, p: 2, borderBottom: `1px solid ${palette.border}` }}>
                 <Avatar
-                  src={hasValidImage(product.thumbnail) ? product.thumbnail : logo}
+                  src={getProductImage(product)}
                   variant="rounded"
                   sx={{ width: 56, height: 56, bgcolor: palette.background, '& img': { objectFit: 'contain', p: 0.3 } }}
                 />
