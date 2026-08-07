@@ -28,6 +28,7 @@ import { Pagination } from '../components/common/Pagination';
 import { usePagination } from '../hooks/usePagination';
 import { fadeInUp, staggerContainer } from '../hooks/useScrollAnimation';
 import { mockBlogs } from '../data/blogData';
+import { resolveImageUrl } from '../utils/image';
 import logo from '../assets/logo.png';
 import { palette } from '../theme';
 
@@ -37,14 +38,6 @@ const formatDate = (value?: Date) => {
   return value.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
-const getValidImage = (thumbnail?: string) => {
-  if (thumbnail &&
-    (thumbnail.startsWith('http') || thumbnail.startsWith('/images/') || thumbnail.endsWith('.svg')) &&
-    !thumbnail.includes('placeholder') && !thumbnail.includes('placehold')) {
-    return thumbnail;
-  }
-  return null;
-};
 
 export const BlogListPage: React.FC = () => {
   const [blogs, setBlogs] = useState<ContentItem[]>([]);
@@ -215,10 +208,10 @@ export const BlogListPage: React.FC = () => {
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' } }}>
               {/* Image */}
               <Box sx={{ position: 'relative', minHeight: { xs: 200, lg: 300 }, bgcolor: palette.background }}>
-                {getValidImage(featured.thumbnail) ? (
+                {resolveImageUrl(featured.thumbnail) ? (
                   <Box
                     component="img"
-                    src={getValidImage(featured.thumbnail)!}
+                    src={resolveImageUrl(featured.thumbnail)!}
                     alt={featured.title}
                     sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                   />
@@ -313,11 +306,11 @@ export const BlogListPage: React.FC = () => {
                     >
                       {/* Image */}
                       <Box sx={{ height: 180, overflow: 'hidden', bgcolor: palette.background, position: 'relative' }}>
-                        {getValidImage(blog.thumbnail) ? (
+                        {resolveImageUrl(blog.thumbnail) ? (
                           <Box
                             component="img"
                             className="blog-img"
-                            src={getValidImage(blog.thumbnail)!}
+                            src={resolveImageUrl(blog.thumbnail)!}
                             alt={blog.title}
                             sx={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.35s ease' }}
                           />
