@@ -16,7 +16,7 @@ import { motion } from 'framer-motion';
 import { useScrollAnimation, fadeInUp, staggerContainer } from '../../hooks/useScrollAnimation';
 import logo from '../../assets/logo.png';
 import { palette } from '../../theme';
-
+import { SITE } from '../../config/site';
 
 const quickLinks = [
   { label: 'Giới thiệu', href: '/about' },
@@ -36,30 +36,30 @@ const policyLinks = [
 const contactInfo = [
   {
     icon: <LocationOn sx={{ fontSize: 18 }} />,
-    text: '120 Hoàng Quốc Việt, Cầu Giấy, Hà Nội',
+    text: SITE.address,
     href: undefined,
   },
   {
     icon: <Phone sx={{ fontSize: 18 }} />,
-    text: '0336 064 040',
-    href: 'tel:0336064040',
+    text: SITE.phone,
+    href: SITE.phoneHref,
   },
   {
     icon: <Email sx={{ fontSize: 18 }} />,
-    text: 'vuquynhhuong171298@gmail.com',
-    href: 'mailto:vuquynhhuong171298@gmail.com',
+    text: SITE.email,
+    href: SITE.emailHref,
   },
   {
     icon: <AccessTime sx={{ fontSize: 18 }} />,
-    text: '8:00 - 22:00 (Tất cả các ngày)',
+    text: SITE.workingHours,
     href: undefined,
   },
 ];
 
 const socials = [
-  { icon: <Facebook sx={{ fontSize: 20 }} />, href: 'https://facebook.com', label: 'Facebook' },
-  { icon: <Instagram sx={{ fontSize: 20 }} />, href: 'https://instagram.com', label: 'Instagram' },
-  { icon: <YouTube sx={{ fontSize: 20 }} />, href: 'https://youtube.com', label: 'YouTube' },
+  { icon: <Facebook sx={{ fontSize: 20 }} />, href: SITE.social.facebook, label: 'Facebook' },
+  { icon: <Instagram sx={{ fontSize: 20 }} />, href: SITE.social.instagram, label: 'Instagram' },
+  { icon: <YouTube sx={{ fontSize: 20 }} />, href: SITE.social.youtube, label: 'YouTube' },
 ];
 
 const paymentMethods = ['VISA', 'MASTERCARD', 'VNPAY', 'COD'];

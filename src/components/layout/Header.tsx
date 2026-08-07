@@ -34,6 +34,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { cn } from '../../utils/cn';
 import logo from '../../assets/logo.png';
 import { palette } from '../../theme';
+import { SITE } from '../../config/site';
 
 
 const navItems = [
@@ -173,7 +174,7 @@ export const Header: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, md: 3 } }}>
             <Box
               component="a"
-              href="tel:0336064040"
+              href={SITE.phoneHref}
               sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -185,11 +186,11 @@ export const Header: React.FC = () => {
               }}
             >
               <Phone sx={{ fontSize: 15 }} />
-              <span>0336 064 040</span>
+              <span>{SITE.phone}</span>
             </Box>
             <Box
               component="a"
-              href="mailto:vuquynhhuong171298@gmail.com"
+              href={SITE.emailHref}
               sx={{
                 display: { xs: 'none', md: 'flex' },
                 alignItems: 'center',
@@ -201,7 +202,7 @@ export const Header: React.FC = () => {
               }}
             >
               <Email sx={{ fontSize: 15 }} />
-              <span>vuquynhhuong171298@gmail.com</span>
+              <span>{SITE.email}</span>
             </Box>
           </Box>
 
@@ -214,7 +215,7 @@ export const Header: React.FC = () => {
             }}
           >
             <LocationOn sx={{ fontSize: 15 }} />
-            <Typography sx={{ fontSize: '0.8rem' }}>120 Hoàng Quốc Việt, Hà Nội</Typography>
+            <Typography sx={{ fontSize: '0.8rem' }}>{SITE.addressShort}</Typography>
           </Box>
         </Box>
       </Box>
