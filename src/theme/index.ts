@@ -4,12 +4,14 @@ import { createTheme } from '@mui/material/styles';
 // No gradients — clean, solid, trustworthy
 export const palette = {
   primary: '#2E7D32',       // Deep green — health, nature, trust
+  primaryDark: '#14532D',   // Xanh rừng sâu (hero, band nhấn)
   primaryLight: '#4CAF50',  // Medium green
   primarySoft: '#E8F5E9',   // Very light green bg
   secondary: '#1565C0',     // Medical blue — credibility, science
   secondaryLight: '#42A5F5',
   secondarySoft: '#E3F2FD',
   accent: '#7daf18',        // Brand green (existing)
+  accentDark: '#6B9E12',    // Accent đậm (hover)
   accentLight: '#EDF7D5',
   warning: '#E65100',       // Urgency orange
   warningSoft: '#FFF3E0',
@@ -17,6 +19,12 @@ export const palette = {
   surface: '#FFFFFF',
   background: '#FAFBFC',
   border: '#E8ECF0',
+  // Footer (nền tối) — token riêng vì khác hệ sáng
+  footerBg: '#0F172A',
+  footerCard: '#1E293B',
+  footerText: '#CBD5E1',
+  footerMuted: '#64748B',
+  footerBorder: '#334155',
   textPrimary: '#1A2332',
   textSecondary: '#5A6B7F',
   textMuted: '#8D99A8',

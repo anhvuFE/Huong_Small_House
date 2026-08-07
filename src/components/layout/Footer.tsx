@@ -15,16 +15,8 @@ import { Input, Button } from 'antd';
 import { motion } from 'framer-motion';
 import { useScrollAnimation, fadeInUp, staggerContainer } from '../../hooks/useScrollAnimation';
 import logo from '../../assets/logo.png';
+import { palette } from '../../theme';
 
-const palette = {
-  accent: '#7daf18',
-  accentLight: '#EDF7D5',
-  footerBg: '#0F172A',
-  footerCard: '#1E293B',
-  textLight: '#CBD5E1',
-  textMuted: '#64748B',
-  border: '#334155',
-};
 
 const quickLinks = [
   { label: 'Giới thiệu', href: '/about' },
@@ -81,7 +73,7 @@ const LinkItem: React.FC<{ label: string; href: string }> = ({ label, href }) =>
           alignItems: 'center',
           gap: 0.8,
           py: 0.5,
-          color: palette.textLight,
+          color: palette.footerText,
           fontSize: '0.88rem',
           transition: 'all 0.2s',
           '&:hover': {
@@ -104,7 +96,7 @@ export const Footer: React.FC = () => {
   return (
     <Box component="footer" ref={ref} sx={{ bgcolor: palette.footerBg, mt: 'auto' }}>
       {/* Mini newsletter strip */}
-      <Box sx={{ bgcolor: palette.footerCard, borderBottom: `1px solid ${palette.border}` }}>
+      <Box sx={{ bgcolor: palette.footerCard, borderBottom: `1px solid ${palette.footerBorder}` }}>
         <Container maxWidth="lg">
           <Box
             sx={{
@@ -148,7 +140,7 @@ export const Footer: React.FC = () => {
                   borderRadius: 10,
                   height: 44,
                   backgroundColor: 'rgba(255,255,255,0.08)',
-                  borderColor: palette.border,
+                  borderColor: palette.footerBorder,
                   color: '#fff',
                   fontSize: '0.88rem',
                   fontFamily: 'Inter, system-ui, sans-serif',
@@ -219,7 +211,7 @@ export const Footer: React.FC = () => {
                 </Box>
               </Box>
 
-              <Typography sx={{ color: palette.textLight, fontSize: '0.88rem', lineHeight: 1.7, mb: 2.5, maxWidth: 320 }}>
+              <Typography sx={{ color: palette.footerText, fontSize: '0.88rem', lineHeight: 1.7, mb: 2.5, maxWidth: 320 }}>
                 Chuyên cung cấp thực phẩm chức năng chính hãng nhập khẩu, cam kết chất lượng với giá tốt nhất thị trường.
               </Typography>
 
@@ -234,9 +226,9 @@ export const Footer: React.FC = () => {
                     rel="noopener noreferrer"
                     aria-label={s.label}
                     sx={{
-                      border: `1px solid ${palette.border}`,
+                      border: `1px solid ${palette.footerBorder}`,
                       borderRadius: 2.5,
-                      color: palette.textMuted,
+                      color: palette.footerMuted,
                       p: 0.9,
                       transition: 'all 0.2s',
                       '&:hover': {
@@ -309,7 +301,7 @@ export const Footer: React.FC = () => {
                       </Box>
                       <Typography
                         sx={{
-                          color: palette.textLight,
+                          color: palette.footerText,
                           fontSize: '0.86rem',
                           lineHeight: 1.5,
                           wordBreak: 'break-all',
@@ -339,7 +331,7 @@ export const Footer: React.FC = () => {
         </motion.div>
 
         {/* Bottom bar */}
-        <Divider sx={{ borderColor: palette.border }} />
+        <Divider sx={{ borderColor: palette.footerBorder }} />
         <Box
           sx={{
             display: 'flex',
@@ -350,12 +342,12 @@ export const Footer: React.FC = () => {
             py: 3,
           }}
         >
-          <Typography sx={{ color: palette.textMuted, fontSize: '0.82rem', textAlign: { xs: 'center', md: 'left' } }}>
+          <Typography sx={{ color: palette.footerMuted, fontSize: '0.82rem', textAlign: { xs: 'center', md: 'left' } }}>
             © 2025 Hương Small House. Tất cả quyền được bảo lưu.
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ color: palette.textMuted, fontSize: '0.8rem', mr: 0.5 }}>
+            <Typography sx={{ color: palette.footerMuted, fontSize: '0.8rem', mr: 0.5 }}>
               Thanh toán:
             </Typography>
             {paymentMethods.map((method) => (
@@ -366,10 +358,10 @@ export const Footer: React.FC = () => {
                   py: 0.4,
                   borderRadius: 1.5,
                   bgcolor: 'rgba(255,255,255,0.06)',
-                  border: `1px solid ${palette.border}`,
+                  border: `1px solid ${palette.footerBorder}`,
                   fontSize: '0.7rem',
                   fontWeight: 700,
-                  color: palette.textLight,
+                  color: palette.footerText,
                   letterSpacing: 0.8,
                 }}
               >

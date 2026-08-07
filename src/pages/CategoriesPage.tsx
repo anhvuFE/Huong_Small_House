@@ -34,18 +34,8 @@ import type { Category as CategoryType } from '../types';
 import { Pagination } from '../components/common/Pagination';
 import { usePagination } from '../hooks/usePagination';
 import { fadeInUp, staggerContainer } from '../hooks/useScrollAnimation';
+import { palette } from '../theme';
 
-const palette = {
-  accent: '#7daf18',
-  accentLight: '#EDF7D5',
-  primary: '#2E7D32',
-  primarySoft: '#E8F5E9',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 const iconMap: Record<string, React.ElementType> = {
   vitamin: FiActivity,

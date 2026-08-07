@@ -25,18 +25,10 @@ import type { Category as CategoryType } from '../../types';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Loader } from '../../components/common/Loader';
 import { useToast } from '../../components/common/Toast';
+import { palette } from '../../theme';
 
 const { TextArea } = Input;
 
-const palette = {
-  accent: '#7daf18',
-  accentLight: '#EDF7D5',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 const defaultFormState = { name: '', nameEn: '', description: '', icon: '', isActive: true };
 
