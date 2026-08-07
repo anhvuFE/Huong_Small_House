@@ -8,6 +8,7 @@ export interface User {
   fullName: string;
   avatar?: string;
   role: UserRole;
+  status?: 'active' | 'locked';
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
   addresses: Address[];

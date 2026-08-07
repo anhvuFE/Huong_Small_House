@@ -88,7 +88,17 @@ export const UserManagement: React.FC = () => {
   useEffect(() => {
     const fetch = async () => {
       setIsLoading(true); setError('');
-      try { setUsers(await userApi.listUsers()); } catch (err) { setError(getErrorMessage(err, 'Không thể tải người dùng.')); } finally { setIsLoading(false); }
+      try {
+        const list = await userApi.listUsers();
+        setUsers(list);
+        // Khởi tạo trạng thái khóa từ dữ liệu thật (status = 'locked').
+        setLockedUsers(
+          list.reduce<Record<string, boolean>>((acc, u) => {
+            acc[u.id] = u.status === 'locked';
+            return acc;
+          }, {}),
+        );
+      } catch (err) { setError(getErrorMessage(err, 'Không thể tải người dùng.')); } finally { setIsLoading(false); }
     };
     fetch();
   }, []);
@@ -118,10 +128,18 @@ export const UserManagement: React.FC = () => {
     return { total, verified, active, new: newU } as Record<string, number>;
   }, [users]);
 
-  const handleToggleLock = (userId: string) => {
+  const handleToggleLock = async (userId: string) => {
     const next = !lockedUsers[userId];
+    // Optimistic: cập nhật ngay, revert nếu API lỗi.
     setLockedUsers((prev) => ({ ...prev, [userId]: next }));
-    showToast({ title: next ? 'Đã khóa tài khoản' : 'Đã mở khóa', variant: next ? 'error' : 'success' });
+    try {
+      if (next) await userApi.lockUser(userId);
+      else await userApi.unlockUser(userId);
+      showToast({ title: next ? 'Đã khóa tài khoản' : 'Đã mở khóa', variant: next ? 'error' : 'success' });
+    } catch (err) {
+      setLockedUsers((prev) => ({ ...prev, [userId]: !next }));
+      showToast({ title: getErrorMessage(err, 'Thao tác thất bại'), variant: 'error' });
+    }
   };
 
   return (
