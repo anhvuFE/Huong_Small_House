@@ -310,4 +310,32 @@ export const orderApi = {
     const response = await apiClient.post<ApiResponse<BackendOrder>>('/orders', payload);
     return toCustomerOrder(response.data.data);
   },
+
+  // Đặt hàng thật: POST /orders. Trả checkoutUrl nếu thanh toán Sepay.
+  async placeOrder(payload: {
+    email: string;
+    items: { productId: number; quantity: number }[];
+    paymentMethod: 'COD' | 'Sepay' | 'Bank';
+    note?: string;
+    promotionCode?: string;
+    guest?: { name: string; phone: string; email: string };
+  }): Promise<{ order: CustomerOrder | null; checkoutUrl?: string }> {
+    const response = await apiClient.post<ApiResponse<{ order: BackendOrder; checkoutUrl?: string }>>(
+      '/orders',
+      payload,
+    );
+    const data = response.data.data;
+    return {
+      order: data?.order ? toCustomerOrder(data.order) : null,
+      checkoutUrl: data?.checkoutUrl,
+    };
+  },
+
+  // Tạo lại phiên thanh toán Sepay cho đơn đã có.
+  async paySepay(orderId: number): Promise<string | undefined> {
+    const response = await apiClient.post<ApiResponse<{ checkoutUrl?: string }>>(
+      `/orders/${orderId}/payment/sepay`,
+    );
+    return response.data.data?.checkoutUrl;
+  },
 };
