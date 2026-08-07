@@ -15,12 +15,14 @@ interface Slide {
   subtitle: string;
   cta: string;
   link: string;
+  image: string;
 }
 
+// Tông sâu, trầm, hài hoà (bỏ cam chói); mỗi slide đổi ảnh minh hoạ bên phải.
 const slides: Slide[] = [
   {
     id: 1,
-    bgColor: palette.primary,
+    bgColor: '#14532D', // xanh rừng sâu
     chipLabel: 'Chính hãng 100%',
     title: 'Thực phẩm chức năng',
     titleHighlight: 'chính hãng',
@@ -28,21 +30,23 @@ const slides: Slide[] = [
       'Cam kết 100% hàng chính hãng nhập khẩu trực tiếp từ Mỹ, Úc, Canada. Nâng cao sức khỏe mỗi ngày cùng Hương Small House.',
     cta: 'Khám phá ngay',
     link: '/products',
+    image: '/images/products/vitamin-c.svg',
   },
   {
     id: 2,
-    bgColor: palette.warning,
-    chipLabel: 'Ưu đãi đặc biệt',
-    title: 'Giảm giá lên đến',
-    titleHighlight: '30%',
+    bgColor: '#0F5C57', // xanh ngọc trầm
+    chipLabel: 'Ưu đãi đặc biệt · -30%',
+    title: 'Ưu đãi cho',
+    titleHighlight: 'khách hàng mới',
     subtitle:
       'Chương trình khuyến mãi dành riêng cho khách hàng mới. Đừng bỏ lỡ cơ hội sở hữu sản phẩm chất lượng với giá tốt nhất.',
     cta: 'Mua sắm ngay',
     link: '/products?featured=true',
+    image: '/images/products/collagen.svg',
   },
   {
     id: 3,
-    bgColor: palette.secondary,
+    bgColor: '#123A6B', // xanh dương sâu
     chipLabel: 'Sức khỏe toàn diện',
     title: 'Chăm sóc sức khỏe',
     titleHighlight: 'toàn diện',
@@ -50,6 +54,7 @@ const slides: Slide[] = [
       'Đa dạng sản phẩm từ vitamin, khoáng chất đến collagen, omega-3. Giải pháp dinh dưỡng cho mọi nhu cầu.',
     cta: 'Xem thêm',
     link: '/categories',
+    image: '/images/products/omega-3.svg',
   },
 ];
 
@@ -121,6 +126,8 @@ const HeroSection: React.FC = () => {
           sx={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 6,
             minHeight: { xs: 380, sm: 440, md: 500 },
             py: { xs: 6, md: 8 },
           }}
@@ -133,7 +140,7 @@ const HeroSection: React.FC = () => {
               exit="exit"
               variants={textVariants}
               transition={{ duration: 0.5, ease: 'easeOut' }}
-              style={{ maxWidth: 580 }}
+              style={{ maxWidth: 560, flexShrink: 0 }}
             >
               <Chip
                 label={slide.chipLabel}
@@ -198,6 +205,117 @@ const HeroSection: React.FC = () => {
               </Link>
             </motion.div>
           </AnimatePresence>
+
+          {/* Showcase sản phẩm bên phải (ẩn trên mobile) */}
+          <Box
+            sx={{
+              display: { xs: 'none', md: 'flex' },
+              flex: 1,
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              position: 'relative',
+            }}
+          >
+            <AnimatePresence mode="wait">
+              <Box
+                component={motion.div}
+                key={slide.id}
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.92 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                sx={{ position: 'relative', width: 320, height: 320 }}
+              >
+                {/* Vòng sáng nền */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: -28,
+                    borderRadius: '50%',
+                    bgcolor: 'rgba(255,255,255,0.06)',
+                  }}
+                />
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 8,
+                    borderRadius: '50%',
+                    border: '1px dashed rgba(255,255,255,0.18)',
+                  }}
+                />
+                {/* Thẻ sản phẩm */}
+                <Box
+                  component="img"
+                  src={slide.image}
+                  alt=""
+                  sx={{
+                    position: 'relative',
+                    width: 320,
+                    height: 320,
+                    objectFit: 'cover',
+                    borderRadius: 6,
+                    boxShadow: '0 32px 64px rgba(0,0,0,0.4)',
+                  }}
+                />
+                {/* Badge rating nổi */}
+                <Box
+                  component={motion.div}
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  sx={{
+                    position: 'absolute',
+                    top: 18,
+                    left: -34,
+                    bgcolor: '#fff',
+                    borderRadius: 3,
+                    px: 1.6,
+                    py: 1,
+                    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.8,
+                  }}
+                >
+                  <Box component="span" sx={{ color: '#FFB300', fontSize: 18, lineHeight: 1 }}>
+                    ★
+                  </Box>
+                  <Box>
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', lineHeight: 1, color: '#1A2332' }}>
+                      4.9
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.62rem', color: '#8D99A8', lineHeight: 1.2 }}>
+                      đánh giá
+                    </Typography>
+                  </Box>
+                </Box>
+                {/* Badge chính hãng nổi */}
+                <Box
+                  component={motion.div}
+                  animate={{ y: [0, 8, 0] }}
+                  transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+                  sx={{
+                    position: 'absolute',
+                    bottom: 20,
+                    right: -30,
+                    bgcolor: palette.accent,
+                    color: '#fff',
+                    borderRadius: 3,
+                    px: 1.8,
+                    py: 1,
+                    boxShadow: '0 10px 24px rgba(125,175,24,0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.8,
+                  }}
+                >
+                  <Box component="span" sx={{ fontSize: 16, lineHeight: 1 }}>✓</Box>
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.8rem', lineHeight: 1.1 }}>
+                    Chính hãng
+                  </Typography>
+                </Box>
+              </Box>
+            </AnimatePresence>
+          </Box>
         </Box>
       </Container>
 

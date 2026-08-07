@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import type { Product } from '../../types';
 import { formatCurrency, calculateDiscount } from '../../utils/format';
 import { useCartStore } from '../../store/useCartStore';
+import { getProductImage } from '../../utils/productImage';
 import logo from '../../assets/logo.png';
 
 const palette = {
@@ -41,13 +42,8 @@ const ProductCardComponent: FC<ProductCardProps> = ({ product }) => {
     ? calculateDiscount(product.price, product.originalPrice)
     : 0;
 
-  const hasValidImage =
-    product.thumbnail &&
-    !product.thumbnail.includes('placeholder') &&
-    !product.thumbnail.includes('placehold') &&
-    !product.thumbnail.includes('/images/products/') &&
-    product.thumbnail.startsWith('http') &&
-    !imageError;
+  const imageSrc = imageError ? logo : getProductImage(product);
+  const hasValidImage = !imageError;
 
   return (
     <motion.div
@@ -91,7 +87,7 @@ const ProductCardComponent: FC<ProductCardProps> = ({ product }) => {
             <Box
               component="img"
               className="product-image"
-              src={hasValidImage ? product.thumbnail : logo}
+              src={imageSrc}
               alt={product.name}
               onError={() => setImageError(true)}
               sx={{
