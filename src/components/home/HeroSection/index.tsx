@@ -243,20 +243,37 @@ const HeroSection: React.FC = () => {
                     border: '1px dashed rgba(255,255,255,0.18)',
                   }}
                 />
-                {/* Thẻ sản phẩm */}
+                {/* Thẻ sản phẩm — hình chai vẽ tay, căn giữa tuyệt đối */}
                 <Box
-                  component="img"
-                  src={slide.image}
-                  alt=""
                   sx={{
                     position: 'relative',
                     width: 320,
                     height: 320,
-                    objectFit: 'cover',
                     borderRadius: 6,
                     boxShadow: '0 32px 64px rgba(0,0,0,0.4)',
+                    overflow: 'hidden',
                   }}
-                />
+                >
+                  <svg width="320" height="320" viewBox="0 0 320 320" role="img" aria-label="Sản phẩm chính hãng">
+                    <rect width="320" height="320" fill="#FFFDF3" />
+                    <circle cx="160" cy="164" r="118" fill="#F1F6E4" />
+                    {/* nắp + cổ chai */}
+                    <rect x="130" y="48" width="60" height="26" rx="9" fill="#1F5C2C" />
+                    <rect x="136" y="70" width="48" height="12" fill="#2E7D32" />
+                    {/* thân chai */}
+                    <rect x="104" y="80" width="112" height="180" rx="22" fill="#2E7D32" />
+                    {/* nhãn */}
+                    <rect x="116" y="126" width="88" height="108" rx="14" fill="#FFFFFF" />
+                    {/* huy hiệu lá/chữ thập */}
+                    <circle cx="160" cy="152" r="17" fill="#7daf18" />
+                    <rect x="151.5" y="149" width="17" height="6" rx="3" fill="#fff" />
+                    <rect x="157" y="143.5" width="6" height="17" rx="3" fill="#fff" />
+                    {/* thanh nhãn (trừu tượng, không chữ méo) */}
+                    <rect x="130" y="182" width="60" height="9" rx="4.5" fill="#2E7D32" />
+                    <rect x="138" y="199" width="44" height="7" rx="3.5" fill="#CBDAAC" />
+                    <rect x="144" y="213" width="32" height="7" rx="3.5" fill="#E4EDCF" />
+                  </svg>
+                </Box>
                 {/* Badge rating nổi */}
                 <Box
                   component={motion.div}
