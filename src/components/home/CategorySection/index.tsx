@@ -1,6 +1,5 @@
 import React, { memo, useEffect, useState } from 'react';
 import { Box, Typography, Container } from '@mui/material';
-import { Card } from 'antd';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
@@ -11,8 +10,9 @@ import {
   FiSun,
   FiMoon,
   FiStar,
-  FiTrendingDown,
+  FiDroplet,
   FiBox,
+  FiArrowRight,
 } from 'react-icons/fi';
 import { productApi } from '../../../services/productApi';
 import type { Category } from '../../../types';
@@ -22,24 +22,13 @@ import { palette } from '../../../theme';
 
 const iconMap: Record<string, React.ElementType> = {
   vitamin: FiActivity,
-  digestive: FiTrendingDown,
+  digestive: FiDroplet,
   immunity: FiShield,
   heart: FiHeart,
   beauty: FiStar,
   energy: FiSun,
   sleep: FiMoon,
   collagen: FiFeather,
-};
-
-const colorMap: Record<string, { icon: string; bg: string }> = {
-  vitamin: { icon: '#E65100', bg: '#FFF3E0' },
-  digestive: { icon: '#2E7D32', bg: '#E8F5E9' },
-  immunity: { icon: '#1565C0', bg: '#E3F2FD' },
-  heart: { icon: '#C62828', bg: '#FFEBEE' },
-  beauty: { icon: '#AD1457', bg: '#FCE4EC' },
-  energy: { icon: '#F9A825', bg: '#FFFDE7' },
-  sleep: { icon: '#4527A0', bg: '#EDE7F6' },
-  collagen: { icon: '#00838F', bg: '#E0F7FA' },
 };
 
 function getSlugKey(slug: string) {
@@ -145,66 +134,73 @@ const CategorySection: React.FC = () => {
               : items.map((cat) => {
                   const key = getSlugKey(cat.slug);
                   const Icon = iconMap[key] ?? FiBox;
-                  const colors = colorMap[key] ?? { icon: palette.accent, bg: palette.accentLight };
 
                   return (
-                    <motion.div
+                    <Box
                       key={cat.id}
+                      component={motion.div}
                       variants={fadeInUp}
                       transition={{ duration: 0.35 }}
                       whileHover={{ y: -4, transition: { duration: 0.2 } }}
                     >
                       <Link to={`/products?category=${cat.slug}`} style={{ textDecoration: 'none' }}>
-                        <Card
-                          hoverable
-                          style={{
-                            borderRadius: 14,
-                            border: `1px solid ${palette.border}`,
-                            textAlign: 'center',
+                        <Box
+                          sx={{
+                            position: 'relative',
                             height: '100%',
-                          }}
-                          styles={{
-                            body: {
-                              padding: '28px 16px',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              gap: 10,
+                            bgcolor: '#fff',
+                            border: `1px solid ${palette.border}`,
+                            borderRadius: 3,
+                            p: 2.75,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.75,
+                            transition: 'all 0.25s ease',
+                            '&:hover': {
+                              borderColor: palette.accent,
+                              boxShadow: '0 10px 26px rgba(125,175,24,0.12)',
                             },
+                            '&:hover .cat-arrow': { opacity: 1, transform: 'translateX(0)' },
+                            '&:hover .cat-title': { color: palette.accent },
                           }}
                         >
-                          <Box
-                            sx={{
-                              width: 56,
-                              height: 56,
-                              borderRadius: '50%',
-                              bgcolor: colors.bg,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'transform 0.25s ease',
-                              '.ant-card:hover &': { transform: 'scale(1.06)' },
-                            }}
-                          >
-                            <Icon style={{ width: 26, height: 26, color: colors.icon }} />
+                          <Box sx={{ color: palette.primary, display: 'flex', mb: 1 }}>
+                            <Icon style={{ width: 30, height: 30 }} />
                           </Box>
                           <Typography
+                            className="cat-title"
                             sx={{
-                              fontWeight: 600,
-                              fontSize: '0.88rem',
+                              fontWeight: 700,
+                              fontSize: '0.95rem',
                               color: palette.textPrimary,
+                              transition: 'color 0.2s ease',
                             }}
                           >
                             {cat.name}
                           </Typography>
                           {(cat.productCount ?? 0) > 0 && (
-                            <Typography sx={{ fontSize: '0.73rem', color: palette.textMuted }}>
+                            <Typography sx={{ fontSize: '0.78rem', color: palette.textMuted }}>
                               {cat.productCount} sản phẩm
                             </Typography>
                           )}
-                        </Card>
+                          <Box
+                            className="cat-arrow"
+                            sx={{
+                              position: 'absolute',
+                              top: 22,
+                              right: 22,
+                              color: palette.accent,
+                              display: 'flex',
+                              opacity: 0,
+                              transform: 'translateX(-6px)',
+                              transition: 'all 0.25s ease',
+                            }}
+                          >
+                            <FiArrowRight style={{ width: 18, height: 18 }} />
+                          </Box>
+                        </Box>
                       </Link>
-                    </motion.div>
+                    </Box>
                   );
                 })}
           </Box>
