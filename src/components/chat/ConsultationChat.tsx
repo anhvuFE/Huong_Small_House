@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { Box, Stack, Typography } from '@mui/material';
 import { Button, Input } from 'antd';
 import { FiSend } from 'react-icons/fi';
-import { consultationApi, type Consultation } from '../../services/consultationApi';
+import { consultationApi, type Consultation, type ConsultationMessage } from '../../services/consultationApi';
 import { useAuthStore } from '../../store/useAuthStore';
+import { getSocket } from '../../lib/socket';
 import { getErrorMessage } from '../../utils/error';
 import { palette } from '../../theme';
 
@@ -12,7 +13,7 @@ const { TextArea } = Input;
 
 /** Chat trực tiếp với tư vấn viên (backend consultations), dùng cạnh bot. */
 export const ConsultationChat: React.FC = () => {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, accessToken } = useAuthStore();
   const [consultation, setConsultation] = useState<Consultation | null>(null);
   const [name, setName] = useState(user?.fullName ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -27,19 +28,28 @@ export const ConsultationChat: React.FC = () => {
     if (el) el.scrollTop = el.scrollHeight;
   }, [consultation?.messages.length]);
 
-  // Poll tin trả lời của tư vấn viên (mỗi 5s) khi phiên đang mở.
+  // Nhận tin nhắn tư vấn viên real-time qua Socket.IO (thay cho polling).
   useEffect(() => {
-    if (!consultation || consultation.status !== 'open') return;
+    if (!consultation) return;
     const id = consultation.id;
-    const timer = setInterval(async () => {
-      try {
-        setConsultation(await consultationApi.get(id));
-      } catch {
-        /* bỏ qua lỗi poll */
-      }
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [consultation]);
+    const socket = getSocket(accessToken);
+    socket.emit('consultation:join', id);
+    const onMessage = (msg: ConsultationMessage) => {
+      setConsultation((prev) => {
+        if (!prev) return prev;
+        const last = prev.messages[prev.messages.length - 1];
+        // Bỏ qua nếu trùng tin vừa gửi (API response đã thêm).
+        if (last && last.sender === msg.sender && last.content === msg.content) return prev;
+        return { ...prev, messages: [...prev.messages, msg] };
+      });
+    };
+    socket.on('consultation:message', onMessage);
+    return () => {
+      socket.emit('consultation:leave', id);
+      socket.off('consultation:message', onMessage);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consultation?.id, accessToken]);
 
   const handleStart = async () => {
     if (!name.trim() || !email.trim() || !draft.trim()) {
