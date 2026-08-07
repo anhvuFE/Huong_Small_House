@@ -97,6 +97,25 @@ export const contentApi = {
     return transformContent(response.data.data);
   },
 
+  async createContent(payload: {
+    title: string;
+    slug?: string;
+    excerpt?: string;
+    body?: string;
+    tags?: string[];
+    published?: boolean;
+  }): Promise<ContentItem> {
+    const data: Record<string, unknown> = { title: payload.title };
+    if (payload.slug) data.slug = payload.slug;
+    if (payload.excerpt !== undefined) data.excerpt = payload.excerpt;
+    if (payload.body !== undefined) data.content = payload.body;
+    if (payload.tags !== undefined) data.tags = payload.tags;
+    if (payload.published !== undefined) data.published = payload.published;
+
+    const response = await apiClient.post<ApiResponse<BackendContent>>('/blogs', data);
+    return transformContent(response.data.data);
+  },
+
   async deleteContent(id: string): Promise<void> {
     const blogId = Number(id);
     await apiClient.delete(`/blogs/${blogId}`);
