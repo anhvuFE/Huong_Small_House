@@ -14,55 +14,20 @@ import {
   ShoppingCartOutlined,
   MenuRounded,
   Close,
-  Phone,
-  Email,
-  LocationOn,
   Person,
   Logout,
   Login,
   KeyboardArrowDown,
-  Home,
-  Inventory2Outlined,
-  CategoryOutlined,
-  InfoOutlined,
-  ContactMailOutlined,
-  ArticleOutlined,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCartStore } from '../../store/useCartStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import { cn } from '../../utils/cn';
 import logo from '../../assets/logo.png';
 import { palette } from '../../theme';
-import { SITE } from '../../config/site';
-
-
-const navItems = [
-  { label: 'Trang chủ', href: '/', icon: Home },
-  { label: 'Sản phẩm', href: '/products', icon: Inventory2Outlined },
-  { label: 'Danh mục', href: '/categories', icon: CategoryOutlined },
-  { label: 'Giới thiệu', href: '/about', icon: InfoOutlined },
-  { label: 'Liên hệ', href: '/contact', icon: ContactMailOutlined },
-  { label: 'Blog', href: '/blog', icon: ArticleOutlined },
-];
-
-// Framer motion variants
-const mobileMenuOverlay = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-  exit: { opacity: 0 },
-};
-
-const mobileMenuPanel = {
-  hidden: { x: '-100%' },
-  visible: { x: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 30 } },
-  exit: { x: '-100%', transition: { duration: 0.25 } },
-};
-
-const mobileNavItem = {
-  hidden: { opacity: 0, x: -16 },
-  visible: { opacity: 1, x: 0 },
-};
+import { navItems } from './header/navItems';
+import { HeaderTopBar } from './header/HeaderTopBar';
+import { DesktopNav } from './header/DesktopNav';
+import { MobileDrawer } from './header/MobileDrawer';
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -150,75 +115,7 @@ export const Header: React.FC = () => {
       sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40 }}
     >
       {/* ===== Top Bar ===== */}
-      <Box
-        id="top-bar"
-        sx={{
-          bgcolor: palette.primary,
-          color: '#fff',
-          py: 0.8,
-          fontSize: '0.8rem',
-        }}
-      >
-        <Box
-          sx={{
-            maxWidth: 1200,
-            mx: 'auto',
-            px: { xs: 2, sm: 3, lg: 5 },
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 1,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, md: 3 } }}>
-            <Box
-              component="a"
-              href={SITE.phoneHref}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.7,
-                color: '#fff',
-                textDecoration: 'none',
-                '&:hover': { color: 'rgba(255,255,255,0.85)' },
-                transition: 'color 0.2s',
-              }}
-            >
-              <Phone sx={{ fontSize: 15 }} />
-              <span>{SITE.phone}</span>
-            </Box>
-            <Box
-              component="a"
-              href={SITE.emailHref}
-              sx={{
-                display: { xs: 'none', md: 'flex' },
-                alignItems: 'center',
-                gap: 0.7,
-                color: '#fff',
-                textDecoration: 'none',
-                '&:hover': { color: 'rgba(255,255,255,0.85)' },
-                transition: 'color 0.2s',
-              }}
-            >
-              <Email sx={{ fontSize: 15 }} />
-              <span>{SITE.email}</span>
-            </Box>
-          </Box>
-
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.7,
-              color: 'rgba(255,255,255,0.8)',
-            }}
-          >
-            <LocationOn sx={{ fontSize: 15 }} />
-            <Typography sx={{ fontSize: '0.8rem' }}>{SITE.addressShort}</Typography>
-          </Box>
-        </Box>
-      </Box>
+      <HeaderTopBar />
 
       {/* ===== Main Header ===== */}
       <Box
@@ -304,34 +201,7 @@ export const Header: React.FC = () => {
             </Link>
 
             {/* Desktop Navigation */}
-            <Box
-              component="nav"
-              sx={{
-                display: { xs: 'none', lg: 'flex' },
-                alignItems: 'center',
-                gap: 0.3,
-                ml: 1,
-                bgcolor: palette.background,
-                borderRadius: 3,
-                p: 0.5,
-                border: `1px solid ${palette.border}`,
-              }}
-            >
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={cn(
-                    'px-3.5 py-2 text-[0.84rem] font-medium rounded-[10px] transition-all duration-200 whitespace-nowrap',
-                    isActiveNav(item.href)
-                      ? 'bg-white text-[#7daf18] shadow-sm'
-                      : 'text-[#5A6B7F] hover:text-[#2E7D32] hover:bg-white/60'
-                  )}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </Box>
+            <DesktopNav navItems={navItems} isActive={isActiveNav} />
           </Box>
 
           {/* Right: Search + Auth + Cart */}
@@ -655,214 +525,15 @@ export const Header: React.FC = () => {
       </Box>
 
       {/* ===== Mobile Side Menu ===== */}
-      <AnimatePresence>
-        {isMenuOpen && (
-          <>
-            {/* Overlay */}
-            <motion.div
-              variants={mobileMenuOverlay}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={{ duration: 0.25 }}
-              onClick={() => setIsMenuOpen(false)}
-              style={{
-                position: 'fixed',
-                inset: 0,
-                zIndex: 45,
-                backgroundColor: 'rgba(0,0,0,0.4)',
-                backdropFilter: 'blur(2px)',
-              }}
-            />
-
-            {/* Panel */}
-            <motion.nav
-              variants={mobileMenuPanel}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                bottom: 0,
-                width: 300,
-                maxWidth: '85vw',
-                zIndex: 50,
-                backgroundColor: '#fff',
-                display: 'flex',
-                flexDirection: 'column',
-                boxShadow: '4px 0 30px rgba(0,0,0,0.1)',
-              }}
-            >
-              {/* Menu Header */}
-              <Box
-                sx={{
-                  px: 3,
-                  py: 2.5,
-                  borderBottom: `1px solid ${palette.border}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Box>
-                  <Typography sx={{ fontSize: '0.72rem', color: palette.textMuted, mb: 0.2 }}>
-                    Menu
-                  </Typography>
-                  <Typography sx={{ fontSize: '1.05rem', fontWeight: 700, color: palette.textPrimary }}>
-                    Hương Small House
-                  </Typography>
-                </Box>
-                <IconButton
-                  onClick={() => setIsMenuOpen(false)}
-                  sx={{
-                    border: `1px solid ${palette.border}`,
-                    borderRadius: 2,
-                    p: 0.6,
-                    color: palette.textSecondary,
-                  }}
-                  aria-label="Đóng menu"
-                >
-                  <Close sx={{ fontSize: 20 }} />
-                </IconButton>
-              </Box>
-
-              {/* Nav items */}
-              <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 2 }}>
-                <motion.div
-                  initial="hidden"
-                  animate="visible"
-                  transition={{ staggerChildren: 0.04, delayChildren: 0.1 }}
-                >
-                  {navItems.map((item) => {
-                    const Icon = item.icon;
-                    const active = isActiveNav(item.href);
-                    return (
-                      <motion.div key={item.href} variants={mobileNavItem} transition={{ duration: 0.25 }}>
-                        <Link
-                          to={item.href}
-                          onClick={() => setIsMenuOpen(false)}
-                          style={{ textDecoration: 'none' }}
-                        >
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1.5,
-                              py: 1.4,
-                              px: 1.5,
-                              mb: 0.5,
-                              borderRadius: 2.5,
-                              bgcolor: active ? '#EDF7D5' : 'transparent',
-                              border: `1px solid ${active ? 'rgba(125,175,24,0.2)' : 'transparent'}`,
-                              transition: 'all 0.2s',
-                              '&:hover': {
-                                bgcolor: active ? '#EDF7D5' : palette.background,
-                              },
-                            }}
-                          >
-                            <Icon
-                              sx={{
-                                fontSize: 20,
-                                color: active ? palette.accent : palette.textMuted,
-                              }}
-                            />
-                            <Typography
-                              sx={{
-                                fontSize: '0.92rem',
-                                fontWeight: active ? 600 : 500,
-                                color: active ? palette.accent : palette.textPrimary,
-                              }}
-                            >
-                              {item.label}
-                            </Typography>
-                          </Box>
-                        </Link>
-                      </motion.div>
-                    );
-                  })}
-                </motion.div>
-              </Box>
-
-              {/* Footer actions */}
-              <Box sx={{ px: 2, py: 2, borderTop: `1px solid ${palette.border}` }}>
-                {isAuthenticated ? (
-                  <>
-                    <Link to="/account" onClick={() => setIsMenuOpen(false)} style={{ textDecoration: 'none' }}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.5,
-                          py: 1.3,
-                          px: 1.5,
-                          mb: 1,
-                          borderRadius: 2.5,
-                          border: `1px solid ${palette.border}`,
-                          transition: 'all 0.2s',
-                          '&:hover': { borderColor: palette.accent },
-                        }}
-                      >
-                        <Person sx={{ fontSize: 20, color: palette.textSecondary }} />
-                        <Typography sx={{ fontSize: '0.9rem', fontWeight: 500, color: palette.textPrimary }}>
-                          {user?.fullName || 'Tài khoản'}
-                        </Typography>
-                      </Box>
-                    </Link>
-                    <Box
-                      component="button"
-                      type="button"
-                      onClick={() => { logout(); setIsMenuOpen(false); }}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1.5,
-                        py: 1.3,
-                        px: 1.5,
-                        width: '100%',
-                        borderRadius: 2.5,
-                        border: '1px solid #FFCDD2',
-                        bgcolor: 'transparent',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        '&:hover': { bgcolor: '#FFEBEE' },
-                      }}
-                    >
-                      <Logout sx={{ fontSize: 20, color: '#C62828' }} />
-                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 500, color: '#C62828' }}>
-                        Đăng xuất
-                      </Typography>
-                    </Box>
-                  </>
-                ) : (
-                  <Link to="/login" onClick={() => setIsMenuOpen(false)} style={{ textDecoration: 'none' }}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 1,
-                        py: 1.4,
-                        borderRadius: 2.5,
-                        bgcolor: palette.accent,
-                        color: '#fff',
-                        fontWeight: 600,
-                        fontSize: '0.92rem',
-                        transition: 'all 0.2s',
-                        '&:hover': { bgcolor: '#6B9E12' },
-                      }}
-                    >
-                      <Login sx={{ fontSize: 20 }} />
-                      <span>Đăng nhập</span>
-                    </Box>
-                  </Link>
-                )}
-              </Box>
-            </motion.nav>
-          </>
-        )}
-      </AnimatePresence>
+      <MobileDrawer
+        open={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        navItems={navItems}
+        isActive={isActiveNav}
+        isAuthenticated={isAuthenticated}
+        user={user}
+        onLogout={() => { logout(); setIsMenuOpen(false); }}
+      />
     </Box>
   );
 };
