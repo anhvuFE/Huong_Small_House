@@ -4,6 +4,8 @@ import { FiArrowLeft, FiCreditCard, FiTruck, FiUser, FiMail, FiPhone, FiMapPin, 
 import { useCartStore } from '../store/useCartStore';
 import { formatCurrency } from '../utils/format';
 import { useToast } from '../components/common/Toast';
+import { orderApi } from '../services/orderApi';
+import { getErrorMessage } from '../utils/error';
 import logo from '../assets/logo.png';
 import { getProductImage } from '../utils/productImage';
 
@@ -13,6 +15,7 @@ export const CheckoutPage: React.FC = () => {
   const { showToast } = useToast();
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
   const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -32,29 +35,55 @@ export const CheckoutPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Here you would typically send the order to your backend
-    console.log('Order submitted:', {
-      customer: formData,
-      items,
-      paymentMethod,
-      total: finalTotal
-    });
+    const orderItems = items
+      .map((i) => ({ productId: i.product.productId, quantity: i.quantity }))
+      .filter((x): x is { productId: number; quantity: number } => typeof x.productId === 'number');
 
-    // Show success toast
-    showToast({
-      title: 'Đặt hàng thành công!',
-      message: 'Chúng tôi sẽ liên hệ với bạn sớm nhất để xác nhận đơn hàng.',
-      variant: 'success'
-    });
+    if (orderItems.length === 0) {
+      showToast({ title: 'Không tạo được đơn', message: 'Sản phẩm không hợp lệ.', variant: 'error' });
+      return;
+    }
 
-    // Clear cart and redirect after a short delay
-    setTimeout(() => {
+    const paymentMap = { cod: 'COD', bank: 'Bank', sepay: 'Sepay' } as const;
+    const note = [
+      `Địa chỉ: ${formData.address}, ${formData.district}, ${formData.province}`,
+      formData.note && `Ghi chú: ${formData.note}`,
+    ]
+      .filter(Boolean)
+      .join(' | ');
+
+    setIsSubmitting(true);
+    try {
+      const result = await orderApi.placeOrder({
+        email: formData.email,
+        guest: { name: formData.fullName, phone: formData.phone, email: formData.email },
+        items: orderItems,
+        paymentMethod: paymentMap[paymentMethod as keyof typeof paymentMap] ?? 'COD',
+        note,
+      });
+
+      // Thanh toán online: chuyển sang cổng SePay.
+      if (result.checkoutUrl) {
+        clearCart();
+        window.location.href = result.checkoutUrl;
+        return;
+      }
+
+      showToast({
+        title: 'Đặt hàng thành công!',
+        message: 'Chúng tôi sẽ liên hệ với bạn sớm nhất để xác nhận đơn hàng.',
+        variant: 'success',
+      });
       clearCart();
       navigate('/');
-    }, 2000);
+    } catch (err) {
+      showToast({ title: 'Đặt hàng thất bại', message: getErrorMessage(err, 'Vui lòng thử lại.'), variant: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (items.length === 0) {
@@ -289,15 +318,36 @@ export const CheckoutPage: React.FC = () => {
                       </div>
                     </div>
                   </label>
+
+                  <label className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all hover:bg-gray-50 ${paymentMethod === 'sepay' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="sepay"
+                      checked={paymentMethod === 'sepay'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="mt-1 w-4 h-4 text-primary focus:ring-primary"
+                    />
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <FiCreditCard className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-800">Thanh toán online (SePay)</div>
+                        <div className="text-sm text-gray-600 mt-1">Chuyển tới cổng thanh toán SePay</div>
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
 
               {/* Submit button for mobile */}
               <button
                 type="submit"
-                className="lg:hidden w-full bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white py-4 rounded-lg font-semibold transition-all transform hover:scale-[1.02] shadow-lg"
+                disabled={isSubmitting}
+                className="lg:hidden w-full bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white py-4 rounded-lg font-semibold transition-all transform hover:scale-[1.02] shadow-lg disabled:opacity-60"
               >
-                Đặt hàng
+                {isSubmitting ? 'Đang xử lý...' : 'Đặt hàng'}
               </button>
             </form>
           </div>
@@ -360,11 +410,12 @@ export const CheckoutPage: React.FC = () => {
               {/* Submit button for desktop */}
               <button
                 onClick={handleSubmit}
-                className="hidden lg:block w-full bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white py-4 rounded-lg font-semibold transition-all transform hover:scale-[1.02] shadow-lg mt-6"
+                disabled={isSubmitting}
+                className="hidden lg:block w-full bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white py-4 rounded-lg font-semibold transition-all transform hover:scale-[1.02] shadow-lg mt-6 disabled:opacity-60"
               >
                 <div className="flex items-center justify-center gap-2">
                   <FiPackage className="w-5 h-5" />
-                  <span>Đặt hàng</span>
+                  <span>{isSubmitting ? 'Đang xử lý...' : 'Đặt hàng'}</span>
                 </div>
               </button>
             </div>
