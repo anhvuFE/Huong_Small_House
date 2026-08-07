@@ -45,7 +45,9 @@ const RULES: [RegExp, string][] = [
   [/immunity|mien.?dich/, 'zinc'],
 ];
 
-type ImageInput = Pick<Product, 'thumbnail' | 'name' | 'category' | 'tags' | 'id'>;
+// Chấp nhận cả object product rút gọn (vd admin chỉ có name/thumbnail).
+type ImageInput = Pick<Product, 'name'> &
+  Partial<Pick<Product, 'thumbnail' | 'category' | 'tags' | 'id'>>;
 
 export function getProductImage(product: ImageInput): string {
   const thumb = product.thumbnail;
@@ -57,8 +59,8 @@ export function getProductImage(product: ImageInput): string {
     if (re.test(hay)) return `${BASE}/${name}.svg`;
   }
 
-  // Fallback ổn định theo id (không random để tránh nhấp nháy khi re-render).
-  const sum = String(product.id)
+  // Fallback ổn định theo id/tên (không random để tránh nhấp nháy khi re-render).
+  const sum = String(product.id ?? product.name)
     .split('')
     .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   return `${BASE}/${ILLUSTRATIONS[sum % ILLUSTRATIONS.length]}.svg`;
