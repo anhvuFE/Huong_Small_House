@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Chip } from '@mui/material';
 import { Button, Input } from 'antd';
-import { consultationApi, type Consultation } from '../../services/consultationApi';
+import { consultationApi, type Consultation, type ConsultationMessage } from '../../services/consultationApi';
 import { getErrorMessage } from '../../utils/error';
 import { useToast } from '../../components/common/Toast';
 import { Loader } from '../../components/common/Loader';
+import { getSocket } from '../../lib/socket';
+import { useAuthStore } from '../../store/useAuthStore';
 import { palette } from '../../theme';
 
 const { TextArea } = Input;
 
 export const ConsultationManagement: React.FC = () => {
   const { showToast } = useToast();
+  const accessToken = useAuthStore((s) => s.accessToken);
   const [items, setItems] = useState<Consultation[]>([]);
   const [selected, setSelected] = useState<Consultation | null>(null);
   const [reply, setReply] = useState('');
@@ -34,6 +37,28 @@ export const ConsultationManagement: React.FC = () => {
     };
     load();
   }, []);
+
+  // Real-time: phiên mới + tin nhắn khách gửi (Socket.IO).
+  useEffect(() => {
+    const socket = getSocket(accessToken);
+    const onNew = () => {
+      consultationApi.list().then(setItems).catch(() => {});
+    };
+    const onMessage = (p: { consultationId: string; message: ConsultationMessage }) => {
+      setSelected((cur) => {
+        if (!cur || cur.id !== p.consultationId) return cur;
+        const last = cur.messages[cur.messages.length - 1];
+        if (last && last.sender === p.message.sender && last.content === p.message.content) return cur;
+        return { ...cur, messages: [...cur.messages, p.message] };
+      });
+    };
+    socket.on('consultation:new', onNew);
+    socket.on('consultation:message', onMessage);
+    return () => {
+      socket.off('consultation:new', onNew);
+      socket.off('consultation:message', onMessage);
+    };
+  }, [accessToken]);
 
   const sync = (updated: Consultation) => {
     setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
