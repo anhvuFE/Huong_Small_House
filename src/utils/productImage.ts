@@ -23,21 +23,26 @@ const ILLUSTRATIONS = [
   'multivitamin',
 ] as const;
 
-// Thứ tự có ý nghĩa: quy tắc cụ thể hơn đứng trước (vd calcium/D3 trước zinc).
+// Thứ tự có ý nghĩa: tên sản phẩm cụ thể phải khớp TRƯỚC các luật theo tag/danh
+// mục (vd "vitamin c" trước "miễn dịch", "calcium/D3" trước "zinc").
 const RULES: [RegExp, string][] = [
   [/collagen/, 'collagen'],
-  [/omega|fish oil|tim.?mach|heart/, 'omega-3'],
-  [/probiotic|tieu.?hoa|digestive/, 'probiotic'],
+  [/omega|fish oil/, 'omega-3'],
+  [/probiotic/, 'probiotic'],
   [/melatonin|sleep|giac.?ngu/, 'sleep-aid'],
   [/biotin/, 'biotin'],
   [/glucosamine|chondroitin|joint|xuong.?khop/, 'joint-support'],
-  [/b.?complex|coq10|coenzyme|energy|nang.?luong/, 'coq10'],
-  [/calcium|magnesium|\bd3\b|vitamin d/, 'vitamin-d'],
-  [/\bzinc\b|immunity|mien.?dich/, 'zinc'],
   [/vitamin c|vitamin-c/, 'vitamin-c'],
   [/vitamin e/, 'coq10'],
-  [/green tea|tra xanh/, 'green-tea'],
+  [/calcium|magnesium|\bd3\b|vitamin d/, 'vitamin-d'],
+  [/\bzinc\b/, 'zinc'],
   [/multivitamin|multi|iron|\bsat\b/, 'multivitamin'],
+  [/b.?complex|coq10|coenzyme|energy|nang.?luong/, 'coq10'],
+  [/green tea|tra xanh/, 'green-tea'],
+  // Luật theo danh mục/tag (ít cụ thể hơn) đặt cuối:
+  [/tim.?mach|heart/, 'omega-3'],
+  [/tieu.?hoa|digestive/, 'probiotic'],
+  [/immunity|mien.?dich/, 'zinc'],
 ];
 
 type ImageInput = Pick<Product, 'thumbnail' | 'name' | 'category' | 'tags' | 'id'>;

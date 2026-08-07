@@ -10,6 +10,7 @@ import type { Product } from '../types';
 import { extractIdFromSlug } from '../utils/slugify';
 import { Loader } from '../components/common/Loader';
 import { mockProducts } from '../data/productData';
+import { getProductImage } from '../utils/productImage';
 import logo from '../assets/logo.png';
 
 export const ProductDetailPage: React.FC = () => {
@@ -138,9 +139,13 @@ export const ProductDetailPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             <div>
               <div className="mb-4">
-                {(product.images[selectedImage] || product.thumbnail) && !imageLoadErrors[selectedImage] ? (
+                {!imageLoadErrors[selectedImage] ? (
                   <img
-                    src={product.images[selectedImage] || product.thumbnail}
+                    src={
+                      /^https?:\/\//.test(product.images[selectedImage] ?? '')
+                        ? product.images[selectedImage]
+                        : getProductImage(product)
+                    }
                     alt={product.name}
                     className="w-full h-64 sm:h-80 md:h-96 object-cover rounded-lg"
                     onError={() => {
@@ -164,9 +169,9 @@ export const ProductDetailPage: React.FC = () => {
                         selectedImage === index ? 'border-primary' : 'border-gray-200'
                       )}
                     >
-                      {image && !imageLoadErrors[1000 + index] ? (
+                      {!imageLoadErrors[1000 + index] ? (
                         <img
-                          src={image}
+                          src={/^https?:\/\//.test(image) ? image : getProductImage(product)}
                           alt={`${product.name} ${index + 1}`}
                           className="w-full h-full object-cover"
                           onError={() => {
@@ -245,10 +250,12 @@ export const ProductDetailPage: React.FC = () => {
                   <span className="text-sm md:text-base text-gray-600">Đơn vị:</span>
                   <span className="ml-2 text-sm md:text-base font-semibold">{product.quantity} {product.unit || 'sản phẩm'}</span>
                 </div>
-                <div className="flex justify-between sm:block">
-                  <span className="text-sm md:text-base text-gray-600">Mã sản phẩm:</span>
-                  <span className="ml-2 text-sm md:text-base font-semibold">#{product.productId}</span>
-                </div>
+                {product.productId && (
+                  <div className="flex justify-between sm:block">
+                    <span className="text-sm md:text-base text-gray-600">Mã sản phẩm:</span>
+                    <span className="ml-2 text-sm md:text-base font-semibold">#{product.productId}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center sm:gap-4">
                   <span className="text-sm md:text-base text-gray-600">Số lượng:</span>
                   <div className="flex items-center border rounded-lg">
@@ -283,7 +290,7 @@ export const ProductDetailPage: React.FC = () => {
                 <button
                   onClick={handleBuyNow}
                   disabled={product.stock === 0}
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 md:px-6 rounded-lg text-sm md:text-base font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-[#14532D] hover:bg-[#0f3d21] text-white py-3 px-4 md:px-6 rounded-lg text-sm md:text-base font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Mua ngay
                 </button>
