@@ -14,6 +14,7 @@ import {
   FiFileText,
   FiGrid,
   FiMessageSquare,
+  FiHeadphones,
 } from 'react-icons/fi';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -66,6 +67,11 @@ const menuItems = [
     path: '/admin/feedback',
     icon: FiMessageSquare,
     label: 'Phản hồi',
+  },
+  {
+    path: '/admin/consultations',
+    icon: FiHeadphones,
+    label: 'Tư vấn',
   },
   {
     path: '/admin/reports',
