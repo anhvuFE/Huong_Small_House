@@ -34,6 +34,7 @@ const BlogListPage = lazyComponent(() => import('./pages/BlogListPage'), 'BlogLi
 const BlogDetailPage = lazyComponent(() => import('./pages/BlogDetailPage'), 'BlogDetailPage');
 const AccountPage = lazyComponent(() => import('./pages/AccountPage'), 'AccountPage');
 const CheckoutPage = lazyComponent(() => import('./pages/CheckoutPage'), 'CheckoutPage');
+const PolicyPage = lazyComponent(() => import('./pages/PolicyPage'), 'PolicyPage');
 const AdminDashboard = lazyComponent(() => import('./pages/admin/AdminDashboard'), 'AdminDashboard');
 const ProductManagement = lazyComponent(() => import('./pages/admin/ProductManagement'), 'ProductManagement');
 const OrderManagement = lazyComponent(() => import('./pages/admin/OrderManagement'), 'OrderManagement');
@@ -130,6 +131,10 @@ function App() {
                     <Route path="/contact" element={<ContactPage />} />
                     <Route path="/account" element={<AccountPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
+                    <Route path="/privacy" element={<PolicyPage />} />
+                    <Route path="/terms" element={<PolicyPage />} />
+                    <Route path="/shipping" element={<PolicyPage />} />
+                    <Route path="/return" element={<PolicyPage />} />
                   </Routes>
                 </main>
                 <Footer />
