@@ -9,16 +9,8 @@ import { formatCurrency, calculateDiscount } from '../../utils/format';
 import { useCartStore } from '../../store/useCartStore';
 import { getProductImage } from '../../utils/productImage';
 import logo from '../../assets/logo.png';
+import { palette } from '../../theme';
 
-const palette = {
-  accent: '#7daf18',
-  accentDark: '#6B9E12',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 interface ProductCardProps {
   product: Product;

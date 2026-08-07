@@ -5,16 +5,8 @@ import { Home, NavigateNext, CheckCircle } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '../hooks/useScrollAnimation';
 import { policies, type Policy } from '../data/policyContent';
+import { palette } from '../theme';
 
-const palette = {
-  accent: '#7daf18',
-  primary: '#14532D',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 export const PolicyPage: React.FC = () => {
   const { pathname } = useLocation();

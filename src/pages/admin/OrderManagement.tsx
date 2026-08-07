@@ -28,16 +28,8 @@ import { getProductImage } from '../../utils/productImage';
 import { useToast } from '../../components/common/Toast';
 import { Pagination } from '../../components/common/Pagination';
 import { usePagination } from '../../hooks/usePagination';
+import { palette } from '../../theme';
 
-const palette = {
-  accent: '#7daf18',
-  accentLight: '#EDF7D5',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 const statusConfig: Record<string, { name: string; color: string; bg: string }> = {
   PENDING: { name: 'Chờ xác nhận', color: '#F59E0B', bg: '#FFFBEB' },

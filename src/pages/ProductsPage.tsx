@@ -28,16 +28,8 @@ import type { Category, Product } from '../types';
 import { mockProducts } from '../data/productData';
 import { mockCategories } from '../data/categoryData';
 import { formatCurrency } from '../utils/format';
+import { palette } from '../theme';
 
-const palette = {
-  accent: '#7daf18',
-  accentLight: '#EDF7D5',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Mới nhất' },

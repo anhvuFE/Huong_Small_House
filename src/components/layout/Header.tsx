@@ -33,16 +33,8 @@ import { useCartStore } from '../../store/useCartStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { cn } from '../../utils/cn';
 import logo from '../../assets/logo.png';
+import { palette } from '../../theme';
 
-const palette = {
-  primary: '#2E7D32',
-  accent: '#7daf18',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 const navItems = [
   { label: 'Trang chủ', href: '/', icon: Home },

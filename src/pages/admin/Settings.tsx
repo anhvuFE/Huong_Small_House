@@ -22,18 +22,10 @@ import { Button, Input, Select as AntSelect } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import { profileApi } from '../../services/profileApi';
 import { getErrorMessage } from '../../utils/error';
+import { palette } from '../../theme';
 
 const { TextArea } = Input;
 
-const palette = {
-  accent: '#7daf18',
-  accentLight: '#EDF7D5',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 const inputStyle = { borderRadius: 10, height: 40, fontFamily: 'Inter, system-ui, sans-serif' };
 

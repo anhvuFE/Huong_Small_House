@@ -26,20 +26,10 @@ import {
   HelpOutline,
 } from '@mui/icons-material';
 import { fadeInUp, staggerContainer } from '../hooks/useScrollAnimation';
+import { palette } from '../theme';
 
 const { TextArea } = Input;
 
-const palette = {
-  accent: '#7daf18',
-  accentLight: '#EDF7D5',
-  primary: '#2E7D32',
-  primarySoft: '#E8F5E9',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 interface ContactFormData {
   fullName: string;

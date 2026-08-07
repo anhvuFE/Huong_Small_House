@@ -20,16 +20,8 @@ import { ResponsivePie } from '@nivo/pie';
 import { reportApi } from '../../services/reportApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Loader } from '../../components/common/Loader';
+import { palette } from '../../theme';
 
-const palette = {
-  accent: '#7daf18',
-  accentLight: '#EDF7D5',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 interface ReportsCache {
   monthlyRevenue: number;

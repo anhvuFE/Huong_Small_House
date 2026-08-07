@@ -25,20 +25,8 @@ import {
 import { motion } from 'framer-motion';
 import { fadeInUp, staggerContainer } from '../hooks/useScrollAnimation';
 import logo from '../assets/logo.png';
+import { palette } from '../theme';
 
-const palette = {
-  accent: '#7daf18',
-  accentLight: '#EDF7D5',
-  primary: '#2E7D32',
-  primarySoft: '#E8F5E9',
-  secondary: '#1565C0',
-  secondarySoft: '#E3F2FD',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 const coreValues = [
   { icon: <CheckCircle sx={{ fontSize: 28 }} />, title: 'Chính hãng', desc: '100% sản phẩm nhập khẩu chính hãng, có tem kiểm định', color: '#2E7D32', bg: '#E8F5E9' },

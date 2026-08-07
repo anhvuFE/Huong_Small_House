@@ -29,17 +29,8 @@ import { usePagination } from '../hooks/usePagination';
 import { fadeInUp, staggerContainer } from '../hooks/useScrollAnimation';
 import { mockBlogs } from '../data/blogData';
 import logo from '../assets/logo.png';
+import { palette } from '../theme';
 
-const palette = {
-  accent: '#7daf18',
-  accentLight: '#EDF7D5',
-  primary: '#2E7D32',
-  textPrimary: '#1A2332',
-  textSecondary: '#5A6B7F',
-  textMuted: '#8D99A8',
-  border: '#E8ECF0',
-  background: '#FAFBFC',
-};
 
 const formatDate = (value?: Date) => {
   if (!value) return 'Không rõ';
