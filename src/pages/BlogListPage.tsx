@@ -23,11 +23,11 @@ import {
 import { motion } from 'framer-motion';
 import { contentApi } from '../services/contentApi';
 import type { ContentItem } from '../types';
-import { getErrorMessage } from '../utils/error';
 import { Loader } from '../components/common/Loader';
 import { Pagination } from '../components/common/Pagination';
 import { usePagination } from '../hooks/usePagination';
 import { fadeInUp, staggerContainer } from '../hooks/useScrollAnimation';
+import { mockBlogs } from '../data/blogData';
 import logo from '../assets/logo.png';
 
 const palette = {
@@ -47,7 +47,9 @@ const formatDate = (value?: Date) => {
 };
 
 const getValidImage = (thumbnail?: string) => {
-  if (thumbnail && thumbnail.startsWith('http') && !thumbnail.includes('placeholder') && !thumbnail.includes('placehold')) {
+  if (thumbnail &&
+    (thumbnail.startsWith('http') || thumbnail.startsWith('/images/') || thumbnail.endsWith('.svg')) &&
+    !thumbnail.includes('placeholder') && !thumbnail.includes('placehold')) {
     return thumbnail;
   }
   return null;
@@ -70,9 +72,12 @@ export const BlogListPage: React.FC = () => {
       setError('');
       try {
         const data = await contentApi.listBlogs();
-        if (!cancelled) setBlogs(data.filter((item) => item.status === 'PUBLISHED' && item.isActive));
-      } catch (err) {
-        if (!cancelled) setError(getErrorMessage(err, 'Không thể tải bài viết.'));
+        const published = data.filter((item) => item.status === 'PUBLISHED' && item.isActive);
+        // Nếu API trả rỗng thì dùng bài viết mẫu để trang không trống trơn.
+        if (!cancelled) setBlogs(published.length > 0 ? published : mockBlogs);
+      } catch {
+        // API chưa sẵn sàng -> fallback bài viết mẫu (giống mockProducts).
+        if (!cancelled) setBlogs(mockBlogs);
       } finally {
         if (!cancelled) setIsLoading(false);
       }

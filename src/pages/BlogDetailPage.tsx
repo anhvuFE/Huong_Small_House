@@ -5,6 +5,7 @@ import { contentApi } from '../services/contentApi';
 import type { ContentItem } from '../types';
 import { getErrorMessage } from '../utils/error';
 import { Loader } from '../components/common/Loader';
+import { mockBlogs } from '../data/blogData';
 import logo from '../assets/logo.png';
 
 const formatDateTime = (value?: Date) => {
@@ -42,7 +43,10 @@ export const BlogDetailPage: React.FC = () => {
         const data = await contentApi.getBlog(slug);
         setPost(data);
       } catch (err) {
-        setError(getErrorMessage(err, 'Không thể tải bài viết.'));
+        // API chưa sẵn sàng -> thử lấy bài viết mẫu theo slug.
+        const fallback = mockBlogs.find((b) => b.slug === slug);
+        if (fallback) setPost(fallback);
+        else setError(getErrorMessage(err, 'Không thể tải bài viết.'));
       } finally {
         setIsLoading(false);
       }
@@ -85,7 +89,7 @@ export const BlogDetailPage: React.FC = () => {
     <div className="bg-white pb-16">
       <div className="relative h-72 md:h-96 bg-gray-900">
         <img
-          src={(post.thumbnail && post.thumbnail.startsWith('http') && !post.thumbnail.includes('placeholder') && !post.thumbnail.includes('placehold')) ? post.thumbnail : logo}
+          src={(post.thumbnail && (post.thumbnail.startsWith('http') || post.thumbnail.startsWith('/images/') || post.thumbnail.endsWith('.svg')) && !post.thumbnail.includes('placeholder') && !post.thumbnail.includes('placehold')) ? post.thumbnail : logo}
           alt={post.title}
           className="absolute inset-0 w-full h-full object-cover"
         />
