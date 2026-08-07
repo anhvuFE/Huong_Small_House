@@ -175,20 +175,18 @@ const CategorySection: React.FC = () => {
                         >
                           <Box
                             sx={{
-                              width: 60,
-                              height: 60,
+                              width: 56,
+                              height: 56,
                               borderRadius: '50%',
-                              bgcolor: colors.icon,
+                              bgcolor: colors.bg,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              boxShadow: `0 8px 18px ${colors.icon}33`,
-                              border: `4px solid ${colors.bg}`,
                               transition: 'transform 0.25s ease',
-                              '.ant-card:hover &': { transform: 'scale(1.08)' },
+                              '.ant-card:hover &': { transform: 'scale(1.06)' },
                             }}
                           >
-                            <Icon style={{ width: 26, height: 26, color: '#fff' }} />
+                            <Icon style={{ width: 26, height: 26, color: colors.icon }} />
                           </Box>
                           <Typography
                             sx={{
