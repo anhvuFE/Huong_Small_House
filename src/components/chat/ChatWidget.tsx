@@ -13,8 +13,9 @@ import {
 } from '@mui/material';
 import { Button, ConfigProvider, Input, Tag } from 'antd';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FiMessageCircle, FiSend, FiX } from 'react-icons/fi';
+import { FiMessageCircle, FiSend, FiX, FiHeadphones } from 'react-icons/fi';
 import { palette } from '../../theme';
+import { ConsultationChat } from './ConsultationChat';
 import logo from '../../assets/logo.png';
 import { getProductImage } from '../../utils/productImage';
 import { productApi } from '../../services/productApi';
@@ -50,6 +51,7 @@ const formatTime = (date: Date) =>
 
 export const ChatWidget: FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [mode, setMode] = useState<'bot' | 'consult'>('bot');
   const [hasUnread, setHasUnread] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([BOT_GREETING]);
   const [draft, setDraft] = useState('');
@@ -258,15 +260,31 @@ export const ChatWidget: FC = () => {
                     </Stack>
                   </Box>
                 </Stack>
-                <IconButton
-                  onClick={handleToggle}
-                  size="small"
-                  sx={{ color: '#fff' }}
-                  aria-label="Đóng hộp thoại"
-                >
-                  <FiX />
-                </IconButton>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <IconButton
+                    onClick={() => setMode((m) => (m === 'bot' ? 'consult' : 'bot'))}
+                    size="small"
+                    sx={{ color: '#fff' }}
+                    aria-label={mode === 'bot' ? 'Gặp tư vấn viên' : 'Về trợ lý ảo'}
+                    title={mode === 'bot' ? 'Gặp tư vấn viên' : 'Về trợ lý ảo'}
+                  >
+                    {mode === 'bot' ? <FiHeadphones /> : <FiMessageCircle />}
+                  </IconButton>
+                  <IconButton
+                    onClick={handleToggle}
+                    size="small"
+                    sx={{ color: '#fff' }}
+                    aria-label="Đóng hộp thoại"
+                  >
+                    <FiX />
+                  </IconButton>
+                </Stack>
               </Stack>
+
+              {mode === 'consult' ? (
+                <ConsultationChat />
+              ) : (
+                <>
 
               <Box
                 ref={listRef}
@@ -414,6 +432,8 @@ export const ChatWidget: FC = () => {
                   icon={<FiSend />}
                 />
               </Stack>
+              </>
+              )}
             </Paper>
           </motion.div>
         )}
