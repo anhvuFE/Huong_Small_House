@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiPlus, FiMinus, FiTrash2, FiShoppingBag } from 'react-icons/fi';
 import { useCartStore } from '../../store/useCartStore';
 import { formatCurrency } from '../../utils/format';
+import { getProductImage } from '../../utils/productImage';
 import { palette } from '../../theme';
 import logo from '../../assets/logo.png';
 
@@ -103,8 +104,7 @@ export const ShoppingCart: FC = () => {
               <Stack spacing={2} divider={<Divider flexItem />}>
                 <AnimatePresence initial={false}>
                   {items.map((item) => {
-                    const showFallback =
-                      !item.product.thumbnail || imageLoadErrors[item.product.id];
+                    const showFallback = imageLoadErrors[item.product.id];
                     return (
                       <motion.div
                         key={item.product.id}
@@ -127,7 +127,7 @@ export const ShoppingCart: FC = () => {
                             }}
                           >
                             <img
-                              src={showFallback ? logo : item.product.thumbnail}
+                              src={showFallback ? logo : getProductImage(item.product)}
                               alt={item.product.name}
                               onError={() =>
                                 setImageLoadErrors((prev) => ({

@@ -16,6 +16,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { FiMessageCircle, FiSend, FiX } from 'react-icons/fi';
 import { palette } from '../../theme';
 import logo from '../../assets/logo.png';
+import { getProductImage } from '../../utils/productImage';
 import { productApi } from '../../services/productApi';
 import { formatCurrency } from '../../utils/format';
 import type { Category, Product } from '../../types';
@@ -155,12 +156,12 @@ export const ChatWidget: FC = () => {
           }}
         >
           <img
-            src={product.thumbnail || logo}
+            src={getProductImage(product)}
             alt={product.name}
             style={{
               width: '100%',
               height: '100%',
-              objectFit: product.thumbnail ? 'cover' : 'contain',
+              objectFit: 'cover',
             }}
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src = logo;

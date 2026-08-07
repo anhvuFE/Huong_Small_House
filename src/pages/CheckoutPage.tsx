@@ -5,6 +5,7 @@ import { useCartStore } from '../store/useCartStore';
 import { formatCurrency } from '../utils/format';
 import { useToast } from '../components/common/Toast';
 import logo from '../assets/logo.png';
+import { getProductImage } from '../utils/productImage';
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
@@ -314,9 +315,9 @@ export const CheckoutPage: React.FC = () => {
               <div className="space-y-4 mb-6 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 {items.map((item) => (
                   <div key={item.product.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-                    {item.product.thumbnail && !imageLoadErrors[item.product.id] ? (
+                    {!imageLoadErrors[item.product.id] ? (
                       <img
-                        src={item.product.thumbnail}
+                        src={getProductImage(item.product)}
                         alt={item.product.name}
                         className="w-16 h-16 object-cover rounded-lg"
                         onError={() => {
