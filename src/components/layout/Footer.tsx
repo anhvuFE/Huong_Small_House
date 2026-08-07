@@ -295,7 +295,13 @@ export const Footer: React.FC = () => {
                       <Box
                         sx={{
                           color: palette.accent,
-                          mt: 0.2,
+                          bgcolor: 'rgba(125,175,24,0.12)',
+                          borderRadius: 2,
+                          width: 32,
+                          height: 32,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           flexShrink: 0,
                         }}
                       >

@@ -257,7 +257,7 @@ export const Header: React.FC = () => {
             <IconButton
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               sx={{
-                display: { xs: 'flex', xl: 'none' },
+                display: { xs: 'flex', lg: 'none' },
                 border: `1px solid ${palette.border}`,
                 borderRadius: 2.5,
                 p: 0.8,
@@ -314,7 +314,7 @@ export const Header: React.FC = () => {
             <Box
               component="nav"
               sx={{
-                display: { xs: 'none', xl: 'flex' },
+                display: { xs: 'none', lg: 'flex' },
                 alignItems: 'center',
                 gap: 0.3,
                 ml: 1,
