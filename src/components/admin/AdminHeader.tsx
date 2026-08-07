@@ -3,7 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { FiBell, FiSearch, FiChevronDown, FiMenu } from 'react-icons/fi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { profileApi } from '../../services/profileApi';
+import { getSocket } from '../../lib/socket';
 import logo from '../../assets/logo.png';
+
+interface AdminNotification {
+  id: string;
+  type: 'order' | 'feedback' | 'consultation';
+  title: string;
+  message: string;
+  time: string;
+  isRead: boolean;
+}
 
 interface AdminHeaderProps {
   onToggleSidebar: () => void;
@@ -14,11 +24,39 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onToggleSidebar,
   isMobile,
 }) => {
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, accessToken } = useAuthStore();
   const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const hasFetchedProfile = useRef(false);
+
+  // Nhận thông báo real-time qua Socket.IO.
+  useEffect(() => {
+    const socket = getSocket(accessToken);
+    const push = (n: Omit<AdminNotification, 'id' | 'time' | 'isRead'>) =>
+      setNotifications((prev) =>
+        [{ ...n, id: `${Date.now()}-${prev.length}`, time: 'Vừa xong', isRead: false }, ...prev].slice(0, 30),
+      );
+    const onOrder = (p: { orderId?: number }) => push({ type: 'order', title: 'Đơn hàng mới', message: `Đơn #${p.orderId ?? ''} vừa được đặt` });
+    const onFeedback = (p: { name?: string }) => push({ type: 'feedback', title: 'Phản hồi mới', message: `${p.name ?? 'Khách'} vừa gửi liên hệ` });
+    const onConsultation = (p: { name?: string; topic?: string }) => push({ type: 'consultation', title: 'Yêu cầu tư vấn', message: `${p.name ?? 'Khách'}: ${p.topic ?? ''}` });
+    socket.on('order:new', onOrder);
+    socket.on('feedback:new', onFeedback);
+    socket.on('consultation:new', onConsultation);
+    return () => {
+      socket.off('order:new', onOrder);
+      socket.off('feedback:new', onFeedback);
+      socket.off('consultation:new', onConsultation);
+    };
+  }, [accessToken]);
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const toggleNotifications = () => {
+    setShowNotifications((s) => !s);
+    if (!showNotifications) setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  };
 
   useEffect(() => {
     if (hasFetchedProfile.current) return;
@@ -59,34 +97,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
     navigate('/admin/settings');
   };
 
-  const notifications = [
-    {
-      id: '1',
-      type: 'order',
-      title: 'Đơn hàng mới',
-      message: 'Có 3 đơn hàng mới cần xác nhận',
-      time: '5 phút trước',
-      isRead: false,
-    },
-    {
-      id: '2',
-      type: 'product',
-      title: 'Sản phẩm sắp hết hàng',
-      message: 'Vitamin C 1000mg chỉ còn 5 sản phẩm',
-      time: '1 giờ trước',
-      isRead: false,
-    },
-    {
-      id: '3',
-      type: 'user',
-      title: 'Người dùng mới',
-      message: '10 người dùng mới đăng ký hôm nay',
-      time: '2 giờ trước',
-      isRead: true,
-    },
-  ];
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
@@ -119,7 +129,10 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         <div className="flex items-center space-x-2 lg:space-x-4">
           {/* Notifications */}
           <div className="relative">
-            <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+            <button
+              onClick={toggleNotifications}
+              className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
               <FiBell className="w-5 h-5 lg:w-6 lg:h-6" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 lg:h-5 lg:w-5 flex items-center justify-center">
@@ -127,6 +140,22 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                 </span>
               )}
             </button>
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white rounded-lg shadow-xl border border-gray-100 z-50">
+                <div className="px-4 py-3 border-b border-gray-100 font-semibold text-gray-800">Thông báo</div>
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-sm text-gray-400">Chưa có thông báo mới.</div>
+                ) : (
+                  notifications.map((n) => (
+                    <div key={n.id} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50">
+                      <div className="text-sm font-medium text-gray-800">{n.title}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{n.message}</div>
+                      <div className="text-[11px] text-gray-400 mt-1">{n.time}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           {/* Profile */}
