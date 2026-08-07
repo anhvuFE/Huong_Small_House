@@ -318,7 +318,7 @@ export const orderApi = {
     paymentMethod: 'COD' | 'Sepay' | 'Bank';
     note?: string;
     promotionCode?: string;
-    guest?: { name: string; phone: string; email: string };
+    guest?: { name: string; phone: string; email: string; address: string };
   }): Promise<{ order: CustomerOrder | null; checkoutUrl?: string }> {
     const response = await apiClient.post<ApiResponse<{ order: BackendOrder; checkoutUrl?: string }>>(
       '/orders',

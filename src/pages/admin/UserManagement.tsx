@@ -128,16 +128,21 @@ export const UserManagement: React.FC = () => {
     return { total, verified, active, new: newU } as Record<string, number>;
   }, [users]);
 
-  const handleToggleLock = async (userId: string) => {
-    const next = !lockedUsers[userId];
-    // Optimistic: cập nhật ngay, revert nếu API lỗi.
-    setLockedUsers((prev) => ({ ...prev, [userId]: next }));
+  const handleToggleLock = async (user: User) => {
+    if (typeof user.userId !== 'number') {
+      showToast({ title: 'Thiếu mã người dùng', variant: 'error' });
+      return;
+    }
+    const key = user.id;
+    const next = !lockedUsers[key];
+    // Optimistic: cập nhật ngay, revert nếu API lỗi. (backend dùng userId số)
+    setLockedUsers((prev) => ({ ...prev, [key]: next }));
     try {
-      if (next) await userApi.lockUser(userId);
-      else await userApi.unlockUser(userId);
+      if (next) await userApi.lockUser(user.userId);
+      else await userApi.unlockUser(user.userId);
       showToast({ title: next ? 'Đã khóa tài khoản' : 'Đã mở khóa', variant: next ? 'error' : 'success' });
     } catch (err) {
-      setLockedUsers((prev) => ({ ...prev, [userId]: !next }));
+      setLockedUsers((prev) => ({ ...prev, [key]: !next }));
       showToast({ title: getErrorMessage(err, 'Thao tác thất bại'), variant: 'error' });
     }
   };
@@ -145,8 +150,10 @@ export const UserManagement: React.FC = () => {
   const handleViewDetail = (user: User) => {
     setSelectedUser(user);
     setIsDetailOpen(true);
-    // Lấy bản chi tiết mới nhất từ API (không chặn hiển thị).
-    userApi.getUser(user.id).then(setSelectedUser).catch(() => {});
+    // Lấy bản chi tiết mới nhất từ API (dùng userId số, không chặn hiển thị).
+    if (typeof user.userId === 'number') {
+      userApi.getUser(user.userId).then(setSelectedUser).catch(() => {});
+    }
   };
 
   return (
@@ -245,7 +252,7 @@ export const UserManagement: React.FC = () => {
                       <Box component="td" sx={{ py: 1.5, px: 2 }}>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
                           <IconButton size="small" onClick={() => handleViewDetail(user)} sx={{ color: palette.textMuted, '&:hover': { bgcolor: '#E3F2FD', color: '#1565C0' } }}><Visibility sx={{ fontSize: 18 }} /></IconButton>
-                          <IconButton size="small" onClick={() => handleToggleLock(user.id)} sx={{ color: lockedUsers[user.id] ? '#EF4444' : palette.textMuted, '&:hover': { bgcolor: lockedUsers[user.id] ? '#FEF2F2' : '#E8F5E9', color: lockedUsers[user.id] ? '#EF4444' : '#2E7D32' } }}>
+                          <IconButton size="small" onClick={() => handleToggleLock(user)} sx={{ color: lockedUsers[user.id] ? '#EF4444' : palette.textMuted, '&:hover': { bgcolor: lockedUsers[user.id] ? '#FEF2F2' : '#E8F5E9', color: lockedUsers[user.id] ? '#EF4444' : '#2E7D32' } }}>
                             {lockedUsers[user.id] ? <LockOpen sx={{ fontSize: 18 }} /> : <Lock sx={{ fontSize: 18 }} />}
                           </IconButton>
                         </Box>
@@ -274,7 +281,7 @@ export const UserManagement: React.FC = () => {
                     </Box>
                     <Box sx={{ display: 'flex', gap: 0.3 }}>
                       <IconButton size="small" onClick={() => handleViewDetail(user)} sx={{ color: '#1565C0' }}><Visibility sx={{ fontSize: 16 }} /></IconButton>
-                      <IconButton size="small" onClick={() => handleToggleLock(user.id)} sx={{ color: lockedUsers[user.id] ? '#EF4444' : '#2E7D32' }}>
+                      <IconButton size="small" onClick={() => handleToggleLock(user)} sx={{ color: lockedUsers[user.id] ? '#EF4444' : '#2E7D32' }}>
                         {lockedUsers[user.id] ? <LockOpen sx={{ fontSize: 16 }} /> : <Lock sx={{ fontSize: 16 }} />}
                       </IconButton>
                     </Box>

@@ -3,6 +3,7 @@ import type { Address } from './common';
 
 export interface User {
   id: string;
+  userId?: number;
   email: string;
   phone: string;
   fullName: string;

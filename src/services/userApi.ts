@@ -19,16 +19,17 @@ export const userApi = {
     return response.data.data.map(transformBackendUser);
   },
 
-  async getUser(userId: string): Promise<User> {
+  // Lưu ý: backend định danh user bằng userId dạng SỐ (không phải Mongo _id).
+  async getUser(userId: number): Promise<User> {
     const response = await apiClient.get<ApiResponse<BackendUser>>(`/users/${userId}`);
     return transformBackendUser(response.data.data);
   },
 
-  async lockUser(userId: string): Promise<void> {
+  async lockUser(userId: number): Promise<void> {
     await apiClient.patch<ApiResponse<BackendUser>>(`/users/${userId}/lock`);
   },
 
-  async unlockUser(userId: string): Promise<void> {
+  async unlockUser(userId: number): Promise<void> {
     await apiClient.patch<ApiResponse<BackendUser>>(`/users/${userId}/unlock`);
   },
 };

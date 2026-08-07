@@ -98,6 +98,7 @@ export const transformBackendUser = (payload: BackendUser): User => {
 
   return {
     id: normalizedId,
+    userId: payload.userId,
     email: payload.email,
     phone: payload.phone ?? '',
     fullName: payload.name ?? payload.email ?? 'Người dùng',
