@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Box, Stack, Typography } from '@mui/material';
 import { Button, Input } from 'antd';
 import { FiSend } from 'react-icons/fi';
@@ -11,7 +12,7 @@ const { TextArea } = Input;
 
 /** Chat trực tiếp với tư vấn viên (backend consultations), dùng cạnh bot. */
 export const ConsultationChat: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const [consultation, setConsultation] = useState<Consultation | null>(null);
   const [name, setName] = useState(user?.fullName ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -76,6 +77,21 @@ export const ConsultationChat: React.FC = () => {
       setBusy(false);
     }
   };
+
+  // ----- Chưa đăng nhập: yêu cầu đăng nhập (API tư vấn cần auth) -----
+  if (!isAuthenticated) {
+    return (
+      <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 3, bgcolor: palette.background, textAlign: 'center' }}>
+        <Typography sx={{ fontWeight: 700, color: palette.textPrimary, mb: 0.5 }}>Chat với tư vấn viên</Typography>
+        <Typography sx={{ fontSize: '0.85rem', color: palette.textMuted, mb: 2 }}>
+          Vui lòng đăng nhập để bắt đầu phiên tư vấn với dược sĩ.
+        </Typography>
+        <Link to="/login" style={{ color: palette.accent, fontWeight: 600, textDecoration: 'none' }}>
+          Đăng nhập →
+        </Link>
+      </Box>
+    );
+  }
 
   // ----- Chưa mở phiên: form bắt đầu -----
   if (!consultation) {

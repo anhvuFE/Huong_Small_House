@@ -57,9 +57,10 @@ export const CheckoutPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      const fullAddress = `${formData.address}, ${formData.district}, ${formData.province}`;
       const result = await orderApi.placeOrder({
         email: formData.email,
-        guest: { name: formData.fullName, phone: formData.phone, email: formData.email },
+        guest: { name: formData.fullName, phone: formData.phone, email: formData.email, address: fullAddress },
         items: orderItems,
         paymentMethod: paymentMap[paymentMethod as keyof typeof paymentMap] ?? 'COD',
         note,

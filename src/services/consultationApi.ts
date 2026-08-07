@@ -59,7 +59,7 @@ export const consultationApi = {
 
   // POST /:id/messages — khách gửi thêm tin nhắn.
   async sendMessage(id: string, content: string): Promise<Consultation> {
-    const res = await apiClient.post<ApiResponse<BackendConsultation>>(`/consultations/${id}/messages`, { content });
+    const res = await apiClient.post<ApiResponse<BackendConsultation>>(`/consultations/${id}/messages`, { message: content });
     return toConsultation(res.data.data);
   },
 
@@ -71,7 +71,7 @@ export const consultationApi = {
 
   // POST /:id/admin/messages — admin trả lời.
   async adminReply(id: string, content: string): Promise<Consultation> {
-    const res = await apiClient.post<ApiResponse<BackendConsultation>>(`/consultations/${id}/admin/messages`, { content });
+    const res = await apiClient.post<ApiResponse<BackendConsultation>>(`/consultations/${id}/admin/messages`, { message: content });
     return toConsultation(res.data.data);
   },
 
