@@ -97,18 +97,16 @@ const StatsSection: React.FC = () => {
                 >
                   <Box
                     sx={{
-                      width: 60,
-                      height: 60,
+                      width: 56,
+                      height: 56,
                       borderRadius: '50%',
-                      bgcolor: stat.color,
-                      color: '#fff',
+                      bgcolor: stat.bg,
+                      color: stat.color,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
                       mb: 1.5,
-                      boxShadow: `0 8px 18px ${stat.color}33`,
-                      border: `4px solid ${stat.bg}`,
                     }}
                   >
                     {stat.icon}
