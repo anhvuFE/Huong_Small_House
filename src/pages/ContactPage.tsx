@@ -27,6 +27,7 @@ import {
 } from '@mui/icons-material';
 import { fadeInUp, staggerContainer } from '../hooks/useScrollAnimation';
 import { palette } from '../theme';
+import { SITE } from '../config/site';
 
 const { TextArea } = Input;
 
@@ -40,10 +41,10 @@ interface ContactFormData {
 }
 
 const contactInfo = [
-  { icon: <LocationOn sx={{ fontSize: 22 }} />, label: 'Địa chỉ', value: 'Chung cư nhà A 9 tầng, Ngõ 120 Hoàng Quốc Việt, Bắc Từ Liêm, Hà Nội', color: '#2E7D32', bg: '#E8F5E9' },
-  { icon: <Phone sx={{ fontSize: 22 }} />, label: 'Điện thoại', value: '0336 064 040', href: 'tel:0336064040', color: '#1565C0', bg: '#E3F2FD' },
-  { icon: <Email sx={{ fontSize: 22 }} />, label: 'Email', value: 'vuquynhhuong171298@gmail.com', href: 'mailto:vuquynhhuong171298@gmail.com', color: '#7B1FA2', bg: '#F3E5F5' },
-  { icon: <AccessTime sx={{ fontSize: 22 }} />, label: 'Giờ làm việc', value: '8:00 - 22:00 (Tất cả các ngày)', color: '#E65100', bg: '#FFF3E0' },
+  { icon: <LocationOn sx={{ fontSize: 22 }} />, label: 'Địa chỉ', value: SITE.addressFull, color: '#2E7D32', bg: '#E8F5E9' },
+  { icon: <Phone sx={{ fontSize: 22 }} />, label: 'Điện thoại', value: SITE.phone, href: SITE.phoneHref, color: '#1565C0', bg: '#E3F2FD' },
+  { icon: <Email sx={{ fontSize: 22 }} />, label: 'Email', value: SITE.email, href: SITE.emailHref, color: '#7B1FA2', bg: '#F3E5F5' },
+  { icon: <AccessTime sx={{ fontSize: 22 }} />, label: 'Giờ làm việc', value: SITE.workingHours, color: '#E65100', bg: '#FFF3E0' },
 ];
 
 const socials = [
