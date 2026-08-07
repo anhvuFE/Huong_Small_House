@@ -6,6 +6,7 @@ import type { ContentItem } from '../types';
 import { getErrorMessage } from '../utils/error';
 import { Loader } from '../components/common/Loader';
 import { mockBlogs } from '../data/blogData';
+import { resolveImageUrl } from '../utils/image';
 import logo from '../assets/logo.png';
 
 const formatDateTime = (value?: Date) => {
@@ -89,7 +90,7 @@ export const BlogDetailPage: React.FC = () => {
     <div className="bg-white pb-16">
       <div className="relative h-72 md:h-96 bg-gray-900">
         <img
-          src={(post.thumbnail && (post.thumbnail.startsWith('http') || post.thumbnail.startsWith('/images/') || post.thumbnail.endsWith('.svg')) && !post.thumbnail.includes('placeholder') && !post.thumbnail.includes('placehold')) ? post.thumbnail : logo}
+          src={resolveImageUrl(post.thumbnail) ?? logo}
           alt={post.title}
           className="absolute inset-0 w-full h-full object-cover"
         />
