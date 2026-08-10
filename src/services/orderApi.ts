@@ -88,19 +88,19 @@ const parseDate = (value?: string | Date): Date => {
 const normalizeOrderStatus = (status?: string): AdminOrderStatus => {
   const normalized = status?.toUpperCase() as AdminOrderStatus | undefined;
   const allowed: AdminOrderStatus[] = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'RETURNED'];
-  return allowed.includes(normalized ?? 'PENDING') ? (normalized as AdminOrderStatus) : 'PENDING';
+  return normalized && allowed.includes(normalized) ? normalized : 'PENDING';
 };
 
 const normalizePaymentStatus = (status?: string): PaymentStatus => {
   const normalized = status?.toUpperCase() as PaymentStatus | undefined;
   const allowed: PaymentStatus[] = ['PENDING', 'PAID', 'FAILED', 'REFUNDED'];
-  return allowed.includes(normalized ?? 'PENDING') ? (normalized as PaymentStatus) : 'PENDING';
+  return normalized && allowed.includes(normalized) ? normalized : 'PENDING';
 };
 
 const normalizeAdminPaymentMethod = (method?: string): AdminPaymentMethod => {
   const normalized = method?.toUpperCase() as AdminPaymentMethod | undefined;
   const allowed: AdminPaymentMethod[] = ['COD', 'BANK_TRANSFER', 'CARD', 'WALLET'];
-  return allowed.includes(normalized ?? 'COD') ? (normalized as AdminPaymentMethod) : 'COD';
+  return normalized && allowed.includes(normalized) ? normalized : 'COD';
 };
 
 const normalizeCustomerPaymentMethod = (method?: string): CustomerPaymentMethod => {
