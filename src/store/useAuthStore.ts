@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { User } from '../types';
+import { disconnectSocket } from '../lib/socket';
 
 interface AuthStore {
   user: User | null;
@@ -115,6 +116,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
   logout: () => {
     persistUser(null);
     persistTokens(null, null);
+    // Tear down the socket so it cannot reconnect with the old auth token.
+    disconnectSocket();
     set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
   },
 

@@ -40,17 +40,21 @@ export const ConsultationManagement: React.FC = () => {
 
   // Real-time: phiên mới + tin nhắn khách gửi (Socket.IO).
   useEffect(() => {
+    if (!accessToken) return;
     const socket = getSocket(accessToken);
     const onNew = () => {
       consultationApi.list().then(setItems).catch(() => {});
     };
+    const appendMessage = (c: Consultation, message: ConsultationMessage): Consultation => {
+      const last = c.messages[c.messages.length - 1];
+      if (last && last.sender === message.sender && last.content === message.content) return c;
+      return { ...c, messages: [...c.messages, message] };
+    };
     const onMessage = (p: { consultationId: string; message: ConsultationMessage }) => {
-      setSelected((cur) => {
-        if (!cur || cur.id !== p.consultationId) return cur;
-        const last = cur.messages[cur.messages.length - 1];
-        if (last && last.sender === p.message.sender && last.content === p.message.content) return cur;
-        return { ...cur, messages: [...cur.messages, p.message] };
-      });
+      // Keep both the list panel and the open conversation in sync so a message
+      // for a non-selected session is not lost when it is later opened.
+      setItems((prev) => prev.map((c) => (c.id === p.consultationId ? appendMessage(c, p.message) : c)));
+      setSelected((cur) => (cur && cur.id === p.consultationId ? appendMessage(cur, p.message) : cur));
     };
     socket.on('consultation:new', onNew);
     socket.on('consultation:message', onMessage);
