@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useRive, useStateMachineInput } from '@rive-app/react-canvas';
@@ -20,6 +20,14 @@ export const LoginPage: React.FC = () => {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [formError, setFormError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cancel the post-login redirect timer if the page unmounts first.
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+    };
+  }, []);
 
   const { rive, RiveComponent } = useRive({
     src: '/login_character.riv',
@@ -72,7 +80,7 @@ export const LoginPage: React.FC = () => {
       trigSuccess?.fire();
       login(result.user, result.accessToken, result.refreshToken);
       const destination = result.user.role === 'ADMIN' ? '/admin' : '/';
-      setTimeout(() => navigate(destination), 800);
+      redirectTimerRef.current = setTimeout(() => navigate(destination), 800);
     } catch (error) {
       trigFail?.fire();
       const message = getErrorMessage(error, 'Đăng nhập thất bại, vui lòng thử lại.');
