@@ -122,7 +122,7 @@ export const reportApi = {
     requireAdmin();
     return handleAdminRequest(async () => {
       const response = await apiClient.get<ApiResponse<TopProductsResponse>>(`/reports/top-products?limit=${limit}`);
-      return response.data.data.products;
+      return response.data.data?.products ?? [];
     });
   },
 };
