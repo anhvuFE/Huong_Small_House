@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { CartItem, Product } from '../types';
 
 interface CartStore {
@@ -13,7 +14,9 @@ interface CartStore {
   getTotalPrice: () => number;
 }
 
-export const useCartStore = create<CartStore>((set, get) => ({
+export const useCartStore = create<CartStore>()(
+  persist(
+    (set, get) => ({
   items: [],
   isOpen: false,
 
@@ -76,4 +79,11 @@ export const useCartStore = create<CartStore>((set, get) => ({
       0
     );
   },
-}));
+    }),
+    {
+      name: 'hs-cart',
+      // Chỉ lưu giỏ hàng; trạng thái mở/đóng drawer không cần bền vững.
+      partialize: (state) => ({ items: state.items }),
+    },
+  ),
+);
