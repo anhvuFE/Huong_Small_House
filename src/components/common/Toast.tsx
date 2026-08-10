@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { FiCheckCircle, FiInfo, FiXCircle } from 'react-icons/fi';
 import { cn } from '../../utils/cn';
@@ -30,19 +30,33 @@ export const useToast = (): ToastContextValue => {
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  const timersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+
   const showToast = useCallback((payload: Omit<Toast, 'id'>) => {
     setToasts((prev) => [...prev, { ...payload, id: Date.now() }]);
   }, []);
 
+  // Schedule an auto-dismiss timer exactly once per toast. Re-running this
+  // effect must not reset timers of toasts that are already counting down.
   useEffect(() => {
-    if (toasts.length === 0) return;
-    const timers = toasts.map((toast) =>
-      setTimeout(() => {
+    const timers = timersRef.current;
+    toasts.forEach((toast) => {
+      if (timers.has(toast.id)) return;
+      const timer = setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== toast.id));
-      }, 2500),
-    );
-    return () => timers.forEach(clearTimeout);
+        timers.delete(toast.id);
+      }, 2500);
+      timers.set(toast.id, timer);
+    });
   }, [toasts]);
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      timers.forEach(clearTimeout);
+      timers.clear();
+    };
+  }, []);
 
   return (
     <ToastContext.Provider value={{ showToast }}>
