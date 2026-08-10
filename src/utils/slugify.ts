@@ -1,6 +1,10 @@
 export const slugify = (value: string, suffix?: string | number): string => {
   const base = value
     .toLowerCase()
+    // "đ" does not decompose under NFD, so map it before stripping diacritics
+    // or it would be dropped entirely (e.g. "Đông" -> "ong").
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
     .normalize('NFD')
     .replace(/[^\w\s-]/g, '')
     .trim()

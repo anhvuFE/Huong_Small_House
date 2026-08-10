@@ -85,6 +85,7 @@ export const contentApi = {
     },
   ): Promise<ContentItem> {
     const blogId = Number(id);
+    if (Number.isNaN(blogId)) throw new Error(`Invalid blog id: "${id}"`);
     const data: Record<string, unknown> = {};
     if (payload.title !== undefined) data.title = payload.title;
     if (payload.slug !== undefined) data.slug = payload.slug;
@@ -118,6 +119,7 @@ export const contentApi = {
 
   async deleteContent(id: string): Promise<void> {
     const blogId = Number(id);
+    if (Number.isNaN(blogId)) throw new Error(`Invalid blog id: "${id}"`);
     await apiClient.delete(`/blogs/${blogId}`);
   },
 };
