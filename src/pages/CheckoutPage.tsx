@@ -47,6 +47,22 @@ export const CheckoutPage: React.FC = () => {
       return;
     }
 
+    // The desktop submit button sits outside the <form>, so browser-native
+    // `required` validation is bypassed. Validate the mandatory fields here so
+    // both the desktop and mobile paths are covered.
+    const requiredFields: Array<[string, string]> = [
+      ['Họ và tên', formData.fullName],
+      ['Số điện thoại', formData.phone],
+      ['Địa chỉ', formData.address],
+      ['Quận/Huyện', formData.district],
+      ['Tỉnh/Thành phố', formData.province],
+    ];
+    const missing = requiredFields.filter(([, value]) => !value.trim()).map(([label]) => label);
+    if (missing.length > 0) {
+      showToast({ title: 'Thiếu thông tin', message: `Vui lòng nhập: ${missing.join(', ')}.`, variant: 'error' });
+      return;
+    }
+
     const paymentMap = { cod: 'COD', bank: 'Bank', sepay: 'Sepay' } as const;
     const note = [
       `Địa chỉ: ${formData.address}, ${formData.district}, ${formData.province}`,
