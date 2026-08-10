@@ -129,7 +129,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
   setTokens: ({ accessToken, refreshToken }) => {
     persistTokens(accessToken, refreshToken);
     set((state) => ({
-      ...state,
       accessToken,
       refreshToken,
       isAuthenticated: state.isAuthenticated && Boolean(accessToken),

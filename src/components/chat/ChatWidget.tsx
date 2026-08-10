@@ -60,11 +60,20 @@ export const ChatWidget: FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [catalogLoaded, setCatalogLoaded] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const botTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!listRef.current) return;
     listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, isBotTyping, isOpen]);
+
+  // Cancel any pending bot reply on unmount to avoid a state update on an
+  // unmounted component when the widget is closed within the reply delay.
+  useEffect(() => {
+    return () => {
+      if (botTimerRef.current) clearTimeout(botTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen || catalogLoaded) return;
@@ -108,7 +117,7 @@ export const ChatWidget: FC = () => {
     setDraft('');
     setIsBotTyping(true);
 
-    window.setTimeout(() => {
+    botTimerRef.current = window.setTimeout(() => {
       const reply = buildBotReply(trimmed, products, categories);
       setMessages((prev) => [
         ...prev,
@@ -121,6 +130,7 @@ export const ChatWidget: FC = () => {
         },
       ]);
       setIsBotTyping(false);
+      botTimerRef.current = null;
     }, 700);
   };
 
