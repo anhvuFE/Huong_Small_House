@@ -119,7 +119,11 @@ export const ProductsPage: React.FC = () => {
     };
     fetchInitialData();
     return () => { cancelled = true; };
-  }, [filters.maxPrice, filters.minPrice]);
+    // Chỉ fetch 1 lần khi mount: kho sản phẩm không phụ thuộc bộ lọc. Lọc theo
+    // danh mục/thương hiệu/giá/tìm kiếm đều làm client-side trong filteredProducts,
+    // nên kéo thanh giá KHÔNG được gọi lại API (tránh loading nhấp nháy toàn trang).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const calc = () => {
